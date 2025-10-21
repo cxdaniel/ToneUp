@@ -139,7 +139,8 @@ class _PlanPageState extends State<PlanPage> {
     final theme = Theme.of(context);
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
-      appBar: AppBar(title: const Text('Goals'), centerTitle: true),
+      //TODO: 改到主导航，暂时去掉顶部appBar
+      // appBar: AppBar(title: const Text('Goals'), centerTitle: true),
       // 核心：通过 Consumer 监听 PlanProvider 状态变化
       body: Consumer<PlanProvider>(
         builder: (context, planProvider, child) {
@@ -172,6 +173,19 @@ class _PlanPageState extends State<PlanPage> {
           return CustomScrollView(
             controller: _scrollController,
             slivers: [
+              //TODO: 显示在主导航时，没有appBar，增加占位
+              SliverToBoxAdapter(
+                // child: SizedBox(width: double.infinity, height: 100),
+                child: Padding(
+                  padding: EdgeInsetsGeometry.fromLTRB(20, 100, 20, 12),
+                  child: Text(
+                    'Goals',
+                    style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                      color: Theme.of(context).colorScheme.onSecondaryContainer,
+                    ),
+                  ),
+                ),
+              ),
               // 遍历所有级别分组
               ...levelKeys.expand((level) {
                 final monthGroups = groupedPlans[level]!;

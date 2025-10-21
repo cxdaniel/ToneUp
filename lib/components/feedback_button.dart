@@ -95,9 +95,9 @@ class _FeedbackButtonState extends State<FeedbackButton>
         return Transform.scale(
           scale: _scaleAnimation.value,
           child: InkWell(
-            onTapDown: _handleTapDown,
-            onTapUp: _handleTapUp,
-            onTapCancel: _handleTapCancel,
+            onTapDown: widget.onTap != null ? _handleTapDown : null,
+            onTapUp: widget.onTap != null ? _handleTapUp : null,
+            onTapCancel: widget.onTap != null ? _handleTapCancel : null,
             onTap: null, // 禁用原有onTap，使用自定义触摸事件
             splashColor:
                 widget.splashColor ??

@@ -5,7 +5,7 @@ class PodcastPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Podcasts Page')),
+      // appBar: AppBar(title: Text('Podcasts Page')),
       backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
       // bottomNavigationBar: const BottomTabBar(selectedIndex: 1),
       body: Center(child: Text('Podcasts Page')),

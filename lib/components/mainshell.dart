@@ -68,9 +68,14 @@ class MainShell extends StatelessWidget {
                     label: 'Practice',
                   ),
                   BottomNavigationBarItem(
-                    icon: Icon(Icons.podcasts),
-                    label: 'Podcast',
+                    icon: Icon(Icons.track_changes_outlined),
+                    label: 'Goals',
                   ),
+                  //TODO：暂替换为PlanPage
+                  // BottomNavigationBarItem(
+                  //   icon: Icon(Icons.podcasts),
+                  //   label: 'Podcast',
+                  // ),
                   BottomNavigationBarItem(
                     icon: Icon(Icons.person),
                     label: 'Me',

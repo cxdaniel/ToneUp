@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -20,6 +21,12 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   /// final userPlanService = UserPlanService();
   UserWeeklyPlanModel? _planData;
+
+  void _gotoAllPlans() {
+    if (kDebugMode) debugPrint('on tap');
+    // context.push(AppRoutes.GOAL_LIST);
+    context.go(AppRoutes.GOAL_LIST);
+  }
 
   // 生成活动卡片
   List<Widget> _buildActivityCards(BuildContext context) {
@@ -260,10 +267,7 @@ class _HomePageState extends State<HomePage> {
                 ),
                 FeedbackButton(
                   borderRadius: BorderRadius.circular(16),
-                  onTap: () => {
-                    // if (kDebugMode) debugPrint('on tap'),
-                    context.push(AppRoutes.GOAL_LIST),
-                  },
+                  onTap: _gotoAllPlans,
                   child: Ink(
                     decoration: ShapeDecoration(
                       color: Theme.of(context).colorScheme.surfaceContainerLow,

@@ -60,11 +60,19 @@ class _MyAppState extends State<MyApp> {
       StatefulShellBranch(
         routes: [
           GoRoute(
-            path: AppRoutes.PODCASTS,
-            builder: (context, state) => const PodcastPage(),
+            path: AppRoutes.GOAL_LIST,
+            builder: (context, state) => const PlanPage(),
           ),
         ],
       ),
+      // StatefulShellBranch(
+      //   routes: [
+      //     GoRoute(
+      //       path: AppRoutes.PODCASTS,
+      //       builder: (context, state) => const PodcastPage(),
+      //     ),
+      //   ],
+      // ),
       StatefulShellBranch(
         routes: [
           GoRoute(
@@ -88,10 +96,10 @@ class _MyAppState extends State<MyApp> {
           path: AppRoutes.SIGN_UP,
           builder: (context, state) => const SignUpPage(),
         ),
-        GoRoute(
-          path: AppRoutes.GOAL_LIST,
-          builder: (context, state) => const PlanPage(),
-        ),
+        // GoRoute(
+        //   path: AppRoutes.GOAL_LIST,
+        //   builder: (context, state) => const PlanPage(),
+        // ),
         GoRoute(
           path: AppRoutes.PRACTICE,
           builder: (context, state) => const PracticePage(),
