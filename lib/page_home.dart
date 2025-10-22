@@ -22,7 +22,7 @@ class _HomePageState extends State<HomePage> {
   /// final userPlanService = UserPlanService();
   UserWeeklyPlanModel? _planData;
 
-  void _gotoAllPlans() {
+  void _gotoPagePlan() {
     if (kDebugMode) debugPrint('on tap');
     // context.push(AppRoutes.GOAL_LIST);
     context.go(AppRoutes.GOAL_LIST);
@@ -267,7 +267,7 @@ class _HomePageState extends State<HomePage> {
                 ),
                 FeedbackButton(
                   borderRadius: BorderRadius.circular(16),
-                  onTap: _gotoAllPlans,
+                  onTap: _gotoPagePlan,
                   child: Ink(
                     decoration: ShapeDecoration(
                       color: Theme.of(context).colorScheme.surfaceContainerLow,
@@ -378,10 +378,7 @@ class _HomePageState extends State<HomePage> {
                               borderRadius: BorderRadius.circular(10),
                             ),
                           ),
-                          onPressed: () async {
-                            // planProvider.completeActivePlan();
-                            context.push(AppRoutes.GOAL_LIST);
-                          },
+                          onPressed: _gotoPagePlan,
                           icon: Icon(
                             Icons.list,
                             color: Theme.of(context).colorScheme.secondary,
@@ -716,10 +713,7 @@ class _HomePageState extends State<HomePage> {
                 borderRadius: BorderRadius.circular(10),
               ),
             ),
-            onPressed: () async {
-              // planProvider.completeActivePlan();
-              context.push(AppRoutes.GOAL_LIST);
-            },
+            onPressed: _gotoPagePlan,
             child: Text(
               "View Your All Goals",
               style: Theme.of(context).textTheme.labelLarge?.copyWith(

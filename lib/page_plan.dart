@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
@@ -7,7 +8,7 @@ import 'package:toneup_app/models/enumerated_types.dart';
 import 'package:toneup_app/routes.dart';
 import 'package:toneup_app/services/navigation_service.dart';
 import '../providers/plan_provider.dart';
-import '../components/sliver_headers.dart'; // 保留你的吸顶代理类
+import '../components/sliver_headers.dart'; // 吸顶代理类
 import 'models/user_weekly_plan_model.dart';
 
 class PlanPage extends StatefulWidget {
@@ -45,6 +46,42 @@ class _PlanPageState extends State<PlanPage> {
       if (allPlans[i].id == activePlan.id) {
         _activeItemGlobalIndex = i; // 返回全局索引
       }
+    }
+  }
+
+  Future<void> _changeGoal(UserWeeklyPlanModel plan) async {
+    // 显示确认对话框
+    PlanProvider planProvider = Provider.of<PlanProvider>(
+      context,
+      listen: false,
+    );
+    final shouldSwitch = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Change Goal'),
+        content: const Text(
+          'Do you want to switch goals? After switching, the status of the current goal will be changed to pending.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancle'),
+          ),
+          ElevatedButton.icon(
+            icon: Icon(Icons.swap_calls_rounded, size: 24),
+            label: Text("Change"),
+            style: ElevatedButton.styleFrom(
+              padding: EdgeInsets.fromLTRB(8, 8, 16, 8),
+            ),
+            onPressed: () => Navigator.pop(context, true),
+          ),
+        ],
+      ),
+    );
+    // 仅当用户确认切换时才执行后续操作
+    if (shouldSwitch == true) {
+      await planProvider.activatePlan(plan);
+      NavigationService.go(AppRoutes.HOME);
     }
   }
 
@@ -141,7 +178,6 @@ class _PlanPageState extends State<PlanPage> {
       backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
       //TODO: 改到主导航，暂时去掉顶部appBar
       // appBar: AppBar(title: const Text('Goals'), centerTitle: true),
-      // 核心：通过 Consumer 监听 PlanProvider 状态变化
       body: Consumer<PlanProvider>(
         builder: (context, planProvider, child) {
           // 加载状态
@@ -157,11 +193,10 @@ class _PlanPageState extends State<PlanPage> {
             (_) => _scrollToActiveItem(),
           );
 
-          // 从 Provider 获取分组数据（替代原本地分组逻辑）
+          // 从 Provider 获取分组数据
           final groupedPlans = planProvider.groupPlansByLevelAndMonth();
-          // 按级别升序排序（保留你的排序逻辑）
+          // 按级别升序排序
           final levelKeys = groupedPlans.keys.toList()..sort();
-
           final allPlans = groupedPlans.values
               .expand((l) => l.values)
               .expand((m) => m)
@@ -170,135 +205,92 @@ class _PlanPageState extends State<PlanPage> {
           _calculateActiveItemIndex(allPlans, planProvider.activePlan);
 
           // 保留原有的吸顶UI结构（核心不变）
-          return CustomScrollView(
-            controller: _scrollController,
-            slivers: [
-              //TODO: 显示在主导航时，没有appBar，增加占位
-              SliverToBoxAdapter(
-                // child: SizedBox(width: double.infinity, height: 100),
-                child: Padding(
-                  padding: EdgeInsetsGeometry.fromLTRB(20, 100, 20, 12),
-                  child: Text(
-                    'Goals',
-                    style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                      color: Theme.of(context).colorScheme.onSecondaryContainer,
+          return Padding(
+            padding: const EdgeInsets.only(top: 0, bottom: 88),
+            child: RefreshIndicator(
+              onRefresh: () async {
+                await planProvider.getAllPlans();
+              },
+              backgroundColor: theme.colorScheme.secondaryContainer,
+              child: CustomScrollView(
+                controller: _scrollController,
+                slivers: [
+                  //TODO: 显示在主导航时，没有appBar，增加占位
+                  SliverAppBar(
+                    surfaceTintColor: theme.colorScheme.surfaceContainerHigh,
+                    backgroundColor: theme.colorScheme.surfaceContainerHigh,
+                    title: Padding(
+                      padding: EdgeInsets.only(left: 8),
+                      child: Align(
+                        alignment: AlignmentGeometry.centerLeft,
+                        child: Text(
+                          'Goals',
+                          style: theme.textTheme.headlineLarge?.copyWith(
+                            color: theme.colorScheme.onSecondaryContainer,
+                          ),
+                        ),
+                      ),
                     ),
+                    pinned: true,
                   ),
-                ),
-              ),
-              // 遍历所有级别分组
-              ...levelKeys.expand((level) {
-                final monthGroups = groupedPlans[level]!;
-                // 按月份升序排序（保留你的排序逻辑）
-                final monthKeys = monthGroups.keys.toList()..sort();
-                return [
-                  // 级别吸顶头
-                  SliverPersistentHeader(
-                    delegate: LevelHeaderDelegate(title: 'HSK $level'),
-                    pinned: true, // 吸顶效果
-                  ),
-                  // 遍历该级别下的所有月份分组
-                  ...monthKeys.expand((monthKey) {
-                    final plansInMonth = monthGroups[monthKey]!;
-                    // 生成月份显示文本（如 "Aug. 2025"，保留你的格式）
-                    final monthLabel = DateFormat(
-                      'MMM. yyyy',
-                    ).format(plansInMonth.first.createdAt);
-
+                  // 遍历所有级别分组
+                  ...levelKeys.expand((level) {
+                    final monthGroups = groupedPlans[level]!;
+                    // 按月份升序排序
+                    final monthKeys = monthGroups.keys.toList()..sort();
                     return [
-                      // 月份吸顶头（复用你的 MonthHeaderDelegate）
+                      // 级别吸顶头
                       SliverPersistentHeader(
-                        delegate: MonthHeaderDelegate(title: monthLabel),
+                        delegate: LevelHeaderDelegate(title: 'HSK $level'),
                         pinned: true, // 吸顶效果
                       ),
-                      // 该月份下的计划列表（保留你的列表结构）
-                      SliverList(
-                        delegate: SliverChildBuilderDelegate((context, index) {
-                          final plan = plansInMonth[index];
-                          // 判断当前计划是否为激活状态（从 Provider 获取）
-                          final isActive =
-                              plan.status == PlanStatus.active ||
-                              plan.status == PlanStatus.reactive;
-                          // planProvider.activePlan?.id == plan.id;
-                          return _buildPlanItem(
-                            plan: plan,
-                            isActive: isActive,
-                            theme: theme,
-                            onTap: () async {
-                              // 显示确认对话框
-                              final shouldSwitch = await showDialog<bool>(
-                                context: context,
-                                builder: (context) => AlertDialog(
-                                  title: const Text('Change Goal'),
-                                  content: const Text(
-                                    'Do you want to switch goals? After switching, the status of the current goal will be changed to pending.',
-                                  ),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () =>
-                                          Navigator.pop(context, false),
-                                      child: const Text('Cancle'),
-                                    ),
-                                    ElevatedButton.icon(
-                                      icon: Icon(
-                                        Icons.swap_calls_rounded,
-                                        size: 24,
-                                      ),
-                                      label: Text("Change"),
-                                      style: ElevatedButton.styleFrom(
-                                        padding: EdgeInsets.fromLTRB(
-                                          8,
-                                          8,
-                                          16,
-                                          8,
-                                        ),
-                                      ),
-                                      onPressed: () =>
-                                          Navigator.pop(context, true),
-                                    ),
-                                  ],
-                                ),
+                      // 遍历该级别下的所有月份分组
+                      ...monthKeys.expand((monthKey) {
+                        final plansInMonth = monthGroups[monthKey]!;
+                        // 生成月份显示文本（如 "Aug. 2025"，保留你的格式）
+                        final monthLabel = DateFormat(
+                          'MMM. yyyy',
+                        ).format(plansInMonth.first.createdAt);
+
+                        return [
+                          // 月份吸顶头（复用你的 MonthHeaderDelegate）
+                          SliverPersistentHeader(
+                            delegate: MonthHeaderDelegate(title: monthLabel),
+                            pinned: true, // 吸顶效果
+                          ),
+                          // 该月份下的计划列表（保留你的列表结构）
+                          SliverList(
+                            delegate: SliverChildBuilderDelegate((
+                              context,
+                              index,
+                            ) {
+                              final plan = plansInMonth[index];
+                              // 判断当前计划是否为激活状态（从 Provider 获取）
+                              final isActive =
+                                  plan.status == PlanStatus.active ||
+                                  plan.status == PlanStatus.reactive;
+                              // planProvider.activePlan?.id == plan.id;
+                              return _buildPlanItem(
+                                plan: plan,
+                                isActive: isActive,
+                                theme: theme,
+                                onTap: () => _changeGoal(plan),
                               );
-                              // 仅当用户确认切换时才执行后续操作
-                              if (shouldSwitch == true) {
-                                await planProvider.activatePlan(plan);
-                                NavigationService.go(AppRoutes.HOME);
-                              }
-                            },
-                          );
-                        }, childCount: plansInMonth.length),
-                      ),
+                            }, childCount: plansInMonth.length),
+                          ),
+                        ];
+                      }),
                     ];
                   }),
-                ];
-              }),
-              // 底部「新建目标」区域暂时去掉，减少用户新建plan的入口
-              // SliverToBoxAdapter(
-              //   child: Column(
-              //     children: [
-              //       Padding(
-              //         padding: const EdgeInsets.symmetric(
-              //           horizontal: 16,
-              //           vertical: 24,
-              //         ),
-              //         child: ElevatedButton(
-              //           onPressed: () {
-              //             planProvider.createPlan();
-              //           },
-              //           child: const Text('New Goal'),
-              //         ),
-              //       ),
-              //       Padding(
-              //         padding: const EdgeInsets.only(bottom: 16),
-              //         child: Text(
-              //           'Stop current goals, set new one.',
-              //           style: TextStyle(color: Colors.purple, fontSize: 14),
-              //         ),
-              //       ),
-              //     ],
-              //   ),
-              // ),
-            ],
+                  SliverPadding(
+                    padding: EdgeInsetsGeometry.only(top: 20, bottom: 100),
+                    sliver: SliverToBoxAdapter(
+                      child: Center(child: Text('No more data')),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           );
         },
       ),
@@ -314,7 +306,6 @@ class _PlanPageState extends State<PlanPage> {
   }) {
     IconData icon;
     Color iconColor;
-
     // 根据状态设置图标
     if (isActive) {
       icon = Icons.play_circle_filled_sharp;
@@ -327,7 +318,6 @@ class _PlanPageState extends State<PlanPage> {
       icon = Icons.track_changes_rounded;
       iconColor = theme.colorScheme.onSecondaryFixedVariant;
     }
-
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
       child: Column(

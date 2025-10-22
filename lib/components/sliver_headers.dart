@@ -14,7 +14,7 @@ class LevelHeaderDelegate extends SliverPersistentHeaderDelegate {
   ) {
     return Container(
       color: Theme.of(context).colorScheme.surfaceContainerHigh,
-      margin: const EdgeInsets.only(left: 16),
+      margin: const EdgeInsets.only(left: 24),
       alignment: Alignment.centerLeft,
       child: Container(
         padding: EdgeInsets.symmetric(vertical: 2, horizontal: 12),
