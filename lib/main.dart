@@ -6,11 +6,11 @@ import 'package:toneup_app/components/mainshell.dart';
 import 'package:toneup_app/page_home.dart';
 import 'package:toneup_app/page_login.dart';
 import 'package:toneup_app/page_plan.dart';
-import 'package:toneup_app/page_podcast.dart';
 import 'package:toneup_app/page_practice.dart';
 import 'package:toneup_app/page_profile.dart';
 import 'package:toneup_app/page_signup.dart';
 import 'package:toneup_app/providers/plan_provider.dart';
+import 'package:toneup_app/providers/profile_provider.dart';
 import 'package:toneup_app/providers/tts_provider.dart';
 import 'package:toneup_app/services/navigation_service.dart';
 import 'package:toneup_app/theme_data.dart';
@@ -128,10 +128,9 @@ class _MyAppState extends State<MyApp> {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(
-          create: (context) => PlanProvider()..initialize(),
-        ),
+        ChangeNotifierProvider(create: (_) => PlanProvider()),
         ChangeNotifierProvider(create: (_) => TTSProvider()),
+        ChangeNotifierProvider(create: (_) => ProfileProvider()),
       ],
       child: MaterialApp.router(
         title: 'ToneUp',

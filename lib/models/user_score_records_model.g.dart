@@ -1,0 +1,41 @@
+// GENERATED CODE - DO NOT MODIFY BY HAND
+
+part of 'user_score_records_model.dart';
+
+// **************************************************************************
+// JsonSerializableGenerator
+// **************************************************************************
+
+UserScoreRecordsModel _$UserScoreRecordsModelFromJson(
+  Map<String, dynamic> json,
+) => UserScoreRecordsModel(
+  category: $enumDecode(_$MaterialTypeEnumMap, json['category']),
+  item: json['item'] as String,
+  id: (json['id'] as num?)?.toInt(),
+  userId: json['user_id'] as String?,
+  score: (json['score'] as num?)?.toDouble(),
+  createdAt: json['created_at'] == null
+      ? null
+      : DateTime.parse(json['created_at'] as String),
+);
+
+Map<String, dynamic> _$UserScoreRecordsModelToJson(
+  UserScoreRecordsModel instance,
+) => <String, dynamic>{
+  'id': instance.id,
+  'user_id': instance.userId,
+  'score': instance.score,
+  'created_at': instance.createdAt?.toIso8601String(),
+  'item': instance.item,
+  'category': _$MaterialTypeEnumMap[instance.category]!,
+};
+
+const _$MaterialTypeEnumMap = {
+  MaterialType.character: 'character',
+  MaterialType.word: 'word',
+  MaterialType.sentence: 'sentence',
+  MaterialType.dialog: 'dialog',
+  MaterialType.paragraph: 'paragraph',
+  MaterialType.syllable: 'syllable',
+  MaterialType.grammar: 'grammar',
+};

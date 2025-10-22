@@ -1,5 +1,4 @@
-// ignore_for_file: use_build_context_synchronously, library_private_types_in_public_api
-// import 'package:google_fonts/google_fonts.dart';
+import 'package:faker/faker.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:go_router/go_router.dart';
@@ -8,7 +7,7 @@ import 'package:toneup_app/routes.dart';
 class SignUpPage extends StatefulWidget {
   const SignUpPage({super.key});
   @override
-  _SignUpPageState createState() => _SignUpPageState();
+  State<SignUpPage> createState() => _SignUpPageState();
 }
 
 class _SignUpPageState extends State<SignUpPage> {
@@ -72,6 +71,21 @@ class _SignUpPageState extends State<SignUpPage> {
         password: password,
       );
       if (signUpResponse.user != null) {
+        // 注册成功后创建profile
+        final existProfile = await supabase
+            .from('profiles')
+            .select()
+            .eq('id', signUpResponse.user!.id)
+            .maybeSingle();
+        if (existProfile == null) {
+          final faker = Faker();
+          await supabase.from('profiles').insert([
+            {
+              'id': signUpResponse.user!.id,
+              'nickname': faker.internet.userName(),
+            },
+          ]);
+        }
         // 注册成功后立即登录
         final loginResponse = await supabase.auth.signInWithPassword(
           email: email,
@@ -82,14 +96,17 @@ class _SignUpPageState extends State<SignUpPage> {
         }
       }
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Sign up failed: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Sign up failed: $e')));
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
       body: SingleChildScrollView(
         child: Padding(
@@ -106,9 +123,9 @@ class _SignUpPageState extends State<SignUpPage> {
                 child: Text(
                   'Sign Up',
                   textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.headlineLarge?.merge(
+                  style: theme.textTheme.headlineLarge?.merge(
                     // GoogleFonts.righteous(
-                    //   color: Theme.of(context).colorScheme.primary,
+                    //   color: theme.colorScheme.primary,
                     // ),
                     TextStyle(fontFamily: 'Righteous'),
                   ),
@@ -127,9 +144,7 @@ class _SignUpPageState extends State<SignUpPage> {
                       focusNode: emailFocusNode,
                       decoration: InputDecoration(
                         filled: true,
-                        fillColor: Theme.of(
-                          context,
-                        ).colorScheme.surfaceContainerLow,
+                        fillColor: theme.colorScheme.surfaceContainerLow,
                         labelText: 'Email',
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(16),
@@ -145,7 +160,7 @@ class _SignUpPageState extends State<SignUpPage> {
                         errorBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(16),
                           borderSide: BorderSide(
-                            color: Theme.of(context).colorScheme.errorContainer,
+                            color: theme.colorScheme.errorContainer,
                           ),
                         ),
                       ),
@@ -266,10 +281,9 @@ class _SignUpPageState extends State<SignUpPage> {
                         },
                         child: Text(
                           'Sign Up',
-                          style: Theme.of(context).textTheme.titleMedium
-                              ?.copyWith(
-                                color: Theme.of(context).colorScheme.onPrimary,
-                              ),
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            color: theme.colorScheme.onPrimary,
+                          ),
                         ),
                       ),
                     ),
@@ -279,7 +293,7 @@ class _SignUpPageState extends State<SignUpPage> {
 
               /// Divider
               Divider(
-                color: Theme.of(context).colorScheme.surfaceContainerHigh,
+                color: theme.colorScheme.surfaceContainerHigh,
                 thickness: 1,
               ),
 
@@ -294,9 +308,7 @@ class _SignUpPageState extends State<SignUpPage> {
                         TextSpan(
                           text: 'Already have an account? ',
                           style: TextStyle(
-                            color: const Color(
-                              0xFF6750A4,
-                            ) /* Schemes-Primary */,
+                            color: theme.colorScheme.primary,
                             fontSize: 14,
                             fontFamily: 'Roboto',
                             fontWeight: FontWeight.w400,
@@ -307,9 +319,7 @@ class _SignUpPageState extends State<SignUpPage> {
                         TextSpan(
                           text: 'Login',
                           style: TextStyle(
-                            color: const Color(
-                              0xFF6750A4,
-                            ) /* Schemes-Primary */,
+                            color: theme.colorScheme.primary,
                             fontSize: 14,
                             fontFamily: 'Roboto',
                             fontWeight: FontWeight.w700,

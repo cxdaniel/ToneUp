@@ -61,115 +61,12 @@ class _PracticePageState extends State<PracticePage> {
 
             /// 错误状态
             if (practiceProvider.errorMessage != null) {
-              return Padding(
-                padding: const EdgeInsets.all(24.0),
-                child: Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    spacing: 20,
-                    children: [
-                      Icon(
-                        Icons.error_outline,
-                        color: Theme.of(context).colorScheme.error,
-                        size: 50.0,
-                      ),
-                      Text('加载失败: ${practiceProvider.errorMessage}'),
-                      const SizedBox(height: 20),
-                      if (practiceProvider.retryFunc != null)
-                        ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Theme.of(
-                              context,
-                            ).colorScheme.primary,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 30,
-                              vertical: 12,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                          ),
-                          onPressed: () {
-                            practiceProvider.retryFunc!();
-                          },
-                          child: Text(
-                            practiceProvider.retryLabel ?? "Retry",
-                            style: Theme.of(context).textTheme.labelLarge
-                                ?.copyWith(
-                                  color: Theme.of(
-                                    context,
-                                  ).colorScheme.onPrimary,
-                                ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              );
+              _buildErrorState(practiceProvider);
             }
 
             /// 练习完成状态
             if (practiceProvider.isPracticeCompleted) {
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(
-                      Icons.check_circle,
-                      color: Colors.green,
-                      size: 80,
-                    ),
-                    const SizedBox(height: 20),
-                    const Text(
-                      'Practice Completed!',
-                      style: TextStyle(fontSize: 20),
-                    ),
-                    const SizedBox(height: 10),
-                    ElevatedButton(
-                      onPressed: _isSubmitting
-                          ? null
-                          : () async {
-                              setState(() {
-                                _isSubmitting = true;
-                              });
-                              try {
-                                await practiceProvider.submitPracticeResult();
-                                if (context.mounted) {
-                                  context.pop();
-                                }
-                              } catch (e) {
-                                // 处理错误，如显示错误提示
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text('提交失败: ${e.toString()}'),
-                                      showCloseIcon: true,
-                                      // duration: Durations.long4,
-                                    ),
-                                  );
-                                }
-                              } finally {
-                                if (mounted) {
-                                  setState(() {
-                                    _isSubmitting = false;
-                                  });
-                                }
-                              }
-                            },
-                      child: _isSubmitting
-                          ? SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : const Text('Submit'),
-                    ),
-                  ],
-                ),
-              );
+              _buildFinishedState(practiceProvider);
             }
 
             /// 无题状态
@@ -195,25 +92,6 @@ class _PracticePageState extends State<PracticePage> {
                 actionsPadding: EdgeInsets.symmetric(horizontal: 16),
                 actions: [Icon(Icons.more_horiz)],
               ),
-              // body: IndexedStack(
-              //   index: practiceProvider.currentQuizIndex, // 根据当前索引显示对应页面
-              //   children: quizzes.map((quiz) {
-              //     // 为每个 Quiz 实例创建独立的 QuizProvider
-              //     StatefulWidget quizWidget;
-              //     switch (quiz.type) {
-              //       case QuizType.choice:
-              //         quizWidget = QuizChoiceWidget();
-              //         break;
-              //       default:
-              //         quizWidget = QuizChoiceWidget();
-              //     }
-              //     return ChangeNotifierProvider(
-              //       key: ValueKey(quiz.insid), // 用唯一 key 确保重建时正确关联
-              //       create: (context) => QuizProvider()..initQuiz(quiz),
-              //       child: quizWidget,
-              //     );
-              //   }).toList(),
-              // ),
               body: AnimatedSwitcher(
                 duration: const Duration(milliseconds: 500),
                 switchInCurve: Curves.easeInOut,
@@ -259,6 +137,112 @@ class _PracticePageState extends State<PracticePage> {
             );
           },
         ),
+      ),
+    );
+  }
+
+  /// 错误状态
+  Widget _buildErrorState(PracticeProvider practiceProvider) {
+    return Padding(
+      padding: const EdgeInsets.all(24.0),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          spacing: 20,
+          children: [
+            Icon(
+              Icons.error_outline,
+              color: Theme.of(context).colorScheme.error,
+              size: 50.0,
+            ),
+            Text('加载失败: ${practiceProvider.errorMessage}'),
+            const SizedBox(height: 20),
+            if (practiceProvider.retryFunc != null)
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Theme.of(context).colorScheme.primary,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 30,
+                    vertical: 12,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                onPressed: () {
+                  practiceProvider.retryFunc!();
+                },
+                child: Text(
+                  practiceProvider.retryLabel ?? "Retry",
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    color: Theme.of(context).colorScheme.onPrimary,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 练习完成状态
+  Widget _buildFinishedState(PracticeProvider practiceProvider) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.check_circle, color: Colors.green, size: 80),
+          const SizedBox(height: 20),
+          const Text('Practice Completed!', style: TextStyle(fontSize: 20)),
+          const SizedBox(height: 10),
+          ElevatedButton(
+            onPressed: _isSubmitting
+                ? null
+                : () async {
+                    setState(() {
+                      _isSubmitting = true;
+                    });
+                    try {
+                      await practiceProvider.submitPracticeResult();
+                      if (mounted) {
+                        context.pop();
+                      }
+                    } catch (e) {
+                      // 处理错误，如显示错误提示
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('提交失败: ${e.toString()}'),
+                            showCloseIcon: true,
+                            // duration: Durations.long4,
+                          ),
+                        );
+                      }
+                    } finally {
+                      if (mounted) {
+                        setState(() {
+                          _isSubmitting = false;
+                        });
+                      }
+                    }
+                  },
+            child: _isSubmitting
+                ? Row(
+                    children: [
+                      SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const Text('Submiting...'),
+                    ],
+                  )
+                : const Text('Submit'),
+          ),
+        ],
       ),
     );
   }

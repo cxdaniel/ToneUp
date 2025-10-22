@@ -6,7 +6,7 @@ import 'package:toneup_app/models/user_weekly_plan_model.dart';
 
 /// 用户学习计划服务类：封装所有计划相关的业务逻辑（查询、创建、激活等）
 class UserPlanService {
-  // 单例模式：确保全局只有一个服务实例（避免重复创建Supabase客户端）
+  // 单例模式：确保全局只有一个服务实例
   static final UserPlanService _instance = UserPlanService._internal();
   factory UserPlanService() => _instance;
   UserPlanService._internal();
@@ -133,7 +133,7 @@ class UserPlanService {
     }
   }
 
-  /// 3. 创建新的 active 计划（通过Edge Function，同时将旧active改为pending）
+  /// 创建新的 active 计划（通过Edge Function，同时将旧active改为pending）
   /// @param userId：当前用户ID
   /// @return 新创建的计划数据（包含id、status等）
   Future<UserWeeklyPlanModel> createNewActivePlan(String userId) async {

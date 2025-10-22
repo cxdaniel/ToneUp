@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:toneup_app/components/feedback_button.dart';
+import 'package:toneup_app/providers/profile_provider.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -11,82 +13,106 @@ class ProfilePage extends StatefulWidget {
 
 class _ProfilePageState extends State<ProfilePage> {
   @override
+  void initState() {
+    super.initState();
+    if (Provider.of<ProfileProvider>(context, listen: false).profile == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Provider.of<ProfileProvider>(context, listen: false).fetchProfile();
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     final colorScheme = Theme.of(context).colorScheme;
-    return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 78, 24, 120),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            spacing: 24,
-            children: [
-              _buildUserHeader(),
-              _buildOverview(),
-              _buildListCeil(
-                label: 'Weekly study duration',
-                hit: '50 minutes',
-                call: () {},
-              ),
-              _buildListCeil(label: 'Profile Settings', call: () {}),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                spacing: 8,
+    return Consumer<ProfileProvider>(
+      builder: (context, provider, child) {
+        return Scaffold(
+          backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
+          body: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(24, 78, 24, 120),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                spacing: 24,
                 children: [
-                  TextButton.icon(
-                    icon: Icon(
-                      Icons.assignment_turned_in_outlined,
-                      size: 24,
-                      color: colorScheme.secondary,
-                    ),
-                    onPressed: () {},
-                    label: Text(
-                      'Condition & Terms',
-                      style: textTheme.titleMedium,
-                    ),
+                  _buildUserHeader(provider),
+                  _buildOverview(provider),
+                  _buildListCeil(
+                    label: 'Weekly study duration',
+                    hit:
+                        (provider.profile == null ||
+                            provider.profile!.planDurationMinutes == null)
+                        ? '--'
+                        : '${provider.profile!.planDurationMinutes} minutes',
+                    call: null,
                   ),
-                  TextButton.icon(
-                    icon: Icon(
-                      Icons.privacy_tip_outlined,
-                      size: 24,
-                      color: colorScheme.secondary,
-                    ),
-                    onPressed: () {},
-                    label: Text('Privacy', style: textTheme.titleMedium),
+                  _buildListCeil(
+                    label: 'Profile Settings',
+                    call: provider.updateMaterials,
                   ),
-                  TextButton.icon(
-                    icon: Icon(
-                      Icons.info_outline,
-                      size: 24,
-                      color: colorScheme.secondary,
-                    ),
-                    onPressed: () {},
-                    label: Text('About', style: textTheme.titleMedium),
-                  ),
-                  TextButton.icon(
-                    icon: Icon(
-                      Icons.logout_rounded,
-                      size: 24,
-                      color: colorScheme.secondary,
-                    ),
-                    onPressed: () async {
-                      await Supabase.instance.client.auth.signOut();
-                    },
-                    label: Text('Logout', style: textTheme.titleMedium),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    spacing: 8,
+                    children: [
+                      TextButton.icon(
+                        icon: Icon(
+                          Icons.assignment_turned_in_outlined,
+                          size: 24,
+                          color: colorScheme.secondary,
+                        ),
+                        onPressed: () {},
+                        label: Text(
+                          'Condition & Terms',
+                          style: textTheme.titleMedium,
+                        ),
+                      ),
+                      TextButton.icon(
+                        icon: Icon(
+                          Icons.privacy_tip_outlined,
+                          size: 24,
+                          color: colorScheme.secondary,
+                        ),
+                        onPressed: () {},
+                        label: Text('Privacy', style: textTheme.titleMedium),
+                      ),
+                      TextButton.icon(
+                        icon: Icon(
+                          Icons.info_outline,
+                          size: 24,
+                          color: colorScheme.secondary,
+                        ),
+                        onPressed: () {},
+                        label: Text('About', style: textTheme.titleMedium),
+                      ),
+                      TextButton.icon(
+                        icon: Icon(
+                          Icons.logout_rounded,
+                          size: 24,
+                          color: colorScheme.secondary,
+                        ),
+                        onPressed: _logout,
+                        label: Text('Logout', style: textTheme.titleMedium),
+                      ),
+                    ],
                   ),
                 ],
               ),
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
+  Future<void> _logout() async {
+    // Provider.of<PlanProvider>(context, listen: false).cleanAllPlans();
+    await Supabase.instance.client.auth.signOut();
+  }
+
   /// 用户头像块
-  Widget _buildUserHeader() {
+  Widget _buildUserHeader(ProfileProvider provider) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 24),
       child: Row(
@@ -104,13 +130,17 @@ class _ProfilePageState extends State<ProfilePage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Username',
+                (provider.profile == null || provider.profile!.nickname == null)
+                    ? 'Nickname'
+                    : provider.profile!.nickname!,
                 style: Theme.of(context).textTheme.titleLarge!.copyWith(
                   color: Theme.of(context).colorScheme.onSecondaryContainer,
                 ),
               ),
               Text(
-                '@userid · joined in 2025',
+                (provider.profile == null)
+                    ? ''
+                    : 'joined in ${provider.profile!.createdAt.year}-${provider.profile!.createdAt.month}',
                 style: Theme.of(context).textTheme.labelMedium!.copyWith(
                   color: Theme.of(context).colorScheme.onSecondaryContainer,
                 ),
@@ -123,7 +153,7 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   /// 数据统计块
-  Widget _buildOverview() {
+  Widget _buildOverview(ProfileProvider provider) {
     final textTheme = Theme.of(context).textTheme;
     final colorScheme = Theme.of(context).colorScheme;
     return Ink(
@@ -155,7 +185,9 @@ class _ProfilePageState extends State<ProfilePage> {
                   color: colorScheme.onPrimary,
                 ),
                 Text(
-                  '1873 EXP',
+                  (provider.profile == null || provider.profile!.exp == null)
+                      ? '-- EXP'
+                      : '${provider.profile!.exp!} EXP',
                   style: textTheme.titleMedium!.copyWith(
                     color: colorScheme.onPrimary,
                     fontWeight: FontWeight.w700,
@@ -169,19 +201,30 @@ class _ProfilePageState extends State<ProfilePage> {
             children: [
               _buildInfoCard(
                 icon: Icons.signal_cellular_alt_rounded,
-                title: 'HSK 2',
+                title:
+                    (provider.profile == null || provider.profile!.exp == null)
+                    ? '--'
+                    : 'HSK ${provider.profile!.level}',
                 sub: 'Level',
                 call: null,
               ),
               _buildInfoCard(
                 icon: Icons.track_changes_outlined,
-                title: '5',
+                title:
+                    (provider.profile == null ||
+                        provider.profile!.plans == null)
+                    ? '--'
+                    : '${provider.profile!.plans}',
                 sub: 'Goals',
                 call: null,
               ),
               _buildInfoCard(
                 icon: Icons.local_activity_outlined,
-                title: '63',
+                title:
+                    (provider.profile == null ||
+                        provider.profile!.practices == null)
+                    ? '--'
+                    : '${provider.profile!.practices}',
                 sub: 'Practices',
                 call: null,
               ),
@@ -193,20 +236,32 @@ class _ProfilePageState extends State<ProfilePage> {
             children: [
               _buildInfoCard(
                 icon: Icons.translate_rounded,
-                title: '175',
+                title:
+                    (provider.profile == null ||
+                        provider.profile!.characters == null)
+                    ? '--'
+                    : '${provider.profile!.characters}',
                 sub: 'Characters',
                 call: null,
               ),
               _buildInfoCard(
-                icon: Icons.library_books_outlined,
-                title: '24',
-                sub: 'Sentences',
+                icon: Icons.category_outlined, //content_copy_rounded
+                title:
+                    (provider.profile == null ||
+                        provider.profile!.words == null)
+                    ? '--'
+                    : '${provider.profile!.words}',
+                sub: 'Words',
                 call: null,
               ),
               _buildInfoCard(
-                icon: Icons.perm_data_setting_outlined,
-                title: '12',
-                sub: 'Grammars',
+                icon: Icons.library_books_outlined,
+                title:
+                    (provider.profile == null ||
+                        provider.profile!.sentences == null)
+                    ? '--'
+                    : '${provider.profile!.sentences}',
+                sub: 'Sentences',
                 call: null,
               ),
             ],
@@ -221,14 +276,14 @@ class _ProfilePageState extends State<ProfilePage> {
     required String title,
     required String sub,
     required IconData icon,
-    Function? call,
+    VoidCallback? call,
   }) {
     final textTheme = Theme.of(context).textTheme;
     final colorScheme = Theme.of(context).colorScheme;
     return Expanded(
       child: FeedbackButton(
         borderRadius: BorderRadius.circular(16),
-        onTap: () {},
+        onTap: call,
         child: Ink(
           padding: const EdgeInsets.all(16),
           decoration: ShapeDecoration(
@@ -261,12 +316,12 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   /// 列表项
-  Widget _buildListCeil({String? label, String? hit, Function? call}) {
+  Widget _buildListCeil({String? label, String? hit, VoidCallback? call}) {
     final textTheme = Theme.of(context).textTheme;
     final colorScheme = Theme.of(context).colorScheme;
     return FeedbackButton(
       borderRadius: BorderRadius.circular(16),
-      onTap: (call != null) ? () => call : null,
+      onTap: call,
       child: Ink(
         padding: const EdgeInsets.all(16),
         decoration: ShapeDecoration(

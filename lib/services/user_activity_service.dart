@@ -7,6 +7,11 @@ import 'package:toneup_app/models/user_activity_instances_model.dart';
 import 'package:toneup_app/models/user_practice_model.dart';
 
 class UserActivityService {
+  // 单例模式：确保全局只有一个服务实例
+  static final UserActivityService _instance = UserActivityService._internal();
+  factory UserActivityService() => _instance;
+  UserActivityService._internal();
+
   final SupabaseClient _supabase = Supabase.instance.client;
 
   /// 获取practice下的所有练习实例instance
@@ -107,7 +112,7 @@ class UserActivityService {
           )
           .toList();
       if (user == null) throw Exception("用户未登录");
-      final recoredDate = await _supabase
+      final recordData = await _supabase
           .from('user_score_records')
           .insert(records)
           .select();
@@ -143,9 +148,8 @@ class UserActivityService {
       //     );
       //   }
       // }
-
       if (kDebugMode) {
-        debugPrint('user_score_records 保存练习数据成功: $recoredDate');
+        debugPrint('user_score_records 保存练习数据成功: $recordData');
         debugPrint('user_ability_history 用户能力保存成功: $userAbilityData');
       }
     } catch (e) {

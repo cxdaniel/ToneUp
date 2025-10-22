@@ -1,8 +1,7 @@
-import 'dart:convert';
-
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:toneup_app/models/enumerated_types.dart';
+import 'package:toneup_app/providers/profile_provider.dart';
 import '../services/user_plan_service.dart';
 import '../models/user_weekly_plan_model.dart';
 
@@ -25,6 +24,26 @@ class PlanProvider extends ChangeNotifier {
   Function? get retryFunc => _retryFunc;
   String? get retryLabel => _retryLabel;
 
+  // 单例
+  static final PlanProvider _instance = PlanProvider._internal();
+  factory PlanProvider() => _instance;
+  PlanProvider._internal() {
+    debugPrint('PlanProvider 构造函数执行');
+    Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+      final event = data.event;
+      if (event == AuthChangeEvent.signedOut) {
+        // 登出事件触发时执行清理操作
+        cleanAllPlans();
+      }
+    });
+  }
+
+  /// 用户退出登录初始当前数据
+  void cleanAllPlans() {
+    _activePlan = null;
+    _allPlans = [];
+  }
+
   /// 刷新当前激活的计划（供外部调用）
   void refreshPlan() {
     notifyListeners();
@@ -37,16 +56,18 @@ class PlanProvider extends ChangeNotifier {
       _isLoading = true;
       _errorMessage = null;
       _loadingMessage = "initializing...";
-      notifyListeners(); // 通知UI加载中
+      notifyListeners();
 
       final User? user = Supabase.instance.client.auth.currentUser;
       if (user == null) throw Exception("用户未登录");
 
-      // 并行获取激活计划和所有计划（优化性能）
-      _loadingMessage = "Loading Active Plan...";
-      notifyListeners(); // 通知UI加载中
+      // 获取激活计划和所有计划
+      _loadingMessage = "Fetch Active Goal...";
+      notifyListeners();
       final plan = await _planService.fetchActivePlan(user.id);
       if (plan != null) {
+        _loadingMessage = "Setup Practices...";
+        notifyListeners();
         _activePlan = await _planService.fetchPracticeByPlan(plan);
       }
     } catch (e) {
@@ -56,21 +77,24 @@ class PlanProvider extends ChangeNotifier {
       if (kDebugMode) print("初始化计划失败：$e");
     } finally {
       _isLoading = false;
-      notifyListeners(); // 通知UI更新
+      notifyListeners();
     }
   }
 
   /// 获取所有计划
   Future<void> getAllPlans() async {
     try {
-      _retryFunc = null;
       final User? user = Supabase.instance.client.auth.currentUser;
       if (user == null) throw Exception("用户未登录");
 
-      _loadingMessage = "Loading User's All Plans...";
-      notifyListeners(); // 通知UI加载中
-
+      _retryFunc = null;
+      _isLoading = true;
+      _errorMessage = null;
+      _loadingMessage = "Loading All Goals...";
+      notifyListeners();
       _allPlans = await _planService.fetchPlans(user.id);
+      _loadingMessage = "Fetch Active Goal...";
+      notifyListeners();
       _activePlan = await _planService.fetchPracticeByPlan(
         allPlans
             .where(
@@ -97,18 +121,22 @@ class PlanProvider extends ChangeNotifier {
       _retryFunc = null;
       _isLoading = true;
       _errorMessage = null;
-      _loadingMessage = "Creating a New Plan...";
-      notifyListeners(); // 通知UI加载中
-
       final User? user = Supabase.instance.client.auth.currentUser;
       if (user == null) throw Exception("用户未登录");
 
+      _loadingMessage = "Creating a New Goal...";
+      notifyListeners();
       await _planService.updateOldActivePlansToPending(
         userId: user.id,
         plans: _allPlans,
       );
-      await _planService.createNewActivePlan(user.id);
-      await getAllPlans(); // 创建后刷新列表
+      final newPlan = await _planService.createNewActivePlan(user.id);
+      ProfileProvider().updateLevel(newPlan.level);
+      _loadingMessage = "Updating All Goals...";
+      notifyListeners();
+      await getAllPlans();
+      //更新profile
+      ProfileProvider().updatePlan();
     } catch (e) {
       _errorMessage = e.toString();
       _retryLabel = 'Retry';
@@ -126,9 +154,9 @@ class PlanProvider extends ChangeNotifier {
       _retryFunc = null;
       _isLoading = true;
       _errorMessage = null;
-      _loadingMessage = "Set Plan to Active";
-      notifyListeners();
 
+      _loadingMessage = "Marking to Active";
+      notifyListeners();
       final User? user = Supabase.instance.client.auth.currentUser;
       if (user == null) throw Exception("用户未登录");
 
@@ -137,6 +165,9 @@ class PlanProvider extends ChangeNotifier {
         plans: _allPlans,
       );
       await _planService.markPlanAsActive(userId: user.id, plan: plan);
+
+      _loadingMessage = "Updating All Goals...";
+      notifyListeners();
       await getAllPlans();
     } catch (e) {
       _retryLabel = 'Retry';
@@ -183,7 +214,7 @@ class PlanProvider extends ChangeNotifier {
 }
 
 double calculatePlanProgress(UserWeeklyPlanModel? plan) {
-  if (plan == null) return 0.0;
+  if (plan == null || plan.practiceData == null) return 0.0;
   final passed = plan.practiceData!.fold<int>(
     0,
     (s, p) => (s + (p.score > 0 ? 1 : 0)),

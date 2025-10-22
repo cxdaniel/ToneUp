@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
@@ -37,6 +36,7 @@ class _PlanPageState extends State<PlanPage> {
     super.dispose();
   }
 
+  /// 计算激活计划的索引
   void _calculateActiveItemIndex(
     List<UserWeeklyPlanModel> allPlans,
     UserWeeklyPlanModel? activePlan,
@@ -50,31 +50,36 @@ class _PlanPageState extends State<PlanPage> {
   }
 
   Future<void> _changeGoal(UserWeeklyPlanModel plan) async {
-    // 显示确认对话框
     PlanProvider planProvider = Provider.of<PlanProvider>(
       context,
       listen: false,
     );
+    final isActive = plan == planProvider.activePlan;
+    // 显示确认对话框
     final shouldSwitch = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Change Goal'),
-        content: const Text(
-          'Do you want to switch goals? After switching, the status of the current goal will be changed to pending.',
+        title: Text(
+          isActive
+              ? 'This is the goal you are currently ongoing.'
+              : 'Change Goal',
         ),
+        content: isActive
+            ? null
+            : Text(
+                'Do you want to switch goals? After that, the status of the current goal will be changed to pending.',
+              ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancle'),
+            child: Text(isActive ? 'OK' : 'Cancle'),
           ),
-          ElevatedButton.icon(
-            icon: Icon(Icons.swap_calls_rounded, size: 24),
-            label: Text("Change"),
-            style: ElevatedButton.styleFrom(
-              padding: EdgeInsets.fromLTRB(8, 8, 16, 8),
+          if (!isActive)
+            ElevatedButton.icon(
+              icon: Icon(Icons.swap_calls_rounded, size: 24),
+              label: Text("Change"),
+              onPressed: () => Navigator.pop(context, true),
             ),
-            onPressed: () => Navigator.pop(context, true),
-          ),
         ],
       ),
     );
@@ -181,18 +186,28 @@ class _PlanPageState extends State<PlanPage> {
       body: Consumer<PlanProvider>(
         builder: (context, planProvider, child) {
           // 加载状态
-          if (planProvider.isLoading || planProvider.allPlans.isEmpty) {
+          if (planProvider.isLoading) {
             return _buildLoadingState(context, planProvider);
           }
-          // 错误状态
+          // 加载错误状态
           if (planProvider.errorMessage != null) {
             return _buildErrorState(context, planProvider);
+          }
+          // 空状态
+          if (planProvider.allPlans.isEmpty) {
+            return Center(
+              child: Text(
+                "Your have no Active Goal yet.",
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSecondaryContainer,
+                ),
+              ),
+            );
           }
           // 延迟执行滚动
           WidgetsBinding.instance.addPostFrameCallback(
             (_) => _scrollToActiveItem(),
           );
-
           // 从 Provider 获取分组数据
           final groupedPlans = planProvider.groupPlansByLevelAndMonth();
           // 按级别升序排序
@@ -202,9 +217,9 @@ class _PlanPageState extends State<PlanPage> {
               .expand((m) => m)
               .toList();
 
+          // 激活计划的索引
           _calculateActiveItemIndex(allPlans, planProvider.activePlan);
 
-          // 保留原有的吸顶UI结构（核心不变）
           return Padding(
             padding: const EdgeInsets.only(top: 0, bottom: 88),
             child: RefreshIndicator(
@@ -302,7 +317,7 @@ class _PlanPageState extends State<PlanPage> {
     required UserWeeklyPlanModel plan,
     required bool isActive,
     required ThemeData theme,
-    required VoidCallback onTap,
+    VoidCallback? onTap,
   }) {
     IconData icon;
     Color iconColor;

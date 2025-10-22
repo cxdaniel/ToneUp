@@ -19,8 +19,18 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  /// final userPlanService = UserPlanService();
   UserWeeklyPlanModel? _planData;
+
+  @override
+  void initState() {
+    super.initState();
+    if (Provider.of<PlanProvider>(context, listen: false).activePlan == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Provider.of<PlanProvider>(context, listen: false).initialize();
+        // Provider.of<PlanProvider>(context, listen: false).getAllPlans();
+      });
+    }
+  }
 
   void _gotoPagePlan() {
     if (kDebugMode) debugPrint('on tap');
@@ -576,24 +586,24 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<PlanProvider>(
-      builder: (context, planProvider, child) {
-        if (planProvider.isLoading) {
-          return _buildLoadingState(planProvider);
-        }
-        if (planProvider.errorMessage != null) {
-          return _buildErrorState(planProvider);
-        }
-        _planData = planProvider.activePlan;
-        return Scaffold(
-          backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
-          body: Center(
-            child: _planData == null
-                ? _buildCreateState(planProvider)
-                : _buildDataState(),
-          ),
-        );
-      },
+    return Scaffold(
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
+      body: Consumer<PlanProvider>(
+        builder: (context, planProvider, child) {
+          _planData = planProvider.activePlan;
+          if (planProvider.isLoading) {
+            return _buildLoadingState(planProvider);
+          }
+          if (planProvider.errorMessage != null) {
+            return _buildErrorState(planProvider);
+          }
+          if (_planData == null) {
+            return _buildCreateState(planProvider);
+          } else {
+            return _buildDataState();
+          }
+        },
+      ),
     );
   }
 

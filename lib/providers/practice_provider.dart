@@ -6,6 +6,7 @@ import 'package:toneup_app/models/quizzes/quiz_choice_model.dart';
 import 'package:toneup_app/models/user_activity_instances_model.dart';
 import 'package:toneup_app/models/user_practice_model.dart';
 import 'package:toneup_app/models/user_weekly_plan_model.dart';
+import 'package:toneup_app/providers/profile_provider.dart';
 import '../services/user_activity_service.dart';
 
 class PracticeProvider extends ChangeNotifier {
@@ -156,5 +157,7 @@ class PracticeProvider extends ChangeNotifier {
   Future<void> submitPracticeResult() async {
     await _service.saveResultScores(_quizzes, _practiceData!);
     notifyListeners();
+    // 更新用户档案数据
+    ProfileProvider().updateMaterials();
   }
 }
