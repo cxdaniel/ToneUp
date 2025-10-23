@@ -34,7 +34,7 @@ migrate_working_dir/
 
 # 构建产物（核心忽略项）
 /build/*
-!/buidl/web/
+!/build/web/
 /coverage/
 
 # Symbolication related
