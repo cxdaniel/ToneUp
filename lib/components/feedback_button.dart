@@ -61,7 +61,7 @@ class _FeedbackButtonState extends State<FeedbackButton>
     if (widget.onTap != null) {
       _controller.reverse(); // 从1缩放到scaleFactor
       if (widget.enableFeedback) {
-        HapticFeedback.mediumImpact();
+        HapticFeedback.heavyImpact();
       }
     }
   }
@@ -80,9 +80,9 @@ class _FeedbackButtonState extends State<FeedbackButton>
   // 统一处理点击反馈
   void _handleTap(BuildContext context) {
     // 1. 系统触感反馈（震动）
-    // if (widget.enableFeedback) {
-    //   HapticFeedback.lightImpact();
-    // }
+    if (widget.enableFeedback) {
+      HapticFeedback.heavyImpact();
+    }
     // 2. 执行实际点击逻辑
     widget.onTap?.call();
   }

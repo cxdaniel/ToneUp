@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:toneup_app/components/quiz_choice_widget.dart';
@@ -18,11 +19,18 @@ class PracticePage extends StatefulWidget {
 class _PracticePageState extends State<PracticePage> {
   bool _isSubmitting = false;
   late TTSProvider ttsProvider;
+  late ThemeData theme;
 
   @override
   void initState() {
     super.initState();
     ttsProvider = Provider.of<TTSProvider>(context, listen: false);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    theme = Theme.of(context);
   }
 
   @override
@@ -49,32 +57,28 @@ class _PracticePageState extends State<PracticePage> {
           PracticeProvider()
             ..initialize(practiceData, planData, topic, culture),
       child: Scaffold(
-        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
+        backgroundColor: theme.colorScheme.surfaceContainerHigh,
         body: Consumer<PracticeProvider>(
           builder: (ctx, practiceProvider, _) {
             final quizzes = practiceProvider.quizzes;
 
-            /// 加载状态
+            // 加载状态
             if (practiceProvider.isLoading) {
               return const Center(child: CircularProgressIndicator());
             }
-
-            /// 错误状态
+            // 错误状态
             if (practiceProvider.errorMessage != null) {
-              _buildErrorState(practiceProvider);
+              return _buildErrorState(practiceProvider);
             }
-
-            /// 练习完成状态
+            // 练习完成状态
             if (practiceProvider.isPracticeCompleted) {
-              _buildFinishedState(practiceProvider);
+              return _buildFinishedState(practiceProvider);
             }
-
-            /// 无题状态
+            // 无题状态
             if (quizzes.isEmpty) {
               return const Center(child: Text('暂无练习数据'));
             }
-
-            /// 正常状态
+            // 正常状态
             return Scaffold(
               backgroundColor: Theme.of(
                 context,
@@ -91,6 +95,11 @@ class _PracticePageState extends State<PracticePage> {
                 ),
                 actionsPadding: EdgeInsets.symmetric(horizontal: 16),
                 actions: [Icon(Icons.more_horiz)],
+                backgroundColor: theme.colorScheme.surfaceContainerHigh,
+                foregroundColor: theme.colorScheme.secondary,
+                surfaceTintColor: theme.colorScheme.surfaceContainerHigh,
+                shadowColor: theme.colorScheme.surfaceContainerLowest,
+                scrolledUnderElevation: 1,
               ),
               body: AnimatedSwitcher(
                 duration: const Duration(milliseconds: 500),
@@ -152,7 +161,7 @@ class _PracticePageState extends State<PracticePage> {
           children: [
             Icon(
               Icons.error_outline,
-              color: Theme.of(context).colorScheme.error,
+              color: theme.colorScheme.error,
               size: 50.0,
             ),
             Text('加载失败: ${practiceProvider.errorMessage}'),
@@ -160,7 +169,7 @@ class _PracticePageState extends State<PracticePage> {
             if (practiceProvider.retryFunc != null)
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context).colorScheme.primary,
+                  backgroundColor: theme.colorScheme.primary,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 30,
                     vertical: 12,
@@ -174,8 +183,8 @@ class _PracticePageState extends State<PracticePage> {
                 },
                 child: Text(
                   practiceProvider.retryLabel ?? "Retry",
-                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: Theme.of(context).colorScheme.onPrimary,
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    color: theme.colorScheme.onPrimary,
                   ),
                 ),
               ),
@@ -191,43 +200,34 @@ class _PracticePageState extends State<PracticePage> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.check_circle, color: Colors.green, size: 80),
+          Icon(Icons.check_circle, color: Colors.green, size: 80),
           const SizedBox(height: 20),
-          const Text('Practice Completed!', style: TextStyle(fontSize: 20)),
+          Text(
+            'Practice Completed!',
+            style: theme.textTheme.headlineSmall!.copyWith(
+              color: theme.colorScheme.secondary,
+              fontWeight: FontWeight.w300,
+            ),
+          ),
           const SizedBox(height: 10),
           ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              minimumSize: Size.square(48),
+              backgroundColor: theme.colorScheme.surfaceContainerLowest,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(24),
+              ),
+            ),
             onPressed: _isSubmitting
                 ? null
-                : () async {
-                    setState(() {
-                      _isSubmitting = true;
-                    });
-                    try {
-                      await practiceProvider.submitPracticeResult();
-                      if (mounted) {
-                        context.pop();
-                      }
-                    } catch (e) {
-                      // 处理错误，如显示错误提示
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('提交失败: ${e.toString()}'),
-                            showCloseIcon: true,
-                            // duration: Durations.long4,
-                          ),
-                        );
-                      }
-                    } finally {
-                      if (mounted) {
-                        setState(() {
-                          _isSubmitting = false;
-                        });
-                      }
-                    }
+                : () {
+                    HapticFeedback.heavyImpact();
+                    _submitHandeller(practiceProvider);
                   },
             child: _isSubmitting
                 ? Row(
+                    mainAxisSize: MainAxisSize.min,
+                    spacing: 8,
                     children: [
                       SizedBox(
                         width: 20,
@@ -237,13 +237,54 @@ class _PracticePageState extends State<PracticePage> {
                           color: Colors.white,
                         ),
                       ),
-                      const Text('Submiting...'),
+                      Text(
+                        'Submiting...',
+                        style: theme.textTheme.titleMedium!.copyWith(
+                          color: theme.colorScheme.outline,
+                        ),
+                      ),
                     ],
                   )
-                : const Text('Submit'),
+                : Text(
+                    'Submit',
+                    style: theme.textTheme.titleMedium!.copyWith(
+                      color: theme.colorScheme.primary,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
           ),
         ],
       ),
     );
+  }
+
+  /// 提交练习结果
+  Future<void> _submitHandeller(PracticeProvider provider) async {
+    setState(() {
+      _isSubmitting = true;
+    });
+    try {
+      await provider.submitPracticeResult();
+      if (mounted) {
+        context.pop();
+      }
+    } catch (e) {
+      // 处理错误，如显示错误提示
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('提交失败: ${e.toString()}'),
+            showCloseIcon: true,
+            // duration: Durations.long4,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+        });
+      }
+    }
   }
 }

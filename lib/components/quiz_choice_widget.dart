@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:toneup_app/components/chars_with_pinyin.dart';
 import 'package:toneup_app/components/feedback_button.dart';
+import 'package:toneup_app/components/quiz_feedback_board.dart';
 import 'package:toneup_app/components/wave_animation.dart';
 import 'package:toneup_app/models/enumerated_types.dart';
 import 'package:toneup_app/models/quizzes/quiz_model.dart';
@@ -17,17 +19,58 @@ class QuizChoiceWidget extends StatefulWidget {
   State<QuizChoiceWidget> createState() => _QuizChoiceWidgetState();
 }
 
+enum ColorState { fill, border, above }
+
 class _QuizChoiceWidgetState extends State<QuizChoiceWidget> {
-  late QuizChoice quiz;
   dynamic voicePosition;
+  bool _isBottomSheetShowing = false;
+  late QuizChoice quiz;
+  late QuizProvider quizProvider;
+  late PracticeProvider practiceProvider;
+  late ThemeData theme;
+  late TTSProvider tts;
+  late Map<ColorState, Color> colorPass;
+  late Map<ColorState, Color> colorFail;
+  late Map<ColorState, Color> colorSelect;
+  late Map<ColorState, Color> colorIdle;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    theme = Theme.of(context);
+    tts = context.watch<TTSProvider>();
+
+    colorPass = {
+      ColorState.fill: Color(0xFFD1E2C8),
+      ColorState.border: Color(0x28496A38),
+      ColorState.above: Color(0xFF4A6B38),
+    };
+    colorFail = {
+      ColorState.fill: theme.colorScheme.tertiaryContainer, //0xFFFFD8E4
+      ColorState.border: Color(0x286750A4),
+      ColorState.above: Color(0xFF7D5260),
+    };
+    colorSelect = {
+      ColorState.fill: theme.colorScheme.primaryContainer, //0xFFEADDFF
+      ColorState.border: Color(0x286750A4),
+      ColorState.above: theme.colorScheme.onPrimaryContainer, //0xFF4F378A,
+    };
+    colorIdle = {
+      ColorState.fill: theme.colorScheme.surfaceContainerLowest, //White
+      ColorState.border: Colors.transparent,
+      ColorState.above: theme.colorScheme.primary, //0xFF6750A4,
+    };
+  }
 
   @override
   void initState() {
     super.initState();
-    final tts = Provider.of<TTSProvider>(context, listen: false);
+    practiceProvider = Provider.of<PracticeProvider>(context, listen: false);
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final quizProvider = Provider.of<QuizProvider>(context, listen: false);
-      final quiz = quizProvider.quiz as QuizChoice;
+      tts = Provider.of<TTSProvider>(context, listen: false);
+      quizProvider = Provider.of<QuizProvider>(context, listen: false);
+      quiz = quizProvider.quiz as QuizChoice;
       if (quiz.actInstance.activity!.quizTemplate == QuizTemplate.voiceToText) {
         voicePosition = quiz.material;
         tts.play(quiz.material.voice);
@@ -35,94 +78,92 @@ class _QuizChoiceWidgetState extends State<QuizChoiceWidget> {
     });
   }
 
+  /// 弹出反馈面板
+  void _showFeedbackBottomSheet({
+    required BuildContext context,
+    required QuizProvider quizProvider,
+    required PracticeProvider practiceProvider,
+  }) {
+    _isBottomSheetShowing = true;
+    showModalBottomSheet(
+      context: context,
+      isDismissible: false,
+      enableDrag: false,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      backgroundColor: theme.colorScheme.primary,
+      barrierColor: theme.colorScheme.inverseSurface.withAlpha(50),
+      builder: (context) => QuizFeedbackBoard(
+        quizProvider: quizProvider,
+        practiceProvider: practiceProvider,
+        theme: theme,
+      ),
+    ).whenComplete(() {
+      _isBottomSheetShowing = false;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    final quizProvider = Provider.of<QuizProvider>(context);
-    quiz = quizProvider.quiz as QuizChoice;
+    final screenHeight = MediaQuery.of(context).size.height;
+    final effectiveMinHeight = screenHeight - 115;
     return Consumer<QuizProvider>(
-      builder: (ctx, quizProvider, _) {
+      builder: (ctx, provider, _) {
+        quizProvider = provider;
+        quiz = provider.quiz as QuizChoice;
+
+        if ((quizProvider.state == QuizState.fail ||
+                quizProvider.state == QuizState.pass) &&
+            mounted &&
+            !_isBottomSheetShowing) {
+          Future.microtask(() {
+            if (mounted) {
+              _showFeedbackBottomSheet(
+                context: ctx,
+                quizProvider: quizProvider,
+                practiceProvider: practiceProvider,
+              );
+            }
+          });
+        }
         return Stack(
           children: [
-            Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                spacing: 24,
-                children: [
-                  Text(quizProvider.quiz.actInstance.id.toString()),
-
-                  /// 题干区域 //////////////////////////////////////////////////
-                  _buildMaterial(quizProvider, quiz),
-
-                  /// 题问区 ////////////////////////////////////////////////////
-                  Expanded(
-                    child: SingleChildScrollView(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        spacing: 4,
-                        children: [
-                          if (quiz.isRenewal)
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                              ),
-                              decoration: ShapeDecoration(
-                                color: Theme.of(
-                                  context,
-                                ).colorScheme.secondaryContainer,
-                                shape: RoundedRectangleBorder(
-                                  side: BorderSide(
-                                    width: 1,
-                                    strokeAlign: BorderSide.strokeAlignCenter,
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.secondaryFixedDim,
-                                  ),
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                              ),
-                              child: Text(
-                                'Renewal',
-                                style: Theme.of(context).textTheme.labelLarge
-                                    ?.copyWith(
-                                      color: Theme.of(
-                                        context,
-                                      ).colorScheme.onSecondaryContainer,
-                                    ),
-                              ),
+            SingleChildScrollView(
+              child: Container(
+                padding: EdgeInsets.all(24),
+                constraints: BoxConstraints(minHeight: effectiveMinHeight),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  spacing: 24,
+                  children: [
+                    _buildMaterial(quizProvider, quiz),
+                    _buildQuestion(),
+                    Column(
+                      spacing: 24,
+                      children: [
+                        // 选项
+                        _buildQuizOptions(quizProvider, quiz),
+                        // 底部空间
+                        SizedBox(
+                          child: Text(
+                            'actId: ${quizProvider.quiz.actInstance.id} / ${quiz.actInstance.activity!.quizTemplate}',
+                            style: theme.textTheme.labelSmall!.copyWith(
+                              color: theme.colorScheme.primaryFixed,
                             ),
-                          Text(
-                            '${quiz.actInstance.activity!.quizTemplate.name}: ${quiz.question}',
-                            style: Theme.of(context).textTheme.titleMedium
-                                ?.copyWith(
-                                  color: Theme.of(
-                                    context,
-                                  ).colorScheme.onSecondaryContainer,
-                                ),
                           ),
-                        ],
-                      ),
+                        ),
+                        if (quizProvider.state != QuizState.initial &&
+                            quizProvider.state != QuizState.intouch)
+                          const SizedBox(height: 50),
+                      ],
                     ),
-                  ),
-
-                  /// 选项区 ////////////////////////////////////////////////////
-                  _buildQuizOptions(quizProvider, quiz),
-
-                  /// 底部安全距离 ///////////////////////////////////////////////
-                  Expanded(
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(maxHeight: 60),
-                    ),
-                  ),
-                  // const SizedBox(height: 60),
-                ],
+                  ],
+                ),
               ),
             ),
-
-            /// 反馈区 //////////////////////////////////////////////////////////
-            if (quizProvider.state != QuizState.intouch &&
-                quizProvider.state != QuizState.initial)
-              _buildFeedbackBoard(quizProvider, quiz),
+            _buildCheckButton((quizProvider.state == QuizState.touched)),
           ],
         );
       },
@@ -134,32 +175,49 @@ class _QuizChoiceWidgetState extends State<QuizChoiceWidget> {
     if (quiz.actInstance.activity!.quizTemplate == QuizTemplate.textToVoice) {
       return SizedBox.shrink();
     }
-    final tts = context.watch<TTSProvider>();
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      crossAxisAlignment: CrossAxisAlignment.end,
+      // crossAxisAlignment: CrossAxisAlignment.end,
       spacing: 8,
       children: [
-        IconButton(
-          iconSize: 24,
-          padding: EdgeInsets.all(0),
-          // constraints: BoxConstraints.tight(Size.square(24)),
-          style: IconButton.styleFrom(
-            backgroundColor:
-                (tts.state == TTSState.playing &&
+        FeedbackButton(
+          onTap:
+              (tts.state == TTSState.loading && voicePosition == quiz.material)
+              ? null
+              : () {
+                  HapticFeedback.heavyImpact();
+                  voicePosition = quiz.material;
+                  tts.play(quiz.material.voice);
+                },
+          borderRadius: BorderRadius.circular(24),
+          child: Container(
+            width: 40,
+            height: 40,
+            padding: EdgeInsets.all(8),
+            decoration: ShapeDecoration(
+              color:
+                  (tts.state == TTSState.playing &&
+                      voicePosition == quiz.material)
+                  ? theme.colorScheme.primary
+                  : theme.colorScheme.secondaryContainer,
+              shape: CircleBorder(),
+            ),
+            child:
+                (tts.state == TTSState.loading &&
                     voicePosition == quiz.material)
-                ? Theme.of(context).colorScheme.primary
-                : Theme.of(context).colorScheme.secondaryContainer,
+                ? CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: theme.colorScheme.primaryFixed,
+                  )
+                : Icon(
+                    Icons.volume_up_rounded,
+                    color:
+                        (tts.state == TTSState.playing &&
+                            voicePosition == quiz.material)
+                        ? theme.colorScheme.onPrimary
+                        : theme.colorScheme.primary,
+                  ),
           ),
-          color:
-              (tts.state == TTSState.playing && voicePosition == quiz.material)
-              ? Theme.of(context).colorScheme.onPrimary
-              : Theme.of(context).colorScheme.primary,
-          icon: Icon(Icons.volume_up_rounded),
-          onPressed: () {
-            voicePosition = quiz.material;
-            tts.play(quiz.material.voice);
-          },
         ),
         Row(
           spacing: 4,
@@ -167,9 +225,7 @@ class _QuizChoiceWidgetState extends State<QuizChoiceWidget> {
             OutlinedButton.icon(
               label: Text('Pinyin'),
               style: OutlinedButton.styleFrom(
-                side: BorderSide(
-                  color: Theme.of(context).colorScheme.secondaryFixedDim,
-                ),
+                side: BorderSide(color: theme.colorScheme.secondaryFixedDim),
                 // minimumSize: Size(0, 32),
                 padding: EdgeInsets.symmetric(horizontal: 12),
               ),
@@ -180,9 +236,7 @@ class _QuizChoiceWidgetState extends State<QuizChoiceWidget> {
             OutlinedButton.icon(
               label: Text('1.0x'),
               style: OutlinedButton.styleFrom(
-                side: BorderSide(
-                  color: Theme.of(context).colorScheme.secondaryFixedDim,
-                ),
+                side: BorderSide(color: theme.colorScheme.secondaryFixedDim),
                 // minimumSize: Size(0, 32),
                 padding: EdgeInsets.symmetric(horizontal: 12),
               ),
@@ -212,7 +266,7 @@ class _QuizChoiceWidgetState extends State<QuizChoiceWidget> {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: ShapeDecoration(
-        color: const Color(0xFFF7F2FA) /* Schemes-Surface-Container-Low */,
+        color: theme.colorScheme.surfaceContainerLow,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
       child: Column(
@@ -230,7 +284,11 @@ class _QuizChoiceWidgetState extends State<QuizChoiceWidget> {
               spacing: 4,
               runSpacing: 4,
               children: quiz.material.text.split('').map<Widget>((char) {
-                return CharsWithPinyin(chinese: char, size: 48);
+                if (quiz.material.text.length < 20) {
+                  return CharsWithPinyin(chinese: char, size: 48);
+                } else {
+                  return CharsWithPinyin(chinese: char, size: 32);
+                }
               }).toList(),
             ),
           ),
@@ -241,12 +299,13 @@ class _QuizChoiceWidgetState extends State<QuizChoiceWidget> {
 
   /// 题干组件-听音选文本
   Widget _voiceToTextMaterial(QuizProvider provider, QuizChoice quiz) {
-    final tts = context.watch<TTSProvider>();
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: ShapeDecoration(
-        color: const Color(0xFFF7F2FA) /* Schemes-Surface-Container-Low */,
+        color: theme
+            .colorScheme
+            .surfaceContainerLow, //const Color(0xFFF7F2FA) /* Schemes-Surface-Container-Low */,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
       child: Column(
@@ -269,6 +328,44 @@ class _QuizChoiceWidgetState extends State<QuizChoiceWidget> {
           ),
         ],
       ),
+    );
+  }
+
+  /// 构建题问区
+  Widget _buildQuestion() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      spacing: 4,
+      children: [
+        if (quiz.isRenewal)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            decoration: ShapeDecoration(
+              color: theme.colorScheme.secondaryContainer,
+              shape: RoundedRectangleBorder(
+                side: BorderSide(
+                  width: 1,
+                  strokeAlign: BorderSide.strokeAlignCenter,
+                  color: theme.colorScheme.secondaryFixedDim,
+                ),
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            child: Text(
+              'Renewal',
+              style: theme.textTheme.labelLarge?.copyWith(
+                color: theme.colorScheme.onSecondaryContainer,
+              ),
+            ),
+          ),
+        Text(
+          quiz.question,
+          style: theme.textTheme.titleMedium?.copyWith(
+            color: theme.colorScheme.onSecondaryContainer,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
     );
   }
 
@@ -297,52 +394,61 @@ class _QuizChoiceWidgetState extends State<QuizChoiceWidget> {
           child: Ink(
             decoration: ShapeDecoration(
               color: option.state == OptionStatus.pass
-                  ? Color(0xFFD1E2C8)
+                  ? colorPass[ColorState.fill]
                   : option.state == OptionStatus.fail
-                  ? Color(0xFFFFD8E4)
+                  ? colorFail[ColorState.fill]
                   : option.state == OptionStatus.select
-                  ? Theme.of(context).colorScheme.primaryContainer
-                  : Theme.of(context).colorScheme.surfaceContainerLowest,
+                  ? colorSelect[ColorState.fill]
+                  : colorIdle[ColorState.fill],
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
+                side: BorderSide(
+                  width: 2,
+                  color: option.state == OptionStatus.pass
+                      ? colorPass[ColorState.border]!
+                      : option.state == OptionStatus.fail
+                      ? colorFail[ColorState.border]!
+                      : option.state == OptionStatus.select
+                      ? colorSelect[ColorState.border]!
+                      : colorIdle[ColorState.border]!,
+                ),
               ),
             ),
             child: Padding(
               padding: const EdgeInsets.all(16.0),
               child: Row(
-                spacing: 4,
+                spacing: 8,
                 children: [
                   option.state == OptionStatus.pass
                       ? Icon(
                           Icons.check_circle_rounded,
-                          color: Color(0xFF4A6B38),
+                          color: colorPass[ColorState.above],
                         )
                       : option.state == OptionStatus.fail
                       ? Icon(
                           Icons.check_circle_rounded,
-                          color: Color(0xFF7D5260),
+                          color: colorFail[ColorState.above],
                         )
                       : option.state == OptionStatus.select
                       ? Icon(
                           Icons.check_circle_rounded,
-                          color: Theme.of(context).colorScheme.primary,
+                          color: colorSelect[ColorState.above],
                         )
                       : Icon(
                           Icons.circle_outlined,
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.secondaryFixedDim,
+                          color: theme.colorScheme.secondaryFixedDim,
                         ),
                   Text(
                     option.text,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
                       color: option.state == OptionStatus.pass
-                          ? Color(0xFF4A6B38)
+                          ? colorPass[ColorState.above]
                           : option.state == OptionStatus.fail
-                          ? Color(0xFF7D5260)
+                          ? colorFail[ColorState.above]
                           : option.state == OptionStatus.select
-                          ? Theme.of(context).colorScheme.onPrimaryContainer
-                          : Theme.of(context).colorScheme.primary,
+                          ? colorSelect[ColorState.above]
+                          : colorIdle[ColorState.above],
                     ),
                   ),
                 ],
@@ -356,7 +462,6 @@ class _QuizChoiceWidgetState extends State<QuizChoiceWidget> {
 
   /// 选项组件-看文本选音
   Widget _textToVoiceOptions(QuizProvider provider, QuizChoice quiz) {
-    final tts = context.watch<TTSProvider>();
     return Column(
       spacing: 16,
       children: quiz.options.map<Widget>((option) {
@@ -374,8 +479,8 @@ class _QuizChoiceWidgetState extends State<QuizChoiceWidget> {
                   : option.state == OptionStatus.fail
                   ? Color(0xFFFFD8E4)
                   : option.state == OptionStatus.select
-                  ? Theme.of(context).colorScheme.primaryContainer
-                  : Theme.of(context).colorScheme.surfaceContainerLowest,
+                  ? theme.colorScheme.primaryContainer
+                  : theme.colorScheme.surfaceContainerLowest,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
               ),
@@ -398,7 +503,7 @@ class _QuizChoiceWidgetState extends State<QuizChoiceWidget> {
                       : option.state == OptionStatus.select
                       ? Icon(
                           Icons.check_circle_rounded,
-                          color: Theme.of(context).colorScheme.primary,
+                          color: theme.colorScheme.primary,
                         )
                       : Icon(
                           Icons.circle_outlined,
@@ -408,14 +513,14 @@ class _QuizChoiceWidgetState extends State<QuizChoiceWidget> {
                         ),
                   Text(
                     option.text,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    style: theme.textTheme.titleMedium?.copyWith(
                       color: option.state == OptionStatus.pass
                           ? Color(0xFF4A6B38)
                           : option.state == OptionStatus.fail
                           ? Color(0xFF7D5260)
                           : option.state == OptionStatus.select
-                          ? Theme.of(context).colorScheme.onPrimaryContainer
-                          : Theme.of(context).colorScheme.primary,
+                          ? theme.colorScheme.onPrimaryContainer
+                          : theme.colorScheme.primary,
                     ),
                   ),
                   Spacer(),
@@ -436,100 +541,69 @@ class _QuizChoiceWidgetState extends State<QuizChoiceWidget> {
     );
   }
 
-  /// 题目解析反馈区
-  Widget _buildFeedbackBoard(QuizProvider provider, QuizChoice quiz) {
-    final practiceProvider = Provider.of<PracticeProvider>(
-      context,
-      listen: false,
-    );
+  /// 底部行动按钮
+  Widget _buildCheckButton(bool isShow) {
     return Positioned(
       left: 0,
       right: 0,
       bottom: 0,
-      child: Container(
-        // padding: EdgeInsets.all(24),
-        padding: EdgeInsets.fromLTRB(24, 24, 24, 48),
-        decoration: ShapeDecoration(
-          color: Theme.of(context).colorScheme.primary,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      child: AnimatedSlide(
+        offset: isShow ? Offset(0, 0) : Offset(0, 1),
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOutQuart,
+        child: Container(
+          padding: EdgeInsets.fromLTRB(24, 24, 24, 48),
+          decoration: ShapeDecoration(
+            color: theme.colorScheme.primary,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
           ),
-        ),
-        child: Column(
-          spacing: 16,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // 答案反馈
-            if (provider.state == QuizState.fail)
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                spacing: 16,
-                children: [
-                  Text(
-                    'Not quite right',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      color: Color(0xFFFFD8E4),
-                      fontWeight: FontWeight.w500,
+          child: Material(
+            color: Colors.transparent,
+            child: FeedbackButton(
+              borderRadius: BorderRadius.circular(16),
+              onTap: _handleCheckAnswer,
+              child: Ink(
+                padding: EdgeInsets.all(12),
+                decoration: ShapeDecoration(
+                  color: theme.colorScheme.primaryContainer,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  spacing: 10,
+                  children: [
+                    Icon(
+                      Icons.rule_rounded,
+                      color: theme.colorScheme.onPrimaryContainer,
                     ),
-                  ),
-                  Text(
-                    provider.feedbackMessage,
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: Theme.of(context).colorScheme.onPrimary,
-                    ), // Color(0xFFFFD8E4)
-                  ),
-                ],
-              )
-            else if (provider.state == QuizState.pass)
-              Column(
-                spacing: 16,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    'Awesome!',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      color: Color(0xFFB7EC9B),
-                      fontWeight: FontWeight.w500,
+                    Text(
+                      'Check',
+                      style: theme.textTheme.titleMedium!.copyWith(
+                        color: theme.colorScheme.onPrimaryContainer,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
-                  Text(
-                    provider.feedbackMessage,
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: Theme.of(context).colorScheme.onPrimary,
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            // 提交/重试按钮（根据状态动态变化）
-            if (provider.state == QuizState.touched)
-              ElevatedButton(
-                onPressed: () =>
-                    _handleSubmit(quiz, practiceProvider, provider),
-                child: const Text('提交答案'),
-              )
-            else if (provider.state == QuizState.fail &&
-                quiz.retryCount < quiz.maxRetryTime)
-              ElevatedButton(
-                onPressed: () => provider.retry(),
-                child: const Text('重新答题'),
-              )
-            else
-              ElevatedButton(
-                onPressed: () => practiceProvider.nextQuiz(),
-                child: const Text('继续'),
-              ),
-          ],
+            ),
+          ),
         ),
       ),
     );
   }
 
-  /// 处理答案提交
-  void _handleSubmit(
-    QuizBase quiz,
-    PracticeProvider practiceProvider,
-    QuizProvider quizProvider,
-  ) {
+  /// 验证答案
+  void _handleCheckAnswer() {
+    final practiceProvider = Provider.of<PracticeProvider>(
+      context,
+      listen: false,
+    );
+    final quizProvider = Provider.of<QuizProvider>(context, listen: false);
     quizProvider.submitAnswer();
     practiceProvider.markQuizResult(quiz);
   }
