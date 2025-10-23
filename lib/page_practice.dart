@@ -45,107 +45,94 @@ class _PracticePageState extends State<PracticePage> {
 
   @override
   Widget build(BuildContext context) {
-    // 1. 获取路由参数（此时 context 已可用，可安全调用 GoRouterState.of）
     final extra = GoRouterState.of(context).extra as Map<String, dynamic>;
     final UserPracticeModel practiceData = extra['practiceData'];
     final UserWeeklyPlanModel planData = extra['planData'];
     final String topic = planData.materialSnapshot.topicTag;
     final String culture = planData.materialSnapshot.cultureTag;
-    // 2. 通过 ChangeNotifierProvider 创建并初始化 PracticeProvider
     return ChangeNotifierProvider(
       create: (ctx) =>
           PracticeProvider()
             ..initialize(practiceData, planData, topic, culture),
-      child: Scaffold(
-        backgroundColor: theme.colorScheme.surfaceContainerHigh,
-        body: Consumer<PracticeProvider>(
-          builder: (ctx, practiceProvider, _) {
-            final quizzes = practiceProvider.quizzes;
-
-            // 加载状态
-            if (practiceProvider.isLoading) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            // 错误状态
-            if (practiceProvider.errorMessage != null) {
-              return _buildErrorState(practiceProvider);
-            }
-            // 练习完成状态
-            if (practiceProvider.isPracticeCompleted) {
-              return _buildFinishedState(practiceProvider);
-            }
-            // 无题状态
-            if (quizzes.isEmpty) {
-              return const Center(child: Text('暂无练习数据'));
-            }
-            // 正常状态
-            return Scaffold(
-              backgroundColor: Theme.of(
-                context,
-              ).colorScheme.surfaceContainerHigh,
-              appBar: AppBar(
-                leading: IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: context.pop,
-                ),
-                title: LinearProgressIndicator(
-                  minHeight: 10,
-                  borderRadius: BorderRadius.circular(10),
-                  value: practiceProvider.progress,
-                ),
-                actionsPadding: EdgeInsets.symmetric(horizontal: 16),
-                actions: [Icon(Icons.more_horiz)],
-                backgroundColor: theme.colorScheme.surfaceContainerHigh,
-                foregroundColor: theme.colorScheme.secondary,
-                surfaceTintColor: theme.colorScheme.surfaceContainerHigh,
-                shadowColor: theme.colorScheme.surfaceContainerLowest,
-                scrolledUnderElevation: 1,
+      child: Consumer<PracticeProvider>(
+        builder: (ctx, practiceProvider, _) {
+          final quizzes = practiceProvider.quizzes;
+          return Scaffold(
+            backgroundColor: theme.colorScheme.surfaceContainerHigh,
+            appBar: AppBar(
+              leading: IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: context.pop,
               ),
-              body: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 500),
-                switchInCurve: Curves.easeInOut,
-                // 出场 & 入场动画：根据 forward/backward 区分方向
-                transitionBuilder: (child, animation) {
-                  // 判断当前 child 是否是新页面
-                  final isNewChild =
-                      child.key ==
-                      ValueKey(practiceProvider.currentTouchedCount);
-                  // 不同方向的位移设置
-                  final inOffset = const Offset(1.0, 0.0); //从右进入
-                  final outOffset = const Offset(-1.0, 0.0); // 往左出
-                  // 入场动画
-                  final inAnimation =
-                      Tween<Offset>(begin: inOffset, end: Offset.zero).animate(
-                        CurvedAnimation(
-                          parent: animation,
-                          curve: Curves.easeOutQuad,
-                        ),
-                      );
-                  // 出场动画
-                  final outAnimation =
-                      Tween<Offset>(begin: Offset.zero, end: outOffset).animate(
-                        CurvedAnimation(
-                          parent: ReverseAnimation(animation),
-                          curve: Curves.easeInOutQuad,
-                        ),
-                      );
-
-                  // 区分新旧页面应用不同动画
-                  return SlideTransition(
-                    position: isNewChild ? inAnimation : outAnimation,
-                    child: FadeTransition(opacity: animation, child: child),
-                  );
-                },
-                child: ChangeNotifierProvider(
-                  key: ValueKey(practiceProvider.currentTouchedCount),
-                  create: (context) =>
-                      QuizProvider()..initQuiz(practiceProvider.currentQuiz),
-                  child: QuizChoiceWidget(),
-                ),
+              title: LinearProgressIndicator(
+                minHeight: 10,
+                borderRadius: BorderRadius.circular(10),
+                value: practiceProvider.progress,
+                // backgroundColor: theme.colorScheme.outlineVariant,
+                backgroundColor: theme.focusColor,
               ),
-            );
-          },
-        ),
+              actionsPadding: EdgeInsets.symmetric(horizontal: 16),
+              actions: [Icon(Icons.more_horiz)],
+              backgroundColor: theme.colorScheme.surfaceContainerHigh,
+              foregroundColor: theme.colorScheme.secondary,
+              surfaceTintColor: theme.colorScheme.surfaceContainerHigh,
+              shadowColor: theme.colorScheme.surfaceContainerLowest,
+              scrolledUnderElevation: 1,
+            ),
+            body:
+                (practiceProvider.isLoading) // 加载中状态
+                ? _buildLoadingState()
+                : (practiceProvider.errorMessage != null) // 错误状态
+                ? _buildErrorState(practiceProvider)
+                : (practiceProvider.isPracticeCompleted) // 完成状态
+                ? _buildFinishedState(practiceProvider)
+                : (quizzes.isEmpty) //无题状态
+                ? _buildEmptyState()
+                : _buildDataState(practiceProvider), //正常数据状态
+          );
+        },
+      ),
+    );
+  }
+
+  /// 加载中状态
+  Widget _buildLoadingState() {
+    return Center(child: CircularProgressIndicator());
+  }
+
+  /// 无题状态
+  Widget _buildEmptyState() {
+    return Center(child: Text('暂无练习数据'));
+  }
+
+  /// 正常数据状态
+  Widget _buildDataState(PracticeProvider provider) {
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 500),
+      transitionBuilder: (child, animation) {
+        final isNewChild = child.key == ValueKey(provider.currentTouchedCount);
+        final inOffset = const Offset(1.0, 0.0); //从右进入
+        final outOffset = const Offset(-1.0, 0.0); // 往左出
+        final inAnimation = Tween<Offset>(begin: inOffset, end: Offset.zero)
+            .animate(
+              CurvedAnimation(parent: animation, curve: Curves.easeInOutQuad),
+            ); // 入场动画
+        final outAnimation = Tween<Offset>(begin: Offset.zero, end: outOffset)
+            .animate(
+              CurvedAnimation(
+                parent: ReverseAnimation(animation),
+                curve: Curves.easeOutQuad,
+              ),
+            ); // 出场动画
+        return SlideTransition(
+          position: isNewChild ? inAnimation : outAnimation,
+          child: FadeTransition(opacity: animation, child: child),
+        );
+      },
+      child: ChangeNotifierProvider(
+        key: ValueKey(provider.currentTouchedCount),
+        create: (context) => QuizProvider()..initQuiz(provider.currentQuiz),
+        child: QuizChoiceWidget(),
       ),
     );
   }
@@ -164,7 +151,7 @@ class _PracticePageState extends State<PracticePage> {
               color: theme.colorScheme.error,
               size: 50.0,
             ),
-            Text('加载失败: ${practiceProvider.errorMessage}'),
+            Text('Loading failed: ${practiceProvider.errorMessage}'),
             const SizedBox(height: 20),
             if (practiceProvider.retryFunc != null)
               ElevatedButton(
@@ -196,64 +183,67 @@ class _PracticePageState extends State<PracticePage> {
 
   /// 练习完成状态
   Widget _buildFinishedState(PracticeProvider practiceProvider) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.check_circle, color: Colors.green, size: 80),
-          const SizedBox(height: 20),
-          Text(
-            'Practice Completed!',
-            style: theme.textTheme.headlineSmall!.copyWith(
-              color: theme.colorScheme.secondary,
-              fontWeight: FontWeight.w300,
-            ),
-          ),
-          const SizedBox(height: 10),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              minimumSize: Size.square(48),
-              backgroundColor: theme.colorScheme.surfaceContainerLowest,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(24),
+    return Scaffold(
+      backgroundColor: theme.colorScheme.surfaceContainerHigh,
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.check_circle, color: Colors.green, size: 80),
+            const SizedBox(height: 20),
+            Text(
+              'Practice Completed!',
+              style: theme.textTheme.headlineSmall!.copyWith(
+                color: theme.colorScheme.secondary,
+                fontWeight: FontWeight.w300,
               ),
             ),
-            onPressed: _isSubmitting
-                ? null
-                : () {
-                    HapticFeedback.heavyImpact();
-                    _submitHandeller(practiceProvider);
-                  },
-            child: _isSubmitting
-                ? Row(
-                    mainAxisSize: MainAxisSize.min,
-                    spacing: 8,
-                    children: [
-                      SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
+            const SizedBox(height: 10),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                minimumSize: Size.square(48),
+                backgroundColor: theme.colorScheme.surfaceContainerLowest,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(24),
+                ),
+              ),
+              onPressed: _isSubmitting
+                  ? null
+                  : () {
+                      HapticFeedback.heavyImpact();
+                      _submitHandeller(practiceProvider);
+                    },
+              child: _isSubmitting
+                  ? Row(
+                      mainAxisSize: MainAxisSize.min,
+                      spacing: 8,
+                      children: [
+                        SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
                         ),
-                      ),
-                      Text(
-                        'Submiting...',
-                        style: theme.textTheme.titleMedium!.copyWith(
-                          color: theme.colorScheme.outline,
+                        Text(
+                          'Submiting...',
+                          style: theme.textTheme.titleMedium!.copyWith(
+                            color: theme.colorScheme.outline,
+                          ),
                         ),
+                      ],
+                    )
+                  : Text(
+                      'Submit',
+                      style: theme.textTheme.titleMedium!.copyWith(
+                        color: theme.colorScheme.primary,
+                        fontWeight: FontWeight.bold,
                       ),
-                    ],
-                  )
-                : Text(
-                    'Submit',
-                    style: theme.textTheme.titleMedium!.copyWith(
-                      color: theme.colorScheme.primary,
-                      fontWeight: FontWeight.bold,
                     ),
-                  ),
-          ),
-        ],
+            ),
+          ],
+        ),
       ),
     );
   }

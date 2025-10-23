@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:toneup_app/components/chars_with_pinyin.dart';
@@ -89,6 +90,7 @@ class _QuizChoiceWidgetState extends State<QuizChoiceWidget> {
       context: context,
       isDismissible: false,
       enableDrag: false,
+      useSafeArea: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -107,7 +109,18 @@ class _QuizChoiceWidgetState extends State<QuizChoiceWidget> {
   @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
-    final effectiveMinHeight = screenHeight - 115;
+    final appBarHeight = kToolbarHeight;
+    double statusBarHeight = MediaQuery.of(context).viewPadding.top;
+    // MediaQuery.of(context).padding.vertical +
+    // MediaQuery.of(context).viewInsets.vertical;
+
+    // final appBarKey = GlobalKey();
+    final effectiveMinHeight = screenHeight - appBarHeight - statusBarHeight;
+
+    debugPrint(
+      'screenHeight:$screenHeight / appBarHeight:$appBarHeight / statusBarHeight: $statusBarHeight = effectiveMinHeight:$effectiveMinHeight',
+    );
+
     return Consumer<QuizProvider>(
       builder: (ctx, provider, _) {
         quizProvider = provider;
@@ -146,23 +159,30 @@ class _QuizChoiceWidgetState extends State<QuizChoiceWidget> {
                         // 选项
                         _buildQuizOptions(quizProvider, quiz),
                         // 底部空间
-                        SizedBox(
-                          child: Text(
-                            'actId: ${quizProvider.quiz.actInstance.id} / ${quiz.actInstance.activity!.quizTemplate}',
-                            style: theme.textTheme.labelSmall!.copyWith(
-                              color: theme.colorScheme.primaryFixed,
-                            ),
+                        Text(
+                          'actId: ${quizProvider.quiz.actInstance.id} / ${quiz.actInstance.activity!.quizTemplate}',
+                          style: theme.textTheme.labelSmall!.copyWith(
+                            color: theme.colorScheme.primaryFixed,
                           ),
                         ),
-                        if (quizProvider.state != QuizState.initial &&
-                            quizProvider.state != QuizState.intouch)
-                          const SizedBox(height: 50),
+                        AnimatedSize(
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.easeInOutQuart,
+                          child: SizedBox(
+                            height:
+                                (quizProvider.state != QuizState.initial &&
+                                    quizProvider.state != QuizState.intouch)
+                                ? 50
+                                : 0,
+                          ),
+                        ),
                       ],
                     ),
                   ],
                 ),
               ),
             ),
+
             _buildCheckButton((quizProvider.state == QuizState.touched)),
           ],
         );
@@ -547,47 +567,51 @@ class _QuizChoiceWidgetState extends State<QuizChoiceWidget> {
       left: 0,
       right: 0,
       bottom: 0,
+      // top: 0,
       child: AnimatedSlide(
         offset: isShow ? Offset(0, 0) : Offset(0, 1),
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOutQuart,
-        child: Container(
-          padding: EdgeInsets.fromLTRB(24, 24, 24, 48),
-          decoration: ShapeDecoration(
-            color: theme.colorScheme.primary,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        child: Center(
+          child: Container(
+            constraints: BoxConstraints(maxWidth: 640),
+            padding: EdgeInsets.fromLTRB(24, 24, 24, 48),
+            decoration: ShapeDecoration(
+              color: theme.colorScheme.primary,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
             ),
-          ),
-          child: Material(
-            color: Colors.transparent,
-            child: FeedbackButton(
-              borderRadius: BorderRadius.circular(16),
-              onTap: _handleCheckAnswer,
-              child: Ink(
-                padding: EdgeInsets.all(12),
-                decoration: ShapeDecoration(
-                  color: theme.colorScheme.primaryContainer,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
+            child: Material(
+              color: Colors.transparent,
+              child: FeedbackButton(
+                borderRadius: BorderRadius.circular(16),
+                onTap: _handleCheckAnswer,
+                child: Ink(
+                  padding: EdgeInsets.all(12),
+                  decoration: ShapeDecoration(
+                    color: theme.colorScheme.primaryContainer,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
                   ),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  spacing: 10,
-                  children: [
-                    Icon(
-                      Icons.rule_rounded,
-                      color: theme.colorScheme.onPrimaryContainer,
-                    ),
-                    Text(
-                      'Check',
-                      style: theme.textTheme.titleMedium!.copyWith(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    spacing: 10,
+                    children: [
+                      Icon(
+                        Icons.rule_rounded,
                         color: theme.colorScheme.onPrimaryContainer,
-                        fontWeight: FontWeight.bold,
                       ),
-                    ),
-                  ],
+                      Text(
+                        'Check',
+                        style: theme.textTheme.titleMedium!.copyWith(
+                          color: theme.colorScheme.onPrimaryContainer,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),

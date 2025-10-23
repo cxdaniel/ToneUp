@@ -325,12 +325,6 @@ class _HomePageState extends State<HomePage> {
                             minHeight: 10,
                             borderRadius: BorderRadius.circular(10),
                             value: progress,
-                            backgroundColor: Theme.of(
-                              context,
-                            ).colorScheme.onSecondaryFixedVariant,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              Theme.of(context).colorScheme.primary,
-                            ),
                           ),
                         ],
                       ),
