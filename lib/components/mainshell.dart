@@ -1,5 +1,6 @@
 // 新增一个外壳页面，用于嵌套路由
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
 class MainShell extends StatelessWidget {
@@ -9,6 +10,7 @@ class MainShell extends StatelessWidget {
 
   // 切换底部导航项时调用
   void _goBranch(int index) {
+    HapticFeedback.heavyImpact();
     navigationShell.goBranch(
       index,
       initialLocation: index == navigationShell.currentIndex,
