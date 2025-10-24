@@ -1,5 +1,6 @@
 import 'package:faker/faker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:go_router/go_router.dart';
 import 'package:toneup_app/routes.dart';
@@ -20,6 +21,9 @@ class _SignUpPageState extends State<SignUpPage> {
   late final FocusNode passwordFocusNode;
   late final FocusNode confirmPasswordFocusNode;
 
+  bool isRequesting = false;
+
+  late ThemeData theme;
   @override
   void initState() {
     super.initState();
@@ -41,6 +45,13 @@ class _SignUpPageState extends State<SignUpPage> {
           formKey.currentState?.validate();
         }
       });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    theme = Theme.of(context);
+    isRequesting = false;
   }
 
   @override
@@ -101,12 +112,17 @@ class _SignUpPageState extends State<SignUpPage> {
           context,
         ).showSnackBar(SnackBar(content: Text('Sign up failed: $e')));
       }
+    } finally {
+      if (mounted) {
+        setState(() {
+          isRequesting = false;
+        });
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Scaffold(
       body: SingleChildScrollView(
         child: Padding(
@@ -115,7 +131,6 @@ class _SignUpPageState extends State<SignUpPage> {
             crossAxisAlignment: CrossAxisAlignment.center,
             spacing: 24,
             children: [
-              /// Welcome Title
               Container(
                 margin: const EdgeInsets.only(top: 54),
                 height: 120,
@@ -123,11 +138,9 @@ class _SignUpPageState extends State<SignUpPage> {
                 child: Text(
                   'Sign Up',
                   textAlign: TextAlign.center,
-                  style: theme.textTheme.headlineLarge?.merge(
-                    // GoogleFonts.righteous(
-                    //   color: theme.colorScheme.primary,
-                    // ),
-                    TextStyle(fontFamily: 'Righteous'),
+                  style: theme.textTheme.headlineLarge?.copyWith(
+                    fontFamily: 'Righteous',
+                    color: theme.colorScheme.primary,
                   ),
                 ),
               ),
@@ -144,7 +157,7 @@ class _SignUpPageState extends State<SignUpPage> {
                       focusNode: emailFocusNode,
                       decoration: InputDecoration(
                         filled: true,
-                        fillColor: theme.colorScheme.surfaceContainerLow,
+                        fillColor: theme.colorScheme.surfaceContainer,
                         labelText: 'Email',
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(16),
@@ -154,7 +167,7 @@ class _SignUpPageState extends State<SignUpPage> {
                           borderSide: BorderSide(
                             color: Theme.of(
                               context,
-                            ).colorScheme.surfaceContainerHigh,
+                            ).colorScheme.surfaceContainerHighest,
                           ),
                         ),
                         errorBorder: OutlineInputBorder(
@@ -192,7 +205,7 @@ class _SignUpPageState extends State<SignUpPage> {
                         filled: true,
                         fillColor: Theme.of(
                           context,
-                        ).colorScheme.surfaceContainerLow,
+                        ).colorScheme.surfaceContainer,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(16),
                         ),
@@ -201,7 +214,7 @@ class _SignUpPageState extends State<SignUpPage> {
                           borderSide: BorderSide(
                             color: Theme.of(
                               context,
-                            ).colorScheme.surfaceContainerHigh,
+                            ).colorScheme.surfaceContainerHighest,
                           ),
                         ),
                       ),
@@ -229,7 +242,7 @@ class _SignUpPageState extends State<SignUpPage> {
                         filled: true,
                         fillColor: Theme.of(
                           context,
-                        ).colorScheme.surfaceContainerLow,
+                        ).colorScheme.surfaceContainer,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(16),
                         ),
@@ -238,7 +251,7 @@ class _SignUpPageState extends State<SignUpPage> {
                           borderSide: BorderSide(
                             color: Theme.of(
                               context,
-                            ).colorScheme.surfaceContainerHigh,
+                            ).colorScheme.surfaceContainerHighest,
                           ),
                         ),
                       ),
@@ -261,30 +274,56 @@ class _SignUpPageState extends State<SignUpPage> {
                     SizedBox(
                       width: double.infinity,
                       child: TextButton(
-                        //ElevatedButton, TextButton
                         style: TextButton.styleFrom(
-                          backgroundColor: Theme.of(
-                            context,
-                          ).colorScheme.primary,
-                          foregroundColor: Theme.of(
-                            context,
-                          ).colorScheme.onPrimary,
+                          backgroundColor: theme.colorScheme.primary,
+                          foregroundColor: theme.colorScheme.onPrimary,
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),
                           ),
                         ),
-                        onPressed: () {
-                          if (formKey.currentState?.validate() ?? false) {
-                            _signUp();
-                          }
-                        },
-                        child: Text(
-                          'Sign Up',
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            color: theme.colorScheme.onPrimary,
-                          ),
-                        ),
+                        onPressed: isRequesting
+                            ? null
+                            : () {
+                                setState(() {
+                                  isRequesting = true;
+                                });
+                                if (formKey.currentState?.validate() ?? false) {
+                                  _signUp();
+                                } else {
+                                  setState(() {
+                                    isRequesting = false;
+                                  });
+                                }
+                              },
+                        child: isRequesting
+                            ? Row(
+                                mainAxisSize: MainAxisSize.min,
+                                spacing: 16,
+                                children: [
+                                  SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  Text(
+                                    'Signing up...',
+                                    style: theme.textTheme.titleMedium!
+                                        .copyWith(
+                                          color: theme.colorScheme.onPrimary,
+                                        ),
+                                  ),
+                                ],
+                              )
+                            : Text(
+                                'Sign Up',
+                                style: theme.textTheme.titleMedium?.copyWith(
+                                  color: theme.colorScheme.onPrimary,
+                                ),
+                              ),
                       ),
                     ),
                   ],
@@ -298,40 +337,38 @@ class _SignUpPageState extends State<SignUpPage> {
               ),
 
               /// Sign Up
-              GestureDetector(
-                onTap: () => {context.replace(AppRoutes.LOGIN)},
-                child: SizedBox(
-                  width: 354,
-                  child: Text.rich(
-                    TextSpan(
-                      children: [
-                        TextSpan(
-                          text: 'Already have an account? ',
-                          style: TextStyle(
-                            color: theme.colorScheme.primary,
-                            fontSize: 14,
-                            fontFamily: 'Roboto',
-                            fontWeight: FontWeight.w400,
-                            height: 1.43,
-                            letterSpacing: 0.25,
-                          ),
-                        ),
-                        TextSpan(
-                          text: 'Login',
-                          style: TextStyle(
-                            color: theme.colorScheme.primary,
-                            fontSize: 14,
-                            fontFamily: 'Roboto',
-                            fontWeight: FontWeight.w700,
-                            height: 1.43,
-                            letterSpacing: 0.25,
-                          ),
-                        ),
-                      ],
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    'Already have an account?',
+                    style: TextStyle(
+                      color: theme.colorScheme.primary,
+                      fontSize: 14,
+                      fontFamily: 'Roboto',
+                      fontWeight: FontWeight.w400,
                     ),
-                    textAlign: TextAlign.center,
                   ),
-                ),
+                  TextButton(
+                    onPressed: () {
+                      HapticFeedback.heavyImpact();
+                      context.replace(AppRoutes.LOGIN);
+                    },
+                    style: TextButton.styleFrom(
+                      padding: EdgeInsets.all(2),
+                      minimumSize: Size.square(40),
+                    ),
+                    child: Text(
+                      'Login',
+                      style: TextStyle(
+                        color: theme.colorScheme.primary,
+                        fontSize: 14,
+                        fontFamily: 'Roboto',
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

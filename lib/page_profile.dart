@@ -6,12 +6,18 @@ import 'package:toneup_app/providers/profile_provider.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
-
   @override
   State<ProfilePage> createState() => _ProfilePageState();
 }
 
 class _ProfilePageState extends State<ProfilePage> {
+  late ThemeData theme;
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    theme = Theme.of(context);
+  }
+
   @override
   void initState() {
     super.initState();
@@ -24,12 +30,10 @@ class _ProfilePageState extends State<ProfilePage> {
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    final colorScheme = Theme.of(context).colorScheme;
     return Consumer<ProfileProvider>(
       builder: (context, provider, child) {
         return Scaffold(
-          backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
+          // backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
           body: SingleChildScrollView(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(24, 78, 24, 120),
@@ -46,12 +50,9 @@ class _ProfilePageState extends State<ProfilePage> {
                             provider.profile!.planDurationMinutes == null)
                         ? '--'
                         : '${provider.profile!.planDurationMinutes} minutes',
-                    call: null,
-                  ),
-                  _buildListCeil(
-                    label: 'Profile Settings',
                     call: provider.updateMaterials,
                   ),
+                  _buildListCeil(label: 'Profile Settings', call: null),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     spacing: 8,
@@ -60,40 +61,49 @@ class _ProfilePageState extends State<ProfilePage> {
                         icon: Icon(
                           Icons.assignment_turned_in_outlined,
                           size: 24,
-                          color: colorScheme.secondary,
+                          color: theme.colorScheme.secondary,
                         ),
                         onPressed: () {},
                         label: Text(
                           'Condition & Terms',
-                          style: textTheme.titleMedium,
+                          style: theme.textTheme.titleMedium,
                         ),
                       ),
                       TextButton.icon(
                         icon: Icon(
                           Icons.privacy_tip_outlined,
                           size: 24,
-                          color: colorScheme.secondary,
+                          color: theme.colorScheme.secondary,
                         ),
                         onPressed: () {},
-                        label: Text('Privacy', style: textTheme.titleMedium),
+                        label: Text(
+                          'Privacy',
+                          style: theme.textTheme.titleMedium,
+                        ),
                       ),
                       TextButton.icon(
                         icon: Icon(
                           Icons.info_outline,
                           size: 24,
-                          color: colorScheme.secondary,
+                          color: theme.colorScheme.secondary,
                         ),
                         onPressed: () {},
-                        label: Text('About', style: textTheme.titleMedium),
+                        label: Text(
+                          'About',
+                          style: theme.textTheme.titleMedium,
+                        ),
                       ),
                       TextButton.icon(
                         icon: Icon(
                           Icons.logout_rounded,
                           size: 24,
-                          color: colorScheme.secondary,
+                          color: theme.colorScheme.secondary,
                         ),
                         onPressed: _logout,
-                        label: Text('Logout', style: textTheme.titleMedium),
+                        label: Text(
+                          'Logout',
+                          style: theme.textTheme.titleMedium,
+                        ),
                       ),
                     ],
                   ),
@@ -122,7 +132,7 @@ class _ProfilePageState extends State<ProfilePage> {
             width: 80,
             height: 80,
             decoration: ShapeDecoration(
-              color: Theme.of(context).colorScheme.surfaceDim,
+              color: theme.colorScheme.surfaceContainer,
               shape: OvalBorder(),
             ),
           ),
@@ -133,16 +143,17 @@ class _ProfilePageState extends State<ProfilePage> {
                 (provider.profile == null || provider.profile!.nickname == null)
                     ? 'Nickname'
                     : provider.profile!.nickname!,
-                style: Theme.of(context).textTheme.titleLarge!.copyWith(
-                  color: Theme.of(context).colorScheme.onSecondaryContainer,
+                style: theme.textTheme.titleLarge!.copyWith(
+                  color: theme.colorScheme.secondary,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
               Text(
                 (provider.profile == null)
                     ? ''
                     : 'joined in ${provider.profile!.createdAt.year}-${provider.profile!.createdAt.month}',
-                style: Theme.of(context).textTheme.labelMedium!.copyWith(
-                  color: Theme.of(context).colorScheme.onSecondaryContainer,
+                style: theme.textTheme.labelMedium!.copyWith(
+                  color: theme.colorScheme.secondary,
                 ),
               ),
             ],
@@ -154,13 +165,11 @@ class _ProfilePageState extends State<ProfilePage> {
 
   /// 数据统计块
   Widget _buildOverview(ProfileProvider provider) {
-    final textTheme = Theme.of(context).textTheme;
-    final colorScheme = Theme.of(context).colorScheme;
     return Ink(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: ShapeDecoration(
-        color: colorScheme.surfaceContainerLow,
+        color: theme.colorScheme.surfaceContainer,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
       child: Column(
@@ -170,7 +179,7 @@ class _ProfilePageState extends State<ProfilePage> {
             width: double.infinity,
             padding: const EdgeInsets.symmetric(vertical: 8),
             decoration: ShapeDecoration(
-              color: Colors.amber[500],
+              color: Color(0xFFF3B531),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
               ),
@@ -182,14 +191,14 @@ class _ProfilePageState extends State<ProfilePage> {
               children: [
                 Icon(
                   Icons.energy_savings_leaf_rounded,
-                  color: colorScheme.onPrimary,
+                  color: Color(0xffBF7308),
                 ),
                 Text(
                   (provider.profile == null || provider.profile!.exp == null)
                       ? '-- EXP'
                       : '${provider.profile!.exp!} EXP',
-                  style: textTheme.titleMedium!.copyWith(
-                    color: colorScheme.onPrimary,
+                  style: theme.textTheme.titleMedium!.copyWith(
+                    color: Color(0xffBF7308),
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -197,7 +206,6 @@ class _ProfilePageState extends State<ProfilePage> {
             ),
           ),
           Row(
-            // mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               _buildInfoCard(
                 icon: Icons.signal_cellular_alt_rounded,
@@ -230,7 +238,7 @@ class _ProfilePageState extends State<ProfilePage> {
               ),
             ],
           ),
-          Divider(height: 0, thickness: 1, color: colorScheme.surfaceDim),
+          Divider(height: 0, thickness: 1, color: theme.colorScheme.surfaceDim),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
@@ -278,8 +286,6 @@ class _ProfilePageState extends State<ProfilePage> {
     required IconData icon,
     VoidCallback? call,
   }) {
-    final textTheme = Theme.of(context).textTheme;
-    final colorScheme = Theme.of(context).colorScheme;
     return Expanded(
       child: FeedbackButton(
         borderRadius: BorderRadius.circular(16),
@@ -287,25 +293,24 @@ class _ProfilePageState extends State<ProfilePage> {
         child: Ink(
           padding: const EdgeInsets.all(16),
           decoration: ShapeDecoration(
-            color: colorScheme.surfaceContainerLow,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
             ),
           ),
           child: Column(
             children: [
-              Icon(icon, size: 32),
+              Icon(icon, size: 32, color: theme.colorScheme.outline),
               Text(
                 title,
-                style: textTheme.titleMedium!.copyWith(
-                  color: colorScheme.secondary,
-                  fontWeight: FontWeight.w700,
+                style: theme.textTheme.titleMedium!.copyWith(
+                  color: theme.colorScheme.primary,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
               Text(
                 sub,
-                style: textTheme.labelSmall!.copyWith(
-                  color: colorScheme.secondary,
+                style: theme.textTheme.labelSmall!.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
                 ),
               ),
             ],
@@ -317,16 +322,13 @@ class _ProfilePageState extends State<ProfilePage> {
 
   /// 列表项
   Widget _buildListCeil({String? label, String? hit, VoidCallback? call}) {
-    final textTheme = Theme.of(context).textTheme;
-    final colorScheme = Theme.of(context).colorScheme;
     return FeedbackButton(
       borderRadius: BorderRadius.circular(16),
       onTap: call,
       child: Ink(
         padding: const EdgeInsets.all(16),
         decoration: ShapeDecoration(
-          color: colorScheme
-              .surfaceContainerLow /* Schemes-Surface-Container-Low */,
+          color: theme.colorScheme.surfaceContainer,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
@@ -336,8 +338,8 @@ class _ProfilePageState extends State<ProfilePage> {
             if (label != null)
               Text(
                 label,
-                style: textTheme.titleMedium!.copyWith(
-                  color: colorScheme.onSecondaryContainer,
+                style: theme.textTheme.titleMedium!.copyWith(
+                  color: theme.colorScheme.secondary,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -345,8 +347,8 @@ class _ProfilePageState extends State<ProfilePage> {
             if (hit != null)
               Text(
                 hit,
-                style: textTheme.labelLarge!.copyWith(
-                  color: colorScheme.secondaryFixed,
+                style: theme.textTheme.labelLarge!.copyWith(
+                  color: theme.colorScheme.outline,
                   fontWeight: FontWeight.w300,
                 ),
               ),
@@ -354,7 +356,7 @@ class _ProfilePageState extends State<ProfilePage> {
               Icon(
                 Icons.navigate_next_rounded,
                 size: 24,
-                color: colorScheme.secondary,
+                color: theme.colorScheme.secondary,
               ),
           ],
         ),

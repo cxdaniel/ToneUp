@@ -20,6 +20,7 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   UserWeeklyPlanModel? _planData;
+  late ThemeData theme;
 
   @override
   void initState() {
@@ -30,6 +31,12 @@ class _HomePageState extends State<HomePage> {
         // Provider.of<PlanProvider>(context, listen: false).getAllPlans();
       });
     }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    theme = Theme.of(context);
   }
 
   void _gotoPagePlan() {
@@ -66,17 +73,15 @@ class _HomePageState extends State<HomePage> {
               AppRoutes.PRACTICE,
               extra: {'practiceData': practiceData, 'planData': _planData},
             );
-            // 在 practice 页面中修改数据后，通知 Provider 更新
             if (context.mounted) {
-              Provider.of<PlanProvider>(
-                context,
-                listen: false,
-              ).refreshPlan(); // Call a public method to refresh the plan
+              Provider.of<PlanProvider>(context, listen: false).refreshPlan();
             }
           },
           child: Ink(
             decoration: ShapeDecoration(
-              color: Theme.of(context).colorScheme.surfaceContainerLowest,
+              color: (practiceData.score > 0)
+                  ? Color(0xffFBDC82)
+                  : theme.colorScheme.primaryContainer,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
               ),
@@ -90,20 +95,19 @@ class _HomePageState extends State<HomePage> {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Icon(
-                    // Icons.star_rounded,
                     Icons.star_rounded,
-                    // Icons.emoji_events_rounded,
                     size: 56,
                     color: (practiceData.score > 0)
-                        ? Colors.amberAccent
-                        : Theme.of(context).colorScheme.onSecondaryFixedVariant,
+                        ? Color(0xffF3B531)
+                        : theme.colorScheme.primaryFixedDim,
                   ),
                   Text(
-                    //'${(practiceData.score * 100).toStringAsFixed(2)}/${practiceData.instances.length} Quizes',
                     '${practiceData.instances.length} Quizes',
                     textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.onSecondaryContainer,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      color: (practiceData.score > 0)
+                          ? Color(0xFFBF7308)
+                          : theme.colorScheme.onPrimaryContainer,
                     ),
                   ),
                 ],
@@ -122,7 +126,7 @@ class _HomePageState extends State<HomePage> {
           height: cardHeight,
           padding: const EdgeInsets.all(12),
           decoration: ShapeDecoration(
-            color: Theme.of(context).colorScheme.surfaceContainerLowest,
+            color: theme.colorScheme.surfaceContainerLowest,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
             ),
@@ -131,8 +135,8 @@ class _HomePageState extends State<HomePage> {
             child: Text(
               "暂无活动",
               textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSecondaryContainer,
+              style: theme.textTheme.titleMedium?.copyWith(
+                color: theme.colorScheme.onSecondaryContainer,
               ),
             ),
           ),
@@ -164,12 +168,12 @@ class _HomePageState extends State<HomePage> {
               return [
                 TextSpan(
                   text: word,
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    color: Theme.of(context).colorScheme.onSecondaryContainer,
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
                     fontWeight: FontWeight.w500,
                     decoration: TextDecoration.underline,
                     decorationStyle: TextDecorationStyle.dotted,
-                    decorationThickness: 1.5,
+                    decorationThickness: 1,
                     height: 2,
                     letterSpacing: 0.50,
                   ),
@@ -177,8 +181,8 @@ class _HomePageState extends State<HomePage> {
                 if (!isLast)
                   TextSpan(
                     text: '、',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      color: Theme.of(context).colorScheme.onSecondaryContainer,
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
                       fontWeight: FontWeight.w500,
                       height: 2,
                       letterSpacing: 0.50,
@@ -203,12 +207,12 @@ class _HomePageState extends State<HomePage> {
       return Text.rich(
         TextSpan(
           text: sentence,
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            color: Theme.of(context).colorScheme.onSecondaryContainer,
+          style: theme.textTheme.titleLarge?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
             fontWeight: FontWeight.w500,
             decoration: TextDecoration.underline,
             decorationStyle: TextDecorationStyle.dotted,
-            decorationThickness: 1.5,
+            decorationThickness: 1,
             height: 2,
             letterSpacing: 0.50,
           ),
@@ -231,8 +235,8 @@ class _HomePageState extends State<HomePage> {
       children: keyGrammar.map((grammar) {
         return Text(
           grammar,
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            color: Theme.of(context).colorScheme.onSecondaryContainer,
+          style: theme.textTheme.titleLarge?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
             height: 1.6,
           ),
         );
@@ -243,18 +247,14 @@ class _HomePageState extends State<HomePage> {
   /// 正常数据状态
   Widget _buildDataState() {
     final int currentLevel = _planData!.level;
-    final String topicTag =
-        _planData!.topicTitle ?? "How to get your favorite foods.";
+    final String topicTag = _planData!.topicTitle!;
     final double progress = calculatePlanProgress(_planData);
     final planProvider = Provider.of<PlanProvider>(context, listen: false);
     if (progress == 1) {
-      //更新当前plan的state自active为reactive
       planProvider.completeActivePlan();
     }
     return SingleChildScrollView(
-      child: Container(
-        width: double.infinity,
-        // 底部留空，避免被底 Tab 遮挡
+      child: Padding(
         padding: const EdgeInsets.fromLTRB(24, 100, 24, 120),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -270,8 +270,9 @@ class _HomePageState extends State<HomePage> {
                   width: double.infinity,
                   child: Text(
                     'Keep Advancing Your Goal',
-                    style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                      color: Theme.of(context).colorScheme.onSecondaryContainer,
+                    style: theme.textTheme.headlineLarge?.copyWith(
+                      color: theme.colorScheme.secondary,
+                      fontWeight: FontWeight.w300,
                     ),
                   ),
                 ),
@@ -280,13 +281,10 @@ class _HomePageState extends State<HomePage> {
                   onTap: _gotoPagePlan,
                   child: Ink(
                     decoration: ShapeDecoration(
-                      color: Theme.of(context).colorScheme.surfaceContainerLow,
                       shape: RoundedRectangleBorder(
                         side: BorderSide(
-                          width: 2,
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.onSecondaryFixedVariant,
+                          width: 1,
+                          color: Theme.of(context).colorScheme.outlineVariant,
                         ),
                         borderRadius: BorderRadius.circular(16),
                       ),
@@ -303,28 +301,29 @@ class _HomePageState extends State<HomePage> {
                             decoration: ShapeDecoration(
                               color: const Color(0xFFFF9500),
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
+                                borderRadius: BorderRadius.circular(16),
                               ),
                             ),
                             child: Text(
                               'HSK $currentLevel',
-                              style: Theme.of(context).textTheme.labelLarge
-                                  ?.copyWith(color: Colors.white),
+                              style: theme.textTheme.labelLarge?.copyWith(
+                                color: Colors.white,
+                              ),
                             ),
                           ),
                           Text(
                             topicTag,
-                            style: Theme.of(context).textTheme.titleLarge
-                                ?.copyWith(
-                                  color: Theme.of(
-                                    context,
-                                  ).colorScheme.onSecondaryContainer,
-                                ),
+                            style: theme.textTheme.titleLarge?.copyWith(
+                              color: Theme.of(context).colorScheme.secondary,
+                            ),
                           ),
                           LinearProgressIndicator(
                             minHeight: 10,
                             borderRadius: BorderRadius.circular(10),
                             value: progress,
+                            color: theme.colorScheme.primary,
+                            backgroundColor: theme.colorScheme.primary
+                                .withAlpha(40),
                           ),
                         ],
                       ),
@@ -340,7 +339,7 @@ class _HomePageState extends State<HomePage> {
                 padding: EdgeInsets.all(24),
                 // width: double.infinity,
                 decoration: ShapeDecoration(
-                  // color: Theme.of(context).highlightColor,
+                  // color: theme.highlightColor,
                   color: Colors.amber[300],
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(24),
@@ -358,8 +357,8 @@ class _HomePageState extends State<HomePage> {
                     ),
                     Text(
                       "Congratulations! \n You have completed the goal!",
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        color: Theme.of(context).colorScheme.secondary,
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        color: theme.colorScheme.secondary,
                       ),
                       textAlign: TextAlign.center,
                     ),
@@ -376,7 +375,7 @@ class _HomePageState extends State<HomePage> {
                             minimumSize: Size.square(48),
                             side: BorderSide(
                               width: 0,
-                              color: Theme.of(context).colorScheme.secondary,
+                              color: theme.colorScheme.secondary,
                             ),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(10),
@@ -385,16 +384,13 @@ class _HomePageState extends State<HomePage> {
                           onPressed: _gotoPagePlan,
                           icon: Icon(
                             Icons.list,
-                            color: Theme.of(context).colorScheme.secondary,
+                            color: theme.colorScheme.secondary,
                           ),
                           label: Text(
                             "View Your All Goals",
-                            style: Theme.of(context).textTheme.labelLarge
-                                ?.copyWith(
-                                  color: Theme.of(
-                                    context,
-                                  ).colorScheme.secondary,
-                                ),
+                            style: theme.textTheme.labelLarge?.copyWith(
+                              color: Theme.of(context).colorScheme.secondary,
+                            ),
                           ),
                         ),
                         ElevatedButton.icon(
@@ -414,8 +410,9 @@ class _HomePageState extends State<HomePage> {
                           ),
                           label: Text(
                             "Start a New Goal",
-                            style: Theme.of(context).textTheme.labelLarge
-                                ?.copyWith(color: Colors.amber[800]),
+                            style: theme.textTheme.labelLarge?.copyWith(
+                              color: Colors.amber[800],
+                            ),
                           ),
                         ),
                       ],
@@ -435,23 +432,19 @@ class _HomePageState extends State<HomePage> {
                   Row(
                     children: [
                       Text(
-                        'Activities',
-                        style: Theme.of(context).textTheme.headlineMedium
-                            ?.copyWith(
-                              color: Theme.of(
-                                context,
-                              ).colorScheme.onSecondaryContainer,
-                            ),
+                        'Practices',
+                        style: theme.textTheme.headlineMedium?.copyWith(
+                          color: Theme.of(context).colorScheme.secondary,
+                          fontWeight: FontWeight.w300,
+                        ),
                       ),
                       Spacer(),
                       Text(
                         'score: ${(_planData!.practiceData!.fold<double>(0, (s, p) => (s + p.score)) / _planData!.practiceData!.length * 100).toStringAsFixed(1)}',
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(
-                              color: Theme.of(
-                                context,
-                              ).colorScheme.onSecondaryContainer,
-                            ),
+                        style: theme.textTheme.bodyLarge?.copyWith(
+                          color: Theme.of(context).colorScheme.secondary,
+                          // fontWeight: FontWeight.w300,
+                        ),
                       ),
                     ],
                   ),
@@ -469,8 +462,9 @@ class _HomePageState extends State<HomePage> {
                 const Divider(),
                 Text(
                   'Key Notes',
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSecondaryContainer,
+                  style: theme.textTheme.headlineMedium?.copyWith(
+                    color: theme.colorScheme.secondary,
+                    fontWeight: FontWeight.w300,
                   ),
                 ),
                 // 目标词汇
@@ -482,21 +476,21 @@ class _HomePageState extends State<HomePage> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10),
                       decoration: ShapeDecoration(
-                        color: Theme.of(context).colorScheme.secondaryContainer,
+                        color: theme.colorScheme.secondaryContainer,
                         shape: RoundedRectangleBorder(
                           side: BorderSide(
                             width: 1,
                             strokeAlign: BorderSide.strokeAlignCenter,
                             color: Theme.of(
                               context,
-                            ).colorScheme.secondaryFixedDim,
+                            ).colorScheme.onSecondaryContainer.withAlpha(40),
                           ),
                           borderRadius: BorderRadius.circular(10),
                         ),
                       ),
                       child: Text(
                         'Targets Words',
-                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        style: theme.textTheme.labelLarge?.copyWith(
                           color: Theme.of(
                             context,
                           ).colorScheme.onSecondaryContainer,
@@ -515,20 +509,20 @@ class _HomePageState extends State<HomePage> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10),
                       decoration: ShapeDecoration(
-                        color: Theme.of(context).colorScheme.secondaryContainer,
+                        color: theme.colorScheme.secondaryContainer,
                         shape: RoundedRectangleBorder(
                           side: BorderSide(
                             width: 1,
                             color: Theme.of(
                               context,
-                            ).colorScheme.secondaryFixedDim,
+                            ).colorScheme.onSecondaryContainer.withAlpha(40),
                           ),
                           borderRadius: BorderRadius.circular(10),
                         ),
                       ),
                       child: Text(
                         'Common Sentences',
-                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        style: theme.textTheme.labelLarge?.copyWith(
                           color: Theme.of(
                             context,
                           ).colorScheme.onSecondaryContainer,
@@ -547,20 +541,20 @@ class _HomePageState extends State<HomePage> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10),
                       decoration: ShapeDecoration(
-                        color: Theme.of(context).colorScheme.secondaryContainer,
+                        color: theme.colorScheme.secondaryContainer,
                         shape: RoundedRectangleBorder(
                           side: BorderSide(
                             width: 1,
                             color: Theme.of(
                               context,
-                            ).colorScheme.secondaryFixedDim,
+                            ).colorScheme.onSecondaryContainer.withAlpha(40),
                           ),
                           borderRadius: BorderRadius.circular(10),
                         ),
                       ),
                       child: Text(
                         'key Grammar Points',
-                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        style: theme.textTheme.labelLarge?.copyWith(
                           color: Theme.of(
                             context,
                           ).colorScheme.onSecondaryContainer,
@@ -581,7 +575,7 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
+      // backgroundColor: theme.colorScheme.surfaceContainerHigh,
       body: Consumer<PlanProvider>(
         builder: (context, planProvider, child) {
           _planData = planProvider.activePlan;
@@ -607,15 +601,12 @@ class _HomePageState extends State<HomePage> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          SpinKitFadingCircle(
-            color: Theme.of(context).colorScheme.primaryFixed,
-            size: 50.0,
-          ),
+          SpinKitFadingCircle(color: theme.colorScheme.primary, size: 50.0),
           const SizedBox(height: 20),
           Text(
             planProvider.loadingMessage ?? "Loading...",
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: Theme.of(context).colorScheme.onSecondaryContainer,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.outline,
             ),
           ),
         ],
@@ -629,30 +620,23 @@ class _HomePageState extends State<HomePage> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.error_outline,
-            color: Theme.of(context).colorScheme.error,
-            size: 50.0,
-          ),
+          Icon(Icons.error_outline, color: theme.colorScheme.error, size: 50.0),
           const SizedBox(height: 20),
           Text(
             planProvider.errorMessage ?? "Loading Failed, Please Try Again.",
             textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: Theme.of(context).colorScheme.onSecondaryContainer,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.outline,
             ),
           ),
           const SizedBox(height: 20),
           if (planProvider.retryFunc != null)
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(context).colorScheme.primary,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 30,
-                  vertical: 12,
-                ),
+                backgroundColor: theme.colorScheme.primary,
+                padding: const EdgeInsets.symmetric(horizontal: 24),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(32),
                 ),
               ),
               onPressed: () {
@@ -660,8 +644,8 @@ class _HomePageState extends State<HomePage> {
               },
               child: Text(
                 planProvider.retryLabel ?? "Retry",
-                style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  color: Theme.of(context).colorScheme.onPrimary,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  color: theme.colorScheme.onPrimary,
                 ),
               ),
             ),
@@ -675,26 +659,27 @@ class _HomePageState extends State<HomePage> {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
-        spacing: 16,
+        spacing: 12,
         children: [
           Icon(
             Icons.celebration_rounded,
-            color: Theme.of(context).colorScheme.primary,
-            size: 50.0,
+            color: theme.colorScheme.primary,
+            size: 60,
           ),
           const SizedBox(height: 20),
           Text(
             "Your have no Active Goal yet.",
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: Theme.of(context).colorScheme.onSecondaryContainer,
+            style: theme.textTheme.bodyLarge?.copyWith(
+              color: theme.colorScheme.secondary,
             ),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.primary,
-              padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
+              minimumSize: Size(180, 40),
+              backgroundColor: theme.colorScheme.primary,
+              padding: const EdgeInsets.symmetric(horizontal: 24),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(32),
               ),
             ),
             onPressed: () async {
@@ -702,26 +687,24 @@ class _HomePageState extends State<HomePage> {
             },
             child: Text(
               "Create a New Goal",
-              style: Theme.of(
-                context,
-              ).textTheme.labelLarge?.copyWith(color: Colors.white),
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: theme.colorScheme.onPrimary,
+              ),
             ),
           ),
           OutlinedButton(
             style: ElevatedButton.styleFrom(
-              side: BorderSide(
-                width: 0,
-                color: Theme.of(context).colorScheme.primary,
-              ),
+              minimumSize: Size(180, 40),
+              side: BorderSide(width: 1, color: theme.colorScheme.primary),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(32),
               ),
             ),
             onPressed: _gotoPagePlan,
             child: Text(
               "View Your All Goals",
-              style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                color: Theme.of(context).colorScheme.primary,
+              style: theme.textTheme.titleMedium?.copyWith(
+                color: theme.colorScheme.primary,
               ),
             ),
           ),

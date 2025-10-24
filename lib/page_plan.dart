@@ -180,7 +180,7 @@ class _PlanPageState extends State<PlanPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
+      // backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
       //TODO: 改到主导航，暂时去掉顶部appBar
       // appBar: AppBar(title: const Text('Goals'), centerTitle: true),
       body: Consumer<PlanProvider>(
@@ -230,10 +230,9 @@ class _PlanPageState extends State<PlanPage> {
               child: CustomScrollView(
                 controller: _scrollController,
                 slivers: [
-                  //TODO: 显示在主导航时，没有appBar，增加占位
                   SliverAppBar(
-                    surfaceTintColor: theme.colorScheme.surfaceContainerHigh,
-                    backgroundColor: theme.colorScheme.surfaceContainerHigh,
+                    surfaceTintColor: theme.colorScheme.surface,
+                    backgroundColor: theme.colorScheme.surface,
                     title: Padding(
                       padding: EdgeInsets.only(left: 8),
                       child: Align(
@@ -242,6 +241,7 @@ class _PlanPageState extends State<PlanPage> {
                           'Goals',
                           style: theme.textTheme.headlineLarge?.copyWith(
                             color: theme.colorScheme.onSecondaryContainer,
+                            fontWeight: FontWeight.w300,
                           ),
                         ),
                       ),
@@ -321,15 +321,13 @@ class _PlanPageState extends State<PlanPage> {
   }) {
     IconData icon;
     Color iconColor;
-    // 根据状态设置图标
     if (isActive) {
       icon = Icons.play_circle_filled_sharp;
-      iconColor = Colors.amber; //theme.colorScheme.primary;
+      iconColor = Colors.amber;
     } else if (plan.status == PlanStatus.done) {
       icon = Icons.flag; //flag
       iconColor = Colors.amber;
     } else {
-      //incomplete_circle; //Icons.replay_circle_filled_sharp;
       icon = Icons.track_changes_rounded;
       iconColor = theme.colorScheme.onSecondaryFixedVariant;
     }
@@ -351,7 +349,7 @@ class _PlanPageState extends State<PlanPage> {
             onTap: onTap,
             child: Ink(
               decoration: BoxDecoration(
-                color: theme.colorScheme.surfaceContainerLowest,
+                color: theme.colorScheme.secondaryContainer,
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Padding(
@@ -372,7 +370,8 @@ class _PlanPageState extends State<PlanPage> {
                           Text(
                             plan.topicTitle ?? 'No Plan Title',
                             style: theme.textTheme.titleMedium?.copyWith(
-                              color: theme.colorScheme.onSecondaryContainer,
+                              color: theme.colorScheme.onPrimaryContainer,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
                           if (isActive && plan.progress != null)
@@ -380,8 +379,8 @@ class _PlanPageState extends State<PlanPage> {
                               minHeight: 10,
                               borderRadius: BorderRadius.circular(10),
                               value: calculatePlanProgress(plan),
-                              backgroundColor:
-                                  theme.colorScheme.onSecondaryFixedVariant,
+                              backgroundColor: theme.colorScheme.primary
+                                  .withAlpha(40),
                               valueColor: AlwaysStoppedAnimation<Color>(
                                 theme.colorScheme.primary,
                               ),

@@ -13,7 +13,7 @@ class LevelHeaderDelegate extends SliverPersistentHeaderDelegate {
     bool overlapsContent,
   ) {
     return Container(
-      color: Theme.of(context).colorScheme.surfaceContainerHigh,
+      color: Theme.of(context).colorScheme.surface,
       margin: const EdgeInsets.only(left: 24),
       alignment: Alignment.centerLeft,
       child: Container(
@@ -58,7 +58,7 @@ class MonthHeaderDelegate extends SliverPersistentHeaderDelegate {
     bool overlapsContent,
   ) {
     return Container(
-      color: Theme.of(context).colorScheme.surfaceContainerHigh.withAlpha(240),
+      color: Theme.of(context).colorScheme.surface.withAlpha(200),
       padding: const EdgeInsets.only(left: 24),
       alignment: Alignment.centerLeft,
       child: Text(
