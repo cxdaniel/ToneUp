@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:toneup_app/components/quiz_choice_widget.dart';
@@ -58,27 +59,27 @@ class _PracticePageState extends State<PracticePage> {
         builder: (ctx, practiceProvider, _) {
           final quizzes = practiceProvider.quizzes;
           return Scaffold(
-            backgroundColor: theme.colorScheme.surfaceContainerHigh,
-            appBar: AppBar(
-              leading: IconButton(
-                icon: const Icon(Icons.close),
-                onPressed: context.pop,
-              ),
-              title: LinearProgressIndicator(
-                minHeight: 10,
-                borderRadius: BorderRadius.circular(10),
-                value: practiceProvider.progress,
-                // backgroundColor: theme.colorScheme.outlineVariant,
-                backgroundColor: theme.focusColor,
-              ),
-              actionsPadding: EdgeInsets.symmetric(horizontal: 16),
-              actions: [Icon(Icons.more_horiz)],
-              backgroundColor: theme.colorScheme.surfaceContainerHigh,
-              foregroundColor: theme.colorScheme.secondary,
-              surfaceTintColor: theme.colorScheme.surfaceContainerHigh,
-              shadowColor: theme.colorScheme.surfaceContainerLowest,
-              scrolledUnderElevation: 1,
-            ),
+            // backgroundColor: theme.colorScheme.surfaceContainerHigh,
+            appBar: (!practiceProvider.isPracticeCompleted)
+                ? AppBar(
+                    leading: IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: context.pop,
+                    ),
+                    title: LinearProgressIndicator(
+                      minHeight: 10,
+                      borderRadius: BorderRadius.circular(10),
+                      value: practiceProvider.progress,
+                      backgroundColor: theme.colorScheme.primary.withAlpha(40),
+                    ),
+                    actionsPadding: EdgeInsets.symmetric(horizontal: 16),
+                    actions: [Icon(Icons.more_horiz)],
+                    backgroundColor: theme.colorScheme.surface,
+                    surfaceTintColor: theme.colorScheme.secondary,
+                    shadowColor: theme.colorScheme.surfaceContainerLowest,
+                    scrolledUnderElevation: 1,
+                  )
+                : null,
             body:
                 (practiceProvider.isLoading) // 加载中状态
                 ? _buildLoadingState()
@@ -97,12 +98,53 @@ class _PracticePageState extends State<PracticePage> {
 
   /// 加载中状态
   Widget _buildLoadingState() {
-    return Center(child: CircularProgressIndicator());
+    return Center(
+      child: CircularProgressIndicator(
+        strokeCap: StrokeCap.round,
+        backgroundColor: theme.colorScheme.secondaryContainer,
+      ),
+    );
   }
 
   /// 无题状态
   Widget _buildEmptyState() {
-    return Center(child: Text('暂无练习数据'));
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        spacing: 20,
+        children: [
+          Icon(
+            Icons.hourglass_empty_rounded,
+            color: theme.colorScheme.surfaceDim,
+            size: 50.0,
+          ),
+          Text(
+            'Practice is Empty',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.outline,
+            ),
+          ),
+          TextButton(
+            style: TextButton.styleFrom(
+              backgroundColor: theme.colorScheme.primary,
+              foregroundColor: theme.colorScheme.onPrimary,
+              disabledBackgroundColor: theme.colorScheme.surfaceDim,
+              padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(24),
+              ),
+            ),
+            onPressed: context.pop,
+            child: Text(
+              "Back",
+              style: theme.textTheme.titleMedium?.copyWith(
+                color: theme.colorScheme.onPrimary,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   /// 正常数据状态
@@ -151,26 +193,30 @@ class _PracticePageState extends State<PracticePage> {
               color: theme.colorScheme.error,
               size: 50.0,
             ),
-            Text('Loading failed: ${practiceProvider.errorMessage}'),
-            const SizedBox(height: 20),
-            if (practiceProvider.retryFunc != null)
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
+            Text(
+              'Loading failed: ${practiceProvider.errorMessage}',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.outline,
+              ),
+            ),
+            if (practiceProvider.retryFunc != null || true)
+              TextButton(
+                style: TextButton.styleFrom(
                   backgroundColor: theme.colorScheme.primary,
+                  foregroundColor: theme.colorScheme.onPrimary,
+                  disabledBackgroundColor: theme.colorScheme.surfaceDim,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 30,
                     vertical: 12,
                   ),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(24),
                   ),
                 ),
-                onPressed: () {
-                  practiceProvider.retryFunc!();
-                },
+                onPressed: practiceProvider.retryFunc,
                 child: Text(
                   practiceProvider.retryLabel ?? "Retry",
-                  style: theme.textTheme.labelLarge?.copyWith(
+                  style: theme.textTheme.titleMedium?.copyWith(
                     color: theme.colorScheme.onPrimary,
                   ),
                 ),
@@ -188,20 +234,19 @@ class _PracticePageState extends State<PracticePage> {
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
+          spacing: 16,
           children: [
             Icon(Icons.check_circle, color: Colors.green, size: 80),
-            const SizedBox(height: 20),
             Text(
               'Practice Completed!',
               style: theme.textTheme.headlineSmall!.copyWith(
                 color: theme.colorScheme.secondary,
-                fontWeight: FontWeight.w300,
+                // fontWeight: FontWeight.w300,
               ),
             ),
-            const SizedBox(height: 10),
-            ElevatedButton(
+            TextButton(
               style: ElevatedButton.styleFrom(
-                minimumSize: Size.square(48),
+                minimumSize: Size(120, 48),
                 backgroundColor: theme.colorScheme.surfaceContainerLowest,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(24),

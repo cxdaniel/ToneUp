@@ -10,6 +10,7 @@ import 'package:toneup_app/models/quizzes/quiz_model.dart';
 import 'package:toneup_app/models/quizzes/quiz_options_model.dart';
 import 'package:toneup_app/providers/quiz_provider.dart';
 import 'package:toneup_app/providers/tts_provider.dart';
+import 'package:toneup_app/theme_data.dart';
 import '../providers/practice_provider.dart';
 
 /// Quiz 答题页面：展示单个练习实例的具体题目和答题交互
@@ -29,37 +30,12 @@ class _QuizChoiceWidgetState extends State<QuizChoiceWidget> {
   late PracticeProvider practiceProvider;
   late ThemeData theme;
   late TTSProvider tts;
-  late Map<ColorState, Color> colorPass;
-  late Map<ColorState, Color> colorFail;
-  late Map<ColorState, Color> colorSelect;
-  late Map<ColorState, Color> colorIdle;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     theme = Theme.of(context);
     tts = context.watch<TTSProvider>();
-
-    colorPass = {
-      ColorState.fill: Color(0xFFD1E2C8),
-      ColorState.border: Color(0x28496A38),
-      ColorState.above: Color(0xFF4A6B38),
-    };
-    colorFail = {
-      ColorState.fill: theme.colorScheme.tertiaryContainer, //0xFFFFD8E4
-      ColorState.border: Color(0x286750A4),
-      ColorState.above: Color(0xFF7D5260),
-    };
-    colorSelect = {
-      ColorState.fill: theme.colorScheme.primaryContainer, //0xFFEADDFF
-      ColorState.border: Color(0x286750A4),
-      ColorState.above: theme.colorScheme.onPrimaryContainer, //0xFF4F378A,
-    };
-    colorIdle = {
-      ColorState.fill: theme.colorScheme.surfaceContainerLowest, //White
-      ColorState.border: Colors.transparent,
-      ColorState.above: theme.colorScheme.primary, //0xFF6750A4,
-    };
   }
 
   @override
@@ -112,14 +88,11 @@ class _QuizChoiceWidgetState extends State<QuizChoiceWidget> {
     double statusBarHeight = MediaQuery.of(context).viewPadding.top;
     // MediaQuery.of(context).padding.vertical +
     // MediaQuery.of(context).viewInsets.vertical;
-
     // final appBarKey = GlobalKey();
     final effectiveMinHeight = screenHeight - appBarHeight - statusBarHeight;
-
-    debugPrint(
-      'screenHeight:$screenHeight / appBarHeight:$appBarHeight / statusBarHeight: $statusBarHeight = effectiveMinHeight:$effectiveMinHeight',
-    );
-
+    // debugPrint(
+    //   'screenHeight:$screenHeight / appBarHeight:$appBarHeight / statusBarHeight: $statusBarHeight = effectiveMinHeight:$effectiveMinHeight',
+    // );
     return Consumer<QuizProvider>(
       builder: (ctx, provider, _) {
         quizProvider = provider;
@@ -158,22 +131,35 @@ class _QuizChoiceWidgetState extends State<QuizChoiceWidget> {
                         // 选项
                         _buildQuizOptions(quizProvider, quiz),
                         // 底部空间
-                        Text(
-                          'actId: ${quizProvider.quiz.actInstance.id} / ${quiz.actInstance.activity!.quizTemplate}',
-                          style: theme.textTheme.labelSmall!.copyWith(
-                            color: theme.colorScheme.primaryFixed,
-                          ),
-                        ),
-                        AnimatedSize(
-                          duration: const Duration(milliseconds: 300),
-                          curve: Curves.easeInOutQuart,
-                          child: SizedBox(
-                            height:
-                                (quizProvider.state != QuizState.initial &&
-                                    quizProvider.state != QuizState.intouch)
-                                ? 50
-                                : 0,
-                          ),
+                        Column(
+                          children: [
+                            Text(
+                              'actId: ${quizProvider.quiz.actInstance.id} / ${quiz.actInstance.activity!.quizTemplate}',
+                              // 'screen:$screenHeight - appBar:$appBarHeight - statusBar: $statusBarHeight = $effectiveMinHeight',
+                              style: theme.textTheme.labelSmall!.copyWith(
+                                color:
+                                    theme.colorScheme.onSecondaryFixedVariant,
+                              ),
+                            ),
+                            Text(
+                              'screen:$screenHeight - appBar:$appBarHeight - statusBar: $statusBarHeight = $effectiveMinHeight',
+                              style: theme.textTheme.labelSmall!.copyWith(
+                                color:
+                                    theme.colorScheme.onSecondaryFixedVariant,
+                              ),
+                            ),
+                            AnimatedSize(
+                              duration: const Duration(milliseconds: 300),
+                              curve: Curves.easeInOutQuart,
+                              child: SizedBox(
+                                height:
+                                    (quizProvider.state != QuizState.initial &&
+                                        quizProvider.state != QuizState.intouch)
+                                    ? 80
+                                    : 0,
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -196,7 +182,6 @@ class _QuizChoiceWidgetState extends State<QuizChoiceWidget> {
     }
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      // crossAxisAlignment: CrossAxisAlignment.end,
       spacing: 8,
       children: [
         FeedbackButton(
@@ -218,7 +203,7 @@ class _QuizChoiceWidgetState extends State<QuizChoiceWidget> {
                   (tts.state == TTSState.playing &&
                       voicePosition == quiz.material)
                   ? theme.colorScheme.primary
-                  : theme.colorScheme.secondaryContainer,
+                  : theme.colorScheme.primary.withAlpha(40),
               shape: CircleBorder(),
             ),
             child:
@@ -226,7 +211,9 @@ class _QuizChoiceWidgetState extends State<QuizChoiceWidget> {
                     voicePosition == quiz.material)
                 ? CircularProgressIndicator(
                     strokeWidth: 2,
-                    color: theme.colorScheme.primaryFixed,
+                    strokeCap: StrokeCap.round,
+                    color: theme.colorScheme.primary,
+                    padding: EdgeInsets.all(2),
                   )
                 : Icon(
                     Icons.volume_up_rounded,
@@ -244,8 +231,10 @@ class _QuizChoiceWidgetState extends State<QuizChoiceWidget> {
             OutlinedButton.icon(
               label: Text('Pinyin'),
               style: OutlinedButton.styleFrom(
-                side: BorderSide(color: theme.colorScheme.secondaryFixedDim),
-                // minimumSize: Size(0, 32),
+                side: BorderSide(
+                  color: theme.colorScheme.primary.withAlpha(40),
+                ),
+                minimumSize: Size(0, 32),
                 padding: EdgeInsets.symmetric(horizontal: 12),
               ),
               icon: Icon(size: 20, Icons.bubble_chart_outlined),
@@ -255,8 +244,10 @@ class _QuizChoiceWidgetState extends State<QuizChoiceWidget> {
             OutlinedButton.icon(
               label: Text('1.0x'),
               style: OutlinedButton.styleFrom(
-                side: BorderSide(color: theme.colorScheme.secondaryFixedDim),
-                // minimumSize: Size(0, 32),
+                side: BorderSide(
+                  color: theme.colorScheme.primary.withAlpha(40),
+                ),
+                minimumSize: Size(0, 32),
                 padding: EdgeInsets.symmetric(horizontal: 12),
               ),
               icon: Icon(size: 20, Icons.speed),
@@ -285,7 +276,7 @@ class _QuizChoiceWidgetState extends State<QuizChoiceWidget> {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: ShapeDecoration(
-        color: theme.colorScheme.surfaceContainerLow,
+        color: theme.colorScheme.primaryContainer,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
       child: Column(
@@ -322,9 +313,7 @@ class _QuizChoiceWidgetState extends State<QuizChoiceWidget> {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: ShapeDecoration(
-        color: theme
-            .colorScheme
-            .surfaceContainerLow, //const Color(0xFFF7F2FA) /* Schemes-Surface-Container-Low */,
+        color: theme.colorScheme.primaryContainer,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
       child: Column(
@@ -354,18 +343,20 @@ class _QuizChoiceWidgetState extends State<QuizChoiceWidget> {
   Widget _buildQuestion() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisAlignment: MainAxisAlignment.start,
+      mainAxisSize: MainAxisSize.max,
       spacing: 4,
       children: [
         if (quiz.isRenewal)
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10),
             decoration: ShapeDecoration(
-              color: theme.colorScheme.secondaryContainer,
+              color: theme.colorScheme.tertiaryContainer,
               shape: RoundedRectangleBorder(
                 side: BorderSide(
                   width: 1,
                   strokeAlign: BorderSide.strokeAlignCenter,
-                  color: theme.colorScheme.secondaryFixedDim,
+                  color: theme.colorScheme.onTertiaryContainer.withAlpha(40),
                 ),
                 borderRadius: BorderRadius.circular(10),
               ),
@@ -373,14 +364,14 @@ class _QuizChoiceWidgetState extends State<QuizChoiceWidget> {
             child: Text(
               'Renewal',
               style: theme.textTheme.labelLarge?.copyWith(
-                color: theme.colorScheme.onSecondaryContainer,
+                color: theme.colorScheme.onTertiaryContainer,
               ),
             ),
           ),
         Text(
           quiz.question,
           style: theme.textTheme.titleMedium?.copyWith(
-            color: theme.colorScheme.onSecondaryContainer,
+            color: theme.colorScheme.secondary,
             fontWeight: FontWeight.w500,
           ),
         ),
@@ -412,24 +403,18 @@ class _QuizChoiceWidgetState extends State<QuizChoiceWidget> {
           },
           child: Ink(
             decoration: ShapeDecoration(
-              color: option.state == OptionStatus.pass
-                  ? colorPass[ColorState.fill]
-                  : option.state == OptionStatus.fail
-                  ? colorFail[ColorState.fill]
-                  : option.state == OptionStatus.select
-                  ? colorSelect[ColorState.fill]
-                  : colorIdle[ColorState.fill],
+              color: _getOptColorByState(
+                state: option.state,
+                position: StyleTypeForOption.container,
+              ),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
                 side: BorderSide(
                   width: 2,
-                  color: option.state == OptionStatus.pass
-                      ? colorPass[ColorState.border]!
-                      : option.state == OptionStatus.fail
-                      ? colorFail[ColorState.border]!
-                      : option.state == OptionStatus.select
-                      ? colorSelect[ColorState.border]!
-                      : colorIdle[ColorState.border]!,
+                  color: _getOptColorByState(
+                    state: option.state,
+                    position: StyleTypeForOption.border,
+                  ),
                 ),
               ),
             ),
@@ -438,36 +423,23 @@ class _QuizChoiceWidgetState extends State<QuizChoiceWidget> {
               child: Row(
                 spacing: 8,
                 children: [
-                  option.state == OptionStatus.pass
-                      ? Icon(
-                          Icons.check_circle_rounded,
-                          color: colorPass[ColorState.above],
-                        )
-                      : option.state == OptionStatus.fail
-                      ? Icon(
-                          Icons.check_circle_rounded,
-                          color: colorFail[ColorState.above],
-                        )
-                      : option.state == OptionStatus.select
-                      ? Icon(
-                          Icons.check_circle_rounded,
-                          color: colorSelect[ColorState.above],
-                        )
-                      : Icon(
-                          Icons.circle_outlined,
-                          color: theme.colorScheme.secondaryFixedDim,
-                        ),
+                  Icon(
+                    option.state == OptionStatus.normal
+                        ? Icons.circle_outlined
+                        : Icons.check_circle_rounded,
+                    color: _getOptColorByState(
+                      state: option.state,
+                      position: StyleTypeForOption.icon,
+                    ),
+                  ),
                   Text(
                     option.text,
                     style: theme.textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.bold,
-                      color: option.state == OptionStatus.pass
-                          ? colorPass[ColorState.above]
-                          : option.state == OptionStatus.fail
-                          ? colorFail[ColorState.above]
-                          : option.state == OptionStatus.select
-                          ? colorSelect[ColorState.above]
-                          : colorIdle[ColorState.above],
+                      color: _getOptColorByState(
+                        state: option.state,
+                        position: StyleTypeForOption.onContainer,
+                      ),
                     ),
                   ),
                 ],
@@ -493,15 +465,19 @@ class _QuizChoiceWidgetState extends State<QuizChoiceWidget> {
           },
           child: Ink(
             decoration: ShapeDecoration(
-              color: option.state == OptionStatus.pass
-                  ? Color(0xFFD1E2C8)
-                  : option.state == OptionStatus.fail
-                  ? Color(0xFFFFD8E4)
-                  : option.state == OptionStatus.select
-                  ? theme.colorScheme.primaryContainer
-                  : theme.colorScheme.surfaceContainerLowest,
+              color: _getOptColorByState(
+                state: option.state,
+                position: StyleTypeForOption.container,
+              ),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
+                side: BorderSide(
+                  width: 2,
+                  color: _getOptColorByState(
+                    state: option.state,
+                    position: StyleTypeForOption.border,
+                  ),
+                ),
               ),
             ),
             child: Padding(
@@ -509,37 +485,22 @@ class _QuizChoiceWidgetState extends State<QuizChoiceWidget> {
               child: Row(
                 spacing: 4,
                 children: [
-                  option.state == OptionStatus.pass
-                      ? Icon(
-                          Icons.check_circle_rounded,
-                          color: Color(0xFF4A6B38),
-                        )
-                      : option.state == OptionStatus.fail
-                      ? Icon(
-                          Icons.check_circle_rounded,
-                          color: Color(0xFF7D5260),
-                        )
-                      : option.state == OptionStatus.select
-                      ? Icon(
-                          Icons.check_circle_rounded,
-                          color: theme.colorScheme.primary,
-                        )
-                      : Icon(
-                          Icons.circle_outlined,
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.secondaryFixedDim,
-                        ),
+                  Icon(
+                    option.state == OptionStatus.normal
+                        ? Icons.circle_outlined
+                        : Icons.check_circle_rounded,
+                    color: _getOptColorByState(
+                      state: option.state,
+                      position: StyleTypeForOption.icon,
+                    ),
+                  ),
                   Text(
                     option.text,
                     style: theme.textTheme.titleMedium?.copyWith(
-                      color: option.state == OptionStatus.pass
-                          ? Color(0xFF4A6B38)
-                          : option.state == OptionStatus.fail
-                          ? Color(0xFF7D5260)
-                          : option.state == OptionStatus.select
-                          ? theme.colorScheme.onPrimaryContainer
-                          : theme.colorScheme.primary,
+                      color: _getOptColorByState(
+                        state: option.state,
+                        position: StyleTypeForOption.onContainer,
+                      ),
                     ),
                   ),
                   Spacer(),
@@ -620,6 +581,50 @@ class _QuizChoiceWidgetState extends State<QuizChoiceWidget> {
     );
   }
 
+  /// 通过选项状态和位置获取颜色
+  Color _getOptColorByState({
+    required OptionStatus? state,
+    required StyleTypeForOption position,
+  }) {
+    final Color color;
+    switch (position) {
+      case StyleTypeForOption.container:
+        color = (state == OptionStatus.pass)
+            ? theme.extension<AppThemeExtensions>()!.statePassContainer!
+            : state == OptionStatus.fail
+            ? theme.extension<AppThemeExtensions>()!.stateFailContainer!
+            : state == OptionStatus.select
+            ? theme.colorScheme.primary
+            : theme.colorScheme.secondaryContainer;
+      case StyleTypeForOption.border:
+        color = state == OptionStatus.pass
+            ? theme.extension<AppThemeExtensions>()!.statePass!.withAlpha(40)
+            : state == OptionStatus.fail
+            ? theme.extension<AppThemeExtensions>()!.stateFail!.withAlpha(40)
+            : state == OptionStatus.select
+            ? theme.colorScheme.primary.withAlpha(40)
+            : theme.colorScheme.onSecondaryContainer.withAlpha(0);
+      case StyleTypeForOption.icon:
+        color = state == OptionStatus.pass
+            ? theme.extension<AppThemeExtensions>()!.statePass!
+            : state == OptionStatus.fail
+            ? theme.extension<AppThemeExtensions>()!.stateFail!
+            : state == OptionStatus.select
+            ? theme.colorScheme.onPrimary
+            : theme.colorScheme.inversePrimary;
+        break;
+      case StyleTypeForOption.onContainer:
+        color = state == OptionStatus.pass
+            ? theme.extension<AppThemeExtensions>()!.statePass!
+            : state == OptionStatus.fail
+            ? theme.extension<AppThemeExtensions>()!.stateFail!
+            : state == OptionStatus.select
+            ? theme.colorScheme.onPrimary
+            : theme.colorScheme.primary;
+    }
+    return color;
+  }
+
   /// 验证答案
   void _handleCheckAnswer() {
     final practiceProvider = Provider.of<PracticeProvider>(
@@ -631,3 +636,5 @@ class _QuizChoiceWidgetState extends State<QuizChoiceWidget> {
     practiceProvider.markQuizResult(quiz);
   }
 }
+
+enum StyleTypeForOption { container, onContainer, border, icon }

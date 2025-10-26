@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:toneup_app/components/feedback_button.dart';
@@ -19,7 +18,7 @@ class PlanPage extends StatefulWidget {
 class _PlanPageState extends State<PlanPage> {
   final ScrollController _scrollController = ScrollController();
   int? _activeItemGlobalIndex;
-
+  late ThemeData theme;
   @override
   void initState() {
     super.initState();
@@ -28,6 +27,12 @@ class _PlanPageState extends State<PlanPage> {
         Provider.of<PlanProvider>(context, listen: false).getAllPlans();
       });
     }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    theme = Theme.of(context);
   }
 
   @override
@@ -117,15 +122,19 @@ class _PlanPageState extends State<PlanPage> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          SpinKitFadingCircle(
-            color: Theme.of(context).colorScheme.primaryFixed,
-            size: 50.0,
+          // SpinKitFadingCircle(
+          //   color: theme.colorScheme.primaryFixed,
+          //   size: 50.0,
+          // ),
+          CircularProgressIndicator(
+            strokeCap: StrokeCap.round,
+            backgroundColor: theme.colorScheme.secondaryContainer,
           ),
           const SizedBox(height: 20),
           Text(
             planProvider.loadingMessage ?? "Loading...",
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: Theme.of(context).colorScheme.onSecondaryContainer,
+            style: theme.textTheme.titleMedium?.copyWith(
+              color: theme.colorScheme.onSecondaryContainer,
             ),
           ),
         ],
@@ -139,23 +148,19 @@ class _PlanPageState extends State<PlanPage> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.error_outline,
-            color: Theme.of(context).colorScheme.error,
-            size: 50.0,
-          ),
+          Icon(Icons.error_outline, color: theme.colorScheme.error, size: 50.0),
           const SizedBox(height: 20),
           Text(
             "Loading Failed, Please Try Again.",
             textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: Theme.of(context).colorScheme.onSecondaryContainer,
+            style: theme.textTheme.titleMedium?.copyWith(
+              color: theme.colorScheme.onSecondaryContainer,
             ),
           ),
           const SizedBox(height: 20),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.primary,
+              backgroundColor: theme.colorScheme.primary,
               padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
@@ -166,8 +171,8 @@ class _PlanPageState extends State<PlanPage> {
             },
             child: Text(
               "Retry",
-              style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                color: Theme.of(context).colorScheme.onPrimary,
+              style: theme.textTheme.labelLarge?.copyWith(
+                color: theme.colorScheme.onPrimary,
               ),
             ),
           ),
@@ -178,9 +183,8 @@ class _PlanPageState extends State<PlanPage> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Scaffold(
-      // backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
+      // backgroundColor: theme.colorScheme.surfaceContainerHigh,
       //TODO: 改到主导航，暂时去掉顶部appBar
       // appBar: AppBar(title: const Text('Goals'), centerTitle: true),
       body: Consumer<PlanProvider>(
@@ -198,8 +202,8 @@ class _PlanPageState extends State<PlanPage> {
             return Center(
               child: Text(
                 "Your have no Active Goal yet.",
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSecondaryContainer,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  color: theme.colorScheme.onSecondaryContainer,
                 ),
               ),
             );
@@ -340,8 +344,8 @@ class _PlanPageState extends State<PlanPage> {
           if (isActive && plan.progress != null)
             Text(
               'Ongoing...',
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                color: Theme.of(context).colorScheme.outline,
+              style: theme.textTheme.titleSmall?.copyWith(
+                color: theme.colorScheme.outline,
               ),
             ),
           FeedbackButton(

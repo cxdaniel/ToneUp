@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:toneup_app/components/feedback_button.dart';
 import 'package:toneup_app/providers/profile_provider.dart';
+import 'package:toneup_app/theme_data.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -179,7 +180,7 @@ class _ProfilePageState extends State<ProfilePage> {
             width: double.infinity,
             padding: const EdgeInsets.symmetric(vertical: 8),
             decoration: ShapeDecoration(
-              color: Color(0xFFF3B531),
+              color: theme.extension<AppThemeExtensions>()?.exp,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
               ),
@@ -191,14 +192,16 @@ class _ProfilePageState extends State<ProfilePage> {
               children: [
                 Icon(
                   Icons.energy_savings_leaf_rounded,
-                  color: Color(0xffBF7308),
+                  color: theme.extension<AppThemeExtensions>()?.onExpContainer,
                 ),
                 Text(
                   (provider.profile == null || provider.profile!.exp == null)
                       ? '-- EXP'
                       : '${provider.profile!.exp!} EXP',
                   style: theme.textTheme.titleMedium!.copyWith(
-                    color: Color(0xffBF7308),
+                    color: theme
+                        .extension<AppThemeExtensions>()
+                        ?.onExpContainer,
                     fontWeight: FontWeight.w700,
                   ),
                 ),

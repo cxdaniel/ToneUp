@@ -8,6 +8,7 @@ import 'package:toneup_app/models/user_practice_model.dart';
 import 'package:toneup_app/models/user_weekly_plan_model.dart';
 import 'package:toneup_app/providers/plan_provider.dart';
 import 'package:toneup_app/routes.dart';
+import 'package:toneup_app/theme_data.dart';
 
 // 1. 先定义 Tab 对应的页面（Practice 对应首页，其他页面占位，后续可补充）
 // 首页（原 HomePage，对应 Practice Tab）
@@ -80,7 +81,7 @@ class _HomePageState extends State<HomePage> {
           child: Ink(
             decoration: ShapeDecoration(
               color: (practiceData.score > 0)
-                  ? Color(0xffFBDC82)
+                  ? theme.extension<AppThemeExtensions>()?.expContainer
                   : theme.colorScheme.primaryContainer,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
@@ -98,7 +99,7 @@ class _HomePageState extends State<HomePage> {
                     Icons.star_rounded,
                     size: 56,
                     color: (practiceData.score > 0)
-                        ? Color(0xffF3B531)
+                        ? theme.extension<AppThemeExtensions>()?.exp
                         : theme.colorScheme.primaryFixedDim,
                   ),
                   Text(
@@ -106,7 +107,9 @@ class _HomePageState extends State<HomePage> {
                     textAlign: TextAlign.center,
                     style: theme.textTheme.titleMedium?.copyWith(
                       color: (practiceData.score > 0)
-                          ? Color(0xFFBF7308)
+                          ? theme
+                                .extension<AppThemeExtensions>()
+                                ?.onExpContainer
                           : theme.colorScheme.onPrimaryContainer,
                     ),
                   ),
@@ -601,7 +604,10 @@ class _HomePageState extends State<HomePage> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          SpinKitFadingCircle(color: theme.colorScheme.primary, size: 50.0),
+          CircularProgressIndicator(
+            strokeCap: StrokeCap.round,
+            backgroundColor: theme.colorScheme.secondaryContainer,
+          ),
           const SizedBox(height: 20),
           Text(
             planProvider.loadingMessage ?? "Loading...",

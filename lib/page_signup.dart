@@ -277,6 +277,7 @@ class _SignUpPageState extends State<SignUpPage> {
                         style: TextButton.styleFrom(
                           backgroundColor: theme.colorScheme.primary,
                           foregroundColor: theme.colorScheme.onPrimary,
+                          disabledBackgroundColor: theme.colorScheme.surfaceDim,
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),

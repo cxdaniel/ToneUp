@@ -31,7 +31,7 @@ class PracticeProvider extends ChangeNotifier {
   double get progress =>
       totalQuizzes > 0 ? (_currentQuizIndex + 1) / totalQuizzes : 0;
   bool _disposed = false;
-  Function? retryFunc;
+  VoidCallback? retryFunc;
   String? retryLabel;
 
   @override
