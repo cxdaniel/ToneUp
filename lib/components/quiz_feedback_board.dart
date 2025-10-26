@@ -3,6 +3,7 @@ import 'package:toneup_app/components/feedback_button.dart';
 import 'package:toneup_app/models/quizzes/quiz_model.dart';
 import 'package:toneup_app/providers/practice_provider.dart';
 import 'package:toneup_app/providers/quiz_provider.dart';
+import 'package:toneup_app/theme_data.dart';
 
 class QuizFeedbackBoard extends StatelessWidget {
   final QuizProvider quizProvider;
@@ -53,13 +54,15 @@ class QuizFeedbackBoard extends StatelessWidget {
           children: [
             Icon(
               Icons.sentiment_very_dissatisfied,
-              color: Color(0xFFFFD8E4),
+              color: theme.extension<AppThemeExtensions>()?.stateFailOnPrimary,
               size: 32,
             ),
             Text(
               'Not quite right',
               style: theme.textTheme.titleLarge?.copyWith(
-                color: Color(0xFFFFD8E4),
+                color: theme
+                    .extension<AppThemeExtensions>()
+                    ?.stateFailOnPrimary,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -86,13 +89,15 @@ class QuizFeedbackBoard extends StatelessWidget {
           children: [
             Icon(
               Icons.sentiment_very_satisfied,
-              color: Color(0xFFB7EC9B),
+              color: theme.extension<AppThemeExtensions>()?.statePassOnPrimary,
               size: 32,
             ),
             Text(
               'Awesome!',
               style: theme.textTheme.titleLarge?.copyWith(
-                color: Color(0xFFB7EC9B),
+                color: theme
+                    .extension<AppThemeExtensions>()
+                    ?.statePassOnPrimary,
                 fontWeight: FontWeight.w500,
               ),
             ),

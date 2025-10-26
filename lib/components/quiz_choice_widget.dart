@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -70,7 +71,7 @@ class _QuizChoiceWidgetState extends State<QuizChoiceWidget> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       backgroundColor: theme.colorScheme.primary,
-      barrierColor: theme.colorScheme.inverseSurface.withAlpha(50),
+      barrierColor: theme.colorScheme.shadow.withAlpha(40),
       builder: (context) => QuizFeedbackBoard(
         quizProvider: quizProvider,
         practiceProvider: practiceProvider,
@@ -84,15 +85,15 @@ class _QuizChoiceWidgetState extends State<QuizChoiceWidget> {
   @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
+    EdgeInsets viewpadding = MediaQueryData.fromView(
+      View.of(context),
+    ).viewPadding;
+    final statusBar = viewpadding.top;
     final appBarHeight = kToolbarHeight;
-    double statusBarHeight = MediaQuery.of(context).viewPadding.top;
-    // MediaQuery.of(context).padding.vertical +
-    // MediaQuery.of(context).viewInsets.vertical;
-    // final appBarKey = GlobalKey();
-    final effectiveMinHeight = screenHeight - appBarHeight - statusBarHeight;
-    // debugPrint(
-    //   'screenHeight:$screenHeight / appBarHeight:$appBarHeight / statusBarHeight: $statusBarHeight = effectiveMinHeight:$effectiveMinHeight',
-    // );
+    final effectiveMinHeight = screenHeight - statusBar - appBarHeight;
+
+    final debugtext =
+        '$viewpadding:$screenHeight-$statusBar-$appBarHeight=$effectiveMinHeight';
     return Consumer<QuizProvider>(
       builder: (ctx, provider, _) {
         quizProvider = provider;
@@ -142,7 +143,7 @@ class _QuizChoiceWidgetState extends State<QuizChoiceWidget> {
                               ),
                             ),
                             Text(
-                              'screen:$screenHeight - appBar:$appBarHeight - statusBar: $statusBarHeight = $effectiveMinHeight',
+                              debugtext,
                               style: theme.textTheme.labelSmall!.copyWith(
                                 color:
                                     theme.colorScheme.onSecondaryFixedVariant,

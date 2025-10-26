@@ -33,82 +33,86 @@ class _ProfilePageState extends State<ProfilePage> {
   Widget build(BuildContext context) {
     return Consumer<ProfileProvider>(
       builder: (context, provider, child) {
-        return Scaffold(
-          // backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
-          body: SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(24, 78, 24, 120),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                spacing: 24,
-                children: [
-                  _buildUserHeader(provider),
-                  _buildOverview(provider),
-                  _buildListCeil(
-                    label: 'Weekly study duration',
-                    hit:
-                        (provider.profile == null ||
-                            provider.profile!.planDurationMinutes == null)
-                        ? '--'
-                        : '${provider.profile!.planDurationMinutes} minutes',
-                    call: provider.updateMaterials,
-                  ),
-                  _buildListCeil(label: 'Profile Settings', call: null),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    spacing: 8,
-                    children: [
-                      TextButton.icon(
-                        icon: Icon(
-                          Icons.assignment_turned_in_outlined,
-                          size: 24,
-                          color: theme.colorScheme.secondary,
+        return SafeArea(
+          bottom: false,
+          top: false,
+          child: Scaffold(
+            // backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
+            body: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(24, 78, 24, 120),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  spacing: 24,
+                  children: [
+                    _buildUserHeader(provider),
+                    _buildOverview(provider),
+                    _buildListCeil(
+                      label: 'Weekly study duration',
+                      hit:
+                          (provider.profile == null ||
+                              provider.profile!.planDurationMinutes == null)
+                          ? '--'
+                          : '${provider.profile!.planDurationMinutes} minutes',
+                      call: provider.updateMaterials,
+                    ),
+                    _buildListCeil(label: 'Profile Settings', call: null),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      spacing: 8,
+                      children: [
+                        TextButton.icon(
+                          icon: Icon(
+                            Icons.assignment_turned_in_outlined,
+                            size: 24,
+                            color: theme.colorScheme.secondary,
+                          ),
+                          onPressed: () {},
+                          label: Text(
+                            'Condition & Terms',
+                            style: theme.textTheme.titleMedium,
+                          ),
                         ),
-                        onPressed: () {},
-                        label: Text(
-                          'Condition & Terms',
-                          style: theme.textTheme.titleMedium,
+                        TextButton.icon(
+                          icon: Icon(
+                            Icons.privacy_tip_outlined,
+                            size: 24,
+                            color: theme.colorScheme.secondary,
+                          ),
+                          onPressed: () {},
+                          label: Text(
+                            'Privacy',
+                            style: theme.textTheme.titleMedium,
+                          ),
                         ),
-                      ),
-                      TextButton.icon(
-                        icon: Icon(
-                          Icons.privacy_tip_outlined,
-                          size: 24,
-                          color: theme.colorScheme.secondary,
+                        TextButton.icon(
+                          icon: Icon(
+                            Icons.info_outline,
+                            size: 24,
+                            color: theme.colorScheme.secondary,
+                          ),
+                          onPressed: () {},
+                          label: Text(
+                            'About',
+                            style: theme.textTheme.titleMedium,
+                          ),
                         ),
-                        onPressed: () {},
-                        label: Text(
-                          'Privacy',
-                          style: theme.textTheme.titleMedium,
+                        TextButton.icon(
+                          icon: Icon(
+                            Icons.logout_rounded,
+                            size: 24,
+                            color: theme.colorScheme.secondary,
+                          ),
+                          onPressed: _logout,
+                          label: Text(
+                            'Logout',
+                            style: theme.textTheme.titleMedium,
+                          ),
                         ),
-                      ),
-                      TextButton.icon(
-                        icon: Icon(
-                          Icons.info_outline,
-                          size: 24,
-                          color: theme.colorScheme.secondary,
-                        ),
-                        onPressed: () {},
-                        label: Text(
-                          'About',
-                          style: theme.textTheme.titleMedium,
-                        ),
-                      ),
-                      TextButton.icon(
-                        icon: Icon(
-                          Icons.logout_rounded,
-                          size: 24,
-                          color: theme.colorScheme.secondary,
-                        ),
-                        onPressed: _logout,
-                        label: Text(
-                          'Logout',
-                          style: theme.textTheme.titleMedium,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
           ),

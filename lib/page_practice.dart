@@ -59,7 +59,6 @@ class _PracticePageState extends State<PracticePage> {
         builder: (ctx, practiceProvider, _) {
           final quizzes = practiceProvider.quizzes;
           return Scaffold(
-            // backgroundColor: theme.colorScheme.surfaceContainerHigh,
             appBar: (!practiceProvider.isPracticeCompleted)
                 ? AppBar(
                     leading: IconButton(
@@ -230,7 +229,6 @@ class _PracticePageState extends State<PracticePage> {
   /// 练习完成状态
   Widget _buildFinishedState(PracticeProvider practiceProvider) {
     return Scaffold(
-      backgroundColor: theme.colorScheme.surfaceContainerHigh,
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,

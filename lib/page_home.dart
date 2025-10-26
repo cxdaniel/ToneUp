@@ -2,7 +2,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:toneup_app/components/feedback_button.dart';
 import 'package:toneup_app/models/user_practice_model.dart';
 import 'package:toneup_app/models/user_weekly_plan_model.dart';
@@ -577,23 +576,27 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      // backgroundColor: theme.colorScheme.surfaceContainerHigh,
-      body: Consumer<PlanProvider>(
-        builder: (context, planProvider, child) {
-          _planData = planProvider.activePlan;
-          if (planProvider.isLoading) {
-            return _buildLoadingState(planProvider);
-          }
-          if (planProvider.errorMessage != null) {
-            return _buildErrorState(planProvider);
-          }
-          if (_planData == null) {
-            return _buildCreateState(planProvider);
-          } else {
-            return _buildDataState();
-          }
-        },
+    return SafeArea(
+      top: false,
+      bottom: false,
+      child: Scaffold(
+        // backgroundColor: theme.colorScheme.surfaceContainerHigh,
+        body: Consumer<PlanProvider>(
+          builder: (context, planProvider, child) {
+            _planData = planProvider.activePlan;
+            if (planProvider.isLoading) {
+              return _buildLoadingState(planProvider);
+            }
+            if (planProvider.errorMessage != null) {
+              return _buildErrorState(planProvider);
+            }
+            if (_planData == null) {
+              return _buildCreateState(planProvider);
+            } else {
+              return _buildDataState();
+            }
+          },
+        ),
       ),
     );
   }
