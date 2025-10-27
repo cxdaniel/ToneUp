@@ -21,6 +21,7 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   UserWeeklyPlanModel? _planData;
   late ThemeData theme;
+  late PlanProvider planProvider;
 
   @override
   void initState() {
@@ -46,7 +47,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   // 生成活动卡片
-  List<Widget> _buildActivityCards(BuildContext context) {
+  List<Widget> _buildActivityCards() {
     if (_planData == null) return [];
     List<UserPracticeModel>? practices = _planData!.practiceData;
     if (practices == null || practices.isEmpty) {
@@ -74,7 +75,7 @@ class _HomePageState extends State<HomePage> {
               extra: {'practiceData': practiceData, 'planData': _planData},
             );
             if (context.mounted) {
-              Provider.of<PlanProvider>(context, listen: false).refreshPlan();
+              planProvider.refreshPlan();
             }
           },
           child: Ink(
@@ -246,6 +247,95 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  /// 完成状态组件
+  Widget _buildCelebration() {
+    return Container(
+      padding: EdgeInsets.all(24),
+      decoration: ShapeDecoration(
+        color: theme.colorScheme.surfaceContainerLow,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        spacing: 24,
+        children: [
+          Icon(
+            Icons.celebration_rounded,
+            color: theme.extension<AppThemeExtensions>()?.exp,
+            size: 64.0,
+          ),
+          Text(
+            "Congratulations! \n You have completed the goal!",
+            style: theme.textTheme.titleLarge?.copyWith(
+              color: theme.colorScheme.primary,
+              fontWeight: FontWeight.normal,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          Wrap(
+            spacing: 20,
+            runSpacing: 20,
+            runAlignment: WrapAlignment.spaceEvenly,
+            alignment: WrapAlignment.spaceEvenly,
+            children: [
+              TextButton.icon(
+                style: ElevatedButton.styleFrom(
+                  minimumSize: Size.square(48),
+                  side: BorderSide(
+                    width: 0,
+                    color: theme.colorScheme.secondary,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(32),
+                  ),
+                ),
+                onPressed: _gotoPagePlan,
+                icon: Icon(
+                  Icons.list,
+                  color: theme.colorScheme.secondary,
+                  size: 24,
+                ),
+                label: Text(
+                  "View Your All Goals",
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    color: theme.colorScheme.secondary,
+                  ),
+                ),
+              ),
+              FilledButton.icon(
+                style: FilledButton.styleFrom(
+                  minimumSize: Size.square(48),
+                  // backgroundColor: theme.colorScheme.surfaceContainerLowest,
+                  backgroundColor: theme.colorScheme.primary,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(32),
+                  ),
+                ),
+                onPressed: () async {
+                  planProvider.createPlan();
+                },
+                icon: Icon(
+                  Icons.golf_course,
+                  color: theme.colorScheme.onPrimary,
+                  // color: theme.extension<AppThemeExtensions>()?.exp,
+                  size: 24,
+                ),
+                label: Text(
+                  "Start a New Goal",
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    color: theme.colorScheme.onPrimary,
+                    // color: theme.extension<AppThemeExtensions>()?.exp,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   /// 正常数据状态
   Widget _buildDataState() {
     final int currentLevel = _planData!.level;
@@ -255,9 +345,15 @@ class _HomePageState extends State<HomePage> {
     if (progress == 1) {
       planProvider.completeActivePlan();
     }
+    final viewPadding = MediaQuery.of(context).viewPadding;
     return SingleChildScrollView(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 100, 24, 120),
+        padding: EdgeInsets.fromLTRB(
+          24,
+          viewPadding.top + 60,
+          24,
+          viewPadding.bottom + 90,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.start,
@@ -336,92 +432,7 @@ class _HomePageState extends State<HomePage> {
             ),
 
             /// 计划全部完成
-            if (progress == 1)
-              Container(
-                padding: EdgeInsets.all(24),
-                // width: double.infinity,
-                decoration: ShapeDecoration(
-                  // color: theme.highlightColor,
-                  color: Colors.amber[300],
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(24),
-                  ),
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  spacing: 24,
-                  children: [
-                    Icon(
-                      Icons.celebration_rounded,
-                      color: Colors.white,
-                      size: 80.0,
-                    ),
-                    Text(
-                      "Congratulations! \n You have completed the goal!",
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        color: theme.colorScheme.secondary,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    Wrap(
-                      // crossAxisAlignment: CrossAxisAlignment.stretch,
-                      // mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      spacing: 20,
-                      runSpacing: 20,
-                      runAlignment: WrapAlignment.spaceEvenly,
-                      alignment: WrapAlignment.spaceEvenly,
-                      children: [
-                        OutlinedButton.icon(
-                          style: ElevatedButton.styleFrom(
-                            minimumSize: Size.square(48),
-                            side: BorderSide(
-                              width: 0,
-                              color: theme.colorScheme.secondary,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                          ),
-                          onPressed: _gotoPagePlan,
-                          icon: Icon(
-                            Icons.list,
-                            color: theme.colorScheme.secondary,
-                          ),
-                          label: Text(
-                            "View Your All Goals",
-                            style: theme.textTheme.labelLarge?.copyWith(
-                              color: Theme.of(context).colorScheme.secondary,
-                            ),
-                          ),
-                        ),
-                        ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(
-                            minimumSize: Size.square(48),
-                            backgroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                          ),
-                          onPressed: () async {
-                            planProvider.createPlan();
-                          },
-                          icon: Icon(
-                            Icons.golf_course,
-                            color: Colors.amber[800],
-                          ),
-                          label: Text(
-                            "Start a New Goal",
-                            style: theme.textTheme.labelLarge?.copyWith(
-                              color: Colors.amber[800],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
+            if (progress == 1) _buildCelebration(),
 
             /// 活动卡片模块
             SizedBox(
@@ -450,7 +461,7 @@ class _HomePageState extends State<HomePage> {
                       ),
                     ],
                   ),
-                  ..._buildActivityCards(context),
+                  ..._buildActivityCards(),
                 ],
               ),
             ),
@@ -576,27 +587,23 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      top: false,
-      bottom: false,
-      child: Scaffold(
-        // backgroundColor: theme.colorScheme.surfaceContainerHigh,
-        body: Consumer<PlanProvider>(
-          builder: (context, planProvider, child) {
-            _planData = planProvider.activePlan;
-            if (planProvider.isLoading) {
-              return _buildLoadingState(planProvider);
-            }
-            if (planProvider.errorMessage != null) {
-              return _buildErrorState(planProvider);
-            }
-            if (_planData == null) {
-              return _buildCreateState(planProvider);
-            } else {
-              return _buildDataState();
-            }
-          },
-        ),
+    return Scaffold(
+      body: Consumer<PlanProvider>(
+        builder: (context, provider, child) {
+          planProvider = provider;
+          _planData = planProvider.activePlan;
+          if (planProvider.isLoading) {
+            return _buildLoadingState(planProvider);
+          }
+          if (planProvider.errorMessage != null) {
+            return _buildErrorState(planProvider);
+          }
+          if (_planData == null) {
+            return _buildCreateState(planProvider);
+          } else {
+            return _buildDataState();
+          }
+        },
       ),
     );
   }

@@ -116,16 +116,12 @@ class _PlanPageState extends State<PlanPage> {
     );
   }
 
-  // 加载中状态
+  /// ⏳ 加载中状态
   Widget _buildLoadingState(BuildContext context, PlanProvider planProvider) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // SpinKitFadingCircle(
-          //   color: theme.colorScheme.primaryFixed,
-          //   size: 50.0,
-          // ),
           CircularProgressIndicator(
             strokeCap: StrokeCap.round,
             backgroundColor: theme.colorScheme.secondaryContainer,
@@ -134,7 +130,7 @@ class _PlanPageState extends State<PlanPage> {
           Text(
             planProvider.loadingMessage ?? "Loading...",
             style: theme.textTheme.titleMedium?.copyWith(
-              color: theme.colorScheme.onSecondaryContainer,
+              color: theme.colorScheme.outline,
             ),
           ),
         ],
@@ -142,7 +138,7 @@ class _PlanPageState extends State<PlanPage> {
     );
   }
 
-  // 错误状态
+  /// ⛔️ 错误状态
   Widget _buildErrorState(BuildContext context, PlanProvider planProvider) {
     return Center(
       child: Column(
@@ -183,64 +179,73 @@ class _PlanPageState extends State<PlanPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      // backgroundColor: theme.colorScheme.surfaceContainerHigh,
-      //TODO: 改到主导航，暂时去掉顶部appBar
-      // appBar: AppBar(title: const Text('Goals'), centerTitle: true),
-      body: Consumer<PlanProvider>(
-        builder: (context, planProvider, child) {
-          // 加载状态
-          if (planProvider.isLoading) {
-            return _buildLoadingState(context, planProvider);
-          }
-          // 加载错误状态
-          if (planProvider.errorMessage != null) {
-            return _buildErrorState(context, planProvider);
-          }
-          // 空状态
-          if (planProvider.allPlans.isEmpty) {
-            return Center(
-              child: Text(
-                "Your have no Active Goal yet.",
-                style: theme.textTheme.titleMedium?.copyWith(
-                  color: theme.colorScheme.onSecondaryContainer,
+    return SafeArea(
+      top: false,
+      child: Scaffold(
+        // backgroundColor: theme.colorScheme.surfaceContainerHigh,
+        //TODO: 改到主导航，暂时去掉顶部appBar
+        // appBar: AppBar(title: const Text('Goals'), centerTitle: true),
+        body: Consumer<PlanProvider>(
+          builder: (context, planProvider, child) {
+            // 加载状态
+            if (planProvider.isLoading) {
+              return _buildLoadingState(context, planProvider);
+            }
+            // 加载错误状态
+            if (planProvider.errorMessage != null) {
+              return _buildErrorState(context, planProvider);
+            }
+            // 空状态
+            if (planProvider.allPlans.isEmpty) {
+              return Center(
+                child: Text(
+                  "Your have no Active Goal yet.",
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    color: theme.colorScheme.onSecondaryContainer,
+                  ),
                 ),
-              ),
+              );
+            }
+            // 延迟执行滚动
+            WidgetsBinding.instance.addPostFrameCallback(
+              (_) => _scrollToActiveItem(),
             );
-          }
-          // 延迟执行滚动
-          WidgetsBinding.instance.addPostFrameCallback(
-            (_) => _scrollToActiveItem(),
-          );
-          // 从 Provider 获取分组数据
-          final groupedPlans = planProvider.groupPlansByLevelAndMonth();
-          // 按级别升序排序
-          final levelKeys = groupedPlans.keys.toList()..sort();
-          final allPlans = groupedPlans.values
-              .expand((l) => l.values)
-              .expand((m) => m)
-              .toList();
+            // 从 Provider 获取分组数据
+            final groupedPlans = planProvider.groupPlansByLevelAndMonth();
+            // 按级别升序排序
+            final levelKeys = groupedPlans.keys.toList()..sort();
+            final allPlans = groupedPlans.values
+                .expand((l) => l.values)
+                .expand((m) => m)
+                .toList();
 
-          // 激活计划的索引
-          _calculateActiveItemIndex(allPlans, planProvider.activePlan);
+            // 激活计划的索引
+            _calculateActiveItemIndex(allPlans, planProvider.activePlan);
 
-          return Padding(
-            padding: const EdgeInsets.only(top: 0, bottom: 88),
-            child: RefreshIndicator(
-              onRefresh: () async {
-                await planProvider.getAllPlans();
-              },
-              backgroundColor: theme.colorScheme.secondaryContainer,
-              child: CustomScrollView(
-                controller: _scrollController,
-                slivers: [
-                  SliverAppBar(
-                    surfaceTintColor: theme.colorScheme.surface,
-                    backgroundColor: theme.colorScheme.surface,
-                    title: Padding(
-                      padding: EdgeInsets.only(left: 8),
-                      child: Align(
-                        alignment: AlignmentGeometry.centerLeft,
+            return Padding(
+              padding: EdgeInsets.only(
+                // top: 0, //MediaQuery.of(context).viewPadding.top,
+                bottom: MediaQuery.of(context).viewPadding.bottom + 56,
+              ),
+              child: RefreshIndicator(
+                onRefresh: () async {
+                  await planProvider.getAllPlans();
+                },
+                backgroundColor: theme.colorScheme.secondaryContainer,
+                child: CustomScrollView(
+                  controller: _scrollController,
+                  slivers: [
+                    SliverAppBar(
+                      toolbarHeight: 10,
+                      expandedHeight: 60 + 40,
+                      surfaceTintColor: theme.colorScheme.surface,
+                      backgroundColor: theme.colorScheme.surface,
+                      leadingWidth: double.infinity,
+                      flexibleSpace: Padding(
+                        padding: EdgeInsetsGeometry.only(
+                          left: 24,
+                          top: MediaQuery.of(context).viewPadding.top + 60,
+                        ),
                         child: Text(
                           'Goals',
                           style: theme.textTheme.headlineLarge?.copyWith(
@@ -249,74 +254,74 @@ class _PlanPageState extends State<PlanPage> {
                           ),
                         ),
                       ),
+                      pinned: true,
                     ),
-                    pinned: true,
-                  ),
-                  // 遍历所有级别分组
-                  ...levelKeys.expand((level) {
-                    final monthGroups = groupedPlans[level]!;
-                    // 按月份升序排序
-                    final monthKeys = monthGroups.keys.toList()..sort();
-                    return [
-                      // 级别吸顶头
-                      SliverPersistentHeader(
-                        delegate: LevelHeaderDelegate(title: 'HSK $level'),
-                        pinned: true, // 吸顶效果
-                      ),
-                      // 遍历该级别下的所有月份分组
-                      ...monthKeys.expand((monthKey) {
-                        final plansInMonth = monthGroups[monthKey]!;
-                        // 生成月份显示文本（如 "Aug. 2025"，保留你的格式）
-                        final monthLabel = DateFormat(
-                          'MMM. yyyy',
-                        ).format(plansInMonth.first.createdAt);
+                    // 遍历所有级别分组
+                    ...levelKeys.expand((level) {
+                      final monthGroups = groupedPlans[level]!;
+                      // 按月份升序排序
+                      final monthKeys = monthGroups.keys.toList()..sort();
+                      return [
+                        // 级别吸顶头
+                        SliverPersistentHeader(
+                          delegate: LevelHeaderDelegate(title: 'HSK $level'),
+                          pinned: true, // 吸顶效果
+                        ),
+                        // 遍历该级别下的所有月份分组
+                        ...monthKeys.expand((monthKey) {
+                          final plansInMonth = monthGroups[monthKey]!;
+                          // 生成月份显示文本（如 "Aug. 2025"，保留你的格式）
+                          final monthLabel = DateFormat(
+                            'MMM. yyyy',
+                          ).format(plansInMonth.first.createdAt);
 
-                        return [
-                          // 月份吸顶头（复用你的 MonthHeaderDelegate）
-                          SliverPersistentHeader(
-                            delegate: MonthHeaderDelegate(title: monthLabel),
-                            pinned: true, // 吸顶效果
-                          ),
-                          // 该月份下的计划列表（保留你的列表结构）
-                          SliverList(
-                            delegate: SliverChildBuilderDelegate((
-                              context,
-                              index,
-                            ) {
-                              final plan = plansInMonth[index];
-                              // 判断当前计划是否为激活状态（从 Provider 获取）
-                              final isActive =
-                                  plan.status == PlanStatus.active ||
-                                  plan.status == PlanStatus.reactive;
-                              // planProvider.activePlan?.id == plan.id;
-                              return _buildPlanItem(
-                                plan: plan,
-                                isActive: isActive,
-                                theme: theme,
-                                onTap: () => _changeGoal(plan),
-                              );
-                            }, childCount: plansInMonth.length),
-                          ),
-                        ];
-                      }),
-                    ];
-                  }),
-                  SliverPadding(
-                    padding: EdgeInsetsGeometry.only(top: 20, bottom: 100),
-                    sliver: SliverToBoxAdapter(
-                      child: Center(child: Text('No more data')),
+                          return [
+                            // 月份吸顶头（复用你的 MonthHeaderDelegate）
+                            SliverPersistentHeader(
+                              delegate: MonthHeaderDelegate(title: monthLabel),
+                              pinned: true, // 吸顶效果
+                            ),
+                            // 该月份下的计划列表（保留你的列表结构）
+                            SliverList(
+                              delegate: SliverChildBuilderDelegate((
+                                context,
+                                index,
+                              ) {
+                                final plan = plansInMonth[index];
+                                // 判断当前计划是否为激活状态（从 Provider 获取）
+                                final isActive =
+                                    plan.status == PlanStatus.active ||
+                                    plan.status == PlanStatus.reactive;
+                                // planProvider.activePlan?.id == plan.id;
+                                return _buildPlanItem(
+                                  plan: plan,
+                                  isActive: isActive,
+                                  theme: theme,
+                                  onTap: () => _changeGoal(plan),
+                                );
+                              }, childCount: plansInMonth.length),
+                            ),
+                          ];
+                        }),
+                      ];
+                    }),
+                    SliverPadding(
+                      padding: EdgeInsetsGeometry.only(top: 20, bottom: 100),
+                      sliver: SliverToBoxAdapter(
+                        child: Center(child: Text('No more data')),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }
 
-  /// 单个计划项
+  /// 🧩 单个计划项
   Widget _buildPlanItem({
     required UserWeeklyPlanModel plan,
     required bool isActive,

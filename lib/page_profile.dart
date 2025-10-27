@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:toneup_app/components/feedback_button.dart';
@@ -33,6 +34,7 @@ class _ProfilePageState extends State<ProfilePage> {
   Widget build(BuildContext context) {
     return Consumer<ProfileProvider>(
       builder: (context, provider, child) {
+        final viewPadding = MediaQuery.of(context).viewPadding;
         return SafeArea(
           bottom: false,
           top: false,
@@ -40,7 +42,12 @@ class _ProfilePageState extends State<ProfilePage> {
             // backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
             body: SingleChildScrollView(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(24, 78, 24, 120),
+                padding: EdgeInsets.fromLTRB(
+                  24,
+                  viewPadding.top + 24,
+                  24,
+                  viewPadding.bottom + 90,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   spacing: 24,
@@ -61,53 +68,25 @@ class _ProfilePageState extends State<ProfilePage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       spacing: 8,
                       children: [
-                        TextButton.icon(
-                          icon: Icon(
-                            Icons.assignment_turned_in_outlined,
-                            size: 24,
-                            color: theme.colorScheme.secondary,
-                          ),
-                          onPressed: () {},
-                          label: Text(
-                            'Condition & Terms',
-                            style: theme.textTheme.titleMedium,
-                          ),
+                        _buildLink(
+                          icon: Icons.assignment_turned_in_outlined,
+                          label: 'Condition & Terms',
+                          call: () {},
                         ),
-                        TextButton.icon(
-                          icon: Icon(
-                            Icons.privacy_tip_outlined,
-                            size: 24,
-                            color: theme.colorScheme.secondary,
-                          ),
-                          onPressed: () {},
-                          label: Text(
-                            'Privacy',
-                            style: theme.textTheme.titleMedium,
-                          ),
+                        _buildLink(
+                          icon: Icons.privacy_tip_outlined,
+                          label: 'Privacy',
+                          call: null,
                         ),
-                        TextButton.icon(
-                          icon: Icon(
-                            Icons.info_outline,
-                            size: 24,
-                            color: theme.colorScheme.secondary,
-                          ),
-                          onPressed: () {},
-                          label: Text(
-                            'About',
-                            style: theme.textTheme.titleMedium,
-                          ),
+                        _buildLink(
+                          icon: Icons.info_outline,
+                          label: 'About',
+                          call: null,
                         ),
-                        TextButton.icon(
-                          icon: Icon(
-                            Icons.logout_rounded,
-                            size: 24,
-                            color: theme.colorScheme.secondary,
-                          ),
-                          onPressed: _logout,
-                          label: Text(
-                            'Logout',
-                            style: theme.textTheme.titleMedium,
-                          ),
+                        _buildLink(
+                          icon: Icons.logout_rounded,
+                          label: 'Logout',
+                          call: _logout,
                         ),
                       ],
                     ),
@@ -366,6 +345,24 @@ class _ProfilePageState extends State<ProfilePage> {
                 color: theme.colorScheme.secondary,
               ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLink({
+    required String label,
+    IconData? icon,
+    VoidCallback? call,
+  }) {
+    return TextButton.icon(
+      icon: Icon(icon, size: 20, color: theme.colorScheme.outline),
+      onPressed: call,
+      label: Text(
+        label,
+        style: theme.textTheme.titleSmall?.copyWith(
+          color: theme.colorScheme.secondary,
+          fontWeight: FontWeight.bold,
         ),
       ),
     );

@@ -50,6 +50,7 @@ class _PracticePageState extends State<PracticePage> {
     final UserWeeklyPlanModel planData = extra['planData'];
     final String topic = planData.materialSnapshot.topicTag;
     final String culture = planData.materialSnapshot.cultureTag;
+    debugPrint('PagePractice: ${MediaQuery.of(context).viewPadding}');
     return ChangeNotifierProvider(
       create: (ctx) =>
           PracticeProvider()

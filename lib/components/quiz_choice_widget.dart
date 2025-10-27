@@ -93,6 +93,7 @@ class _QuizChoiceWidgetState extends State<QuizChoiceWidget> {
 
     final debugtext =
         '$viewpadding:$screenHeight-$statusBar-$appBarHeight=$effectiveMinHeight';
+
     return Consumer<QuizProvider>(
       builder: (ctx, provider, _) {
         quizProvider = provider;
@@ -103,7 +104,7 @@ class _QuizChoiceWidgetState extends State<QuizChoiceWidget> {
             mounted &&
             !_isBottomSheetShowing) {
           Future.microtask(() {
-            if (mounted) {
+            if (ctx.mounted) {
               _showFeedbackBottomSheet(
                 context: ctx,
                 quizProvider: quizProvider,
