@@ -68,13 +68,13 @@ class ProfileProvider extends ChangeNotifier {
 
       if (_profileModel != null) {
         _profileModel!.characters = _records!
-            .where((item) => item.category == MaterialType.character)
+            .where((item) => item.category == MaterialContentType.character)
             .length;
         _profileModel!.words = _records!
-            .where((item) => item.category == MaterialType.word)
+            .where((item) => item.category == MaterialContentType.word)
             .length;
         _profileModel!.sentences = _records!
-            .where((item) => item.category == MaterialType.sentence)
+            .where((item) => item.category == MaterialContentType.sentence)
             .length;
       }
       await saveProfile();

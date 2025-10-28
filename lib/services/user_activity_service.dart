@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -15,12 +16,38 @@ class UserActivityService {
   final SupabaseClient _supabase = Supabase.instance.client;
 
   /// 获取practice下的所有练习实例instance
-  Future<List<UserActivityInstanceModel>> getPracticeData(
-    List<int> data, //activity_instance_id 列表
+  Future<List<UserActivityInstanceModel>> getPracticeInstances(
+    List<int> data,
+  ) async {
+    try {
+      final response = await _supabase
+          .from('user_activity_instances')
+          .select()
+          .inFilter('id', data);
+      if (response.isEmpty) {
+        throw Exception("查询活动库实例异常：返回数组为空");
+      }
+      final ret = response
+          .map((e) => (UserActivityInstanceModel.fromJson(e)))
+          .toList();
+      return ret;
+    } catch (e) {
+      throw Exception('查询活动库实例失败: $e');
+    }
+  }
+
+  /// 生成练习题返回活动实例数组
+  Future<List<UserActivityInstanceModel>> generatePracticeQuiz(
+    List<int> data,
     String topic,
     String culture,
   ) async {
     try {
+      final acts = await _supabase
+          .from('user_activity_instances')
+          .select()
+          .inFilter('id', data);
+
       final response = await _supabase.functions.invoke(
         "get_activity_instances",
         body: {
@@ -36,11 +63,9 @@ class UserActivityService {
       if (actInstances.isEmpty) {
         throw Exception("查询活动库实例异常：返回数组为空");
       }
-      final ret = await _addActivityToInstances(
-        actInstances
-            .map((e) => (UserActivityInstanceModel.fromJson(e)))
-            .toList(),
-      );
+      final ret = actInstances
+          .map((e) => (UserActivityInstanceModel.fromJson(e)))
+          .toList();
 
       return ret;
     } catch (e) {
@@ -49,7 +74,7 @@ class UserActivityService {
   }
 
   /// 获取每个练习实例对应的活动库数据activity
-  Future<List<UserActivityInstanceModel>> _addActivityToInstances(
+  Future<List<UserActivityInstanceModel>> addActivityToInstances(
     List<UserActivityInstanceModel> datas,
   ) async {
     final actIds = datas.map((a) => a.activityId).toList();

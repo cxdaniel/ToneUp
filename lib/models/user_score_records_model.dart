@@ -11,7 +11,7 @@ class UserScoreRecordsModel {
   @JsonKey(name: "created_at")
   final DateTime? createdAt;
   final String item;
-  final MaterialType category;
+  final MaterialContentType category;
 
   UserScoreRecordsModel({
     required this.category,

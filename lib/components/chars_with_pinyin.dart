@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:pinyin/pinyin.dart';
+import 'package:toneup_app/services/chinese_words_service.dart';
 
 class CharsWithPinyin extends StatefulWidget {
-  final String? pinyin;
   final String chinese;
+  final bool showPinyin;
   final double? size;
 
   const CharsWithPinyin({
     super.key,
     required this.chinese,
-    this.pinyin,
+    this.showPinyin = true,
     this.size,
   });
 
@@ -20,14 +22,20 @@ class _CharsWithPinyinState extends State<CharsWithPinyin> {
   @override
   Widget build(BuildContext context) {
     final fontsize = (widget.size != null) ? widget.size : 36.0;
+    final pinyin = isChinese(widget.chinese)
+        ? PinyinHelper.getPinyin(
+            widget.chinese,
+            format: PinyinFormat.WITH_TONE_MARK,
+          )
+        : '';
     return Column(
       mainAxisSize: MainAxisSize.min,
       mainAxisAlignment: MainAxisAlignment.center,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        if (widget.pinyin != null)
+        if (widget.showPinyin)
           Text(
-            widget.pinyin!,
+            pinyin,
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               fontWeight: FontWeight.w400,

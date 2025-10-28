@@ -15,7 +15,7 @@ class IndicatorsModel {
   @JsonKey(name: "created_at")
   final DateTime createdAt;
   @JsonKey(name: "material_types")
-  final List<MaterialType> materialTypes;
+  final List<MaterialContentType> materialTypes;
 
   IndicatorsModel({
     required this.id,

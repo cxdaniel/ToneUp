@@ -1,3 +1,6 @@
+import 'package:carousel_slider/carousel_slider.dart';
+import 'package:jieba_flutter/analysis/jieba_segmenter.dart';
+import 'package:toneup_app/components/chars_with_pinyin.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
@@ -7,6 +10,7 @@ import 'package:toneup_app/models/user_practice_model.dart';
 import 'package:toneup_app/models/user_weekly_plan_model.dart';
 import 'package:toneup_app/providers/quiz_provider.dart';
 import 'package:toneup_app/providers/tts_provider.dart';
+import 'package:toneup_app/theme_data.dart';
 import '../providers/practice_provider.dart';
 
 class PracticePage extends StatefulWidget {
@@ -20,6 +24,7 @@ class _PracticePageState extends State<PracticePage> {
   bool _isSubmitting = false;
   late TTSProvider ttsProvider;
   late ThemeData theme;
+  late PracticeProvider practiceProvider;
 
   @override
   void initState() {
@@ -56,10 +61,11 @@ class _PracticePageState extends State<PracticePage> {
           PracticeProvider()
             ..initialize(practiceData, planData, topic, culture),
       child: Consumer<PracticeProvider>(
-        builder: (ctx, practiceProvider, _) {
-          final quizzes = practiceProvider.quizzes;
+        builder: (ctx, provider, _) {
+          practiceProvider = provider;
+          final quizzes = provider.quizzes;
           return Scaffold(
-            appBar: (!practiceProvider.isPracticeCompleted)
+            appBar: (!provider.isPracticeCompleted)
                 ? AppBar(
                     leading: IconButton(
                       icon: const Icon(Icons.close),
@@ -68,7 +74,7 @@ class _PracticePageState extends State<PracticePage> {
                     title: LinearProgressIndicator(
                       minHeight: 10,
                       borderRadius: BorderRadius.circular(10),
-                      value: practiceProvider.progress,
+                      value: provider.progress,
                       backgroundColor: theme.colorScheme.primary.withAlpha(40),
                     ),
                     actionsPadding: EdgeInsets.symmetric(horizontal: 16),
@@ -80,15 +86,15 @@ class _PracticePageState extends State<PracticePage> {
                   )
                 : null,
             body:
-                (practiceProvider.isLoading) // 加载中状态
+                (provider.isLoading) // 加载中状态
                 ? _buildLoadingState()
-                : (practiceProvider.errorMessage != null) // 错误状态
-                ? _buildErrorState(practiceProvider)
-                : (practiceProvider.isPracticeCompleted) // 完成状态
-                ? _buildFinishedState(practiceProvider)
+                : (provider.errorMessage != null) // 错误状态
+                ? _buildErrorState()
+                : (provider.isPracticeCompleted) // 完成状态
+                ? _buildFinishedState()
                 : (quizzes.isEmpty) //无题状态
                 ? _buildEmptyState()
-                : _buildDataState(practiceProvider), //正常数据状态
+                : _buildDataState(), //正常数据状态
           );
         },
       ),
@@ -98,10 +104,52 @@ class _PracticePageState extends State<PracticePage> {
   /// 加载中状态
   Widget _buildLoadingState() {
     return Center(
-      child: CircularProgressIndicator(
-        strokeCap: StrokeCap.round,
-        backgroundColor: theme.colorScheme.secondaryContainer,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          CircularProgressIndicator(
+            strokeCap: StrokeCap.round,
+            backgroundColor: theme.colorScheme.secondaryContainer,
+          ),
+          const SizedBox(height: 20),
+          Text(
+            'Preparing practice...',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.outline,
+            ),
+          ),
+          _buildMaterialCarousel(),
+          SizedBox(height: 10),
+        ],
       ),
+    );
+  }
+
+  /// 加载轮播组件
+  Widget _buildMaterialCarousel() {
+    final tags = practiceProvider.materials.map((m) => m.content).toList();
+    return CarouselSlider(
+      options: CarouselOptions(
+        height: 90,
+        autoPlay: true, // 自动播放
+        autoPlayInterval: const Duration(seconds: 3), // 播放间隔
+        autoPlayAnimationDuration: const Duration(milliseconds: 500), // 动画时长
+        viewportFraction: 0.8, // 显示比例
+        enlargeFactor: 10,
+        enlargeCenterPage: true,
+        enableInfiniteScroll: true, // 无限循环
+      ),
+      items: tags.map((tag) {
+        return Wrap(
+          alignment: WrapAlignment.center,
+          runAlignment: WrapAlignment.center,
+          spacing: 4,
+          runSpacing: 4,
+          children: JiebaSegmenter().sentenceProcess(tag).map<Widget>((char) {
+            return CharsWithPinyin(chinese: char, size: 24);
+          }).toList(),
+        );
+      }).toList(),
     );
   }
 
@@ -147,39 +195,45 @@ class _PracticePageState extends State<PracticePage> {
   }
 
   /// 正常数据状态
-  Widget _buildDataState(PracticeProvider provider) {
+  Widget _buildDataState() {
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 500),
       transitionBuilder: (child, animation) {
-        final isNewChild = child.key == ValueKey(provider.currentTouchedCount);
+        final isNewChild =
+            child.key == ValueKey(practiceProvider.currentTouchedCount);
         final inOffset = const Offset(1.0, 0.0); //从右进入
         final outOffset = const Offset(-1.0, 0.0); // 往左出
         final inAnimation = Tween<Offset>(begin: inOffset, end: Offset.zero)
             .animate(
-              CurvedAnimation(parent: animation, curve: Curves.easeInOutQuad),
+              CurvedAnimation(parent: animation, curve: Curves.fastOutSlowIn),
             ); // 入场动画
-        final outAnimation = Tween<Offset>(begin: Offset.zero, end: outOffset)
-            .animate(
-              CurvedAnimation(
-                parent: ReverseAnimation(animation),
-                curve: Curves.easeOutQuad,
-              ),
-            ); // 出场动画
+        final outAnimation =
+            Tween<Offset>(
+                  begin: Offset.zero,
+                  end: outOffset,
+                ) //Curves.fastOutSlowIn
+                .animate(
+                  CurvedAnimation(
+                    parent: ReverseAnimation(animation),
+                    curve: Curves.fastOutSlowIn,
+                  ),
+                ); // 出场动画
         return SlideTransition(
           position: isNewChild ? inAnimation : outAnimation,
           child: FadeTransition(opacity: animation, child: child),
         );
       },
       child: ChangeNotifierProvider(
-        key: ValueKey(provider.currentTouchedCount),
-        create: (context) => QuizProvider()..initQuiz(provider.currentQuiz),
+        key: ValueKey(practiceProvider.currentTouchedCount),
+        create: (context) =>
+            QuizProvider()..initQuiz(practiceProvider.currentQuiz),
         child: QuizChoiceWidget(),
       ),
     );
   }
 
   /// 错误状态
-  Widget _buildErrorState(PracticeProvider practiceProvider) {
+  Widget _buildErrorState() {
     return Padding(
       padding: const EdgeInsets.all(24.0),
       child: Center(
@@ -227,14 +281,18 @@ class _PracticePageState extends State<PracticePage> {
   }
 
   /// 练习完成状态
-  Widget _buildFinishedState(PracticeProvider practiceProvider) {
+  Widget _buildFinishedState() {
     return Scaffold(
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           spacing: 16,
           children: [
-            Icon(Icons.check_circle, color: Colors.green, size: 80),
+            Icon(
+              Icons.check_circle,
+              color: theme.extension<AppThemeExtensions>()?.statePass,
+              size: 80,
+            ),
             Text(
               'Practice Completed!',
               style: theme.textTheme.headlineSmall!.copyWith(

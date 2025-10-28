@@ -20,11 +20,11 @@ Map<String, dynamic> _$ActInsMaterialModelToJson(
 };
 
 const _$MaterialTypeEnumMap = {
-  MaterialType.character: 'character',
-  MaterialType.word: 'word',
-  MaterialType.sentence: 'sentence',
-  MaterialType.dialog: 'dialog',
-  MaterialType.paragraph: 'paragraph',
-  MaterialType.syllable: 'syllable',
-  MaterialType.grammar: 'grammar',
+  MaterialContentType.character: 'character',
+  MaterialContentType.word: 'word',
+  MaterialContentType.sentence: 'sentence',
+  MaterialContentType.dialog: 'dialog',
+  MaterialContentType.paragraph: 'paragraph',
+  MaterialContentType.syllable: 'syllable',
+  MaterialContentType.grammar: 'grammar',
 };

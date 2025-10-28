@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:jieba_flutter/analysis/jieba_segmenter.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:go_router/go_router.dart';
@@ -12,6 +13,7 @@ import 'package:toneup_app/page_signup.dart';
 import 'package:toneup_app/providers/plan_provider.dart';
 import 'package:toneup_app/providers/profile_provider.dart';
 import 'package:toneup_app/providers/tts_provider.dart';
+import 'package:toneup_app/services/config.dart';
 import 'package:toneup_app/services/navigation_service.dart';
 import 'package:toneup_app/theme_data.dart';
 import 'package:toneup_app/routes.dart';
@@ -19,14 +21,14 @@ import 'package:toneup_app/routes.dart';
 void main() async {
   try {
     await Supabase.initialize(
-      url: 'https://kixonwnuivnjqlraydmz.supabase.co',
-      anonKey:
-          'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtpeG9ud251aXZuanFscmF5ZG16Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY4MjUxMjMsImV4cCI6MjA3MjQwMTEyM30.PWwgMIdde9OMJLA-D5kzlEl9APUvAoeFwWtInXzb4a0',
+      url: SupabaseConfig.url,
+      anonKey: SupabaseConfig.anonKey,
     );
-
+    // Jieba.init();
+    await JiebaSegmenter.init();
     runApp(MyApp());
   } catch (e) {
-    debugPrint('Supabase初始化失败:$e');
+    debugPrint('初始化失败:$e');
   }
 }
 

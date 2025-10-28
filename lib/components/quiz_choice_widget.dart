@@ -582,6 +582,17 @@ class _QuizChoiceWidgetState extends State<QuizChoiceWidget> {
     );
   }
 
+  /// 验证答案
+  void _handleCheckAnswer() {
+    final practiceProvider = Provider.of<PracticeProvider>(
+      context,
+      listen: false,
+    );
+    final quizProvider = Provider.of<QuizProvider>(context, listen: false);
+    quizProvider.submitAnswer();
+    practiceProvider.markQuizResult(quiz);
+  }
+
   /// 通过选项状态和位置获取颜色
   Color _getOptColorByState({
     required OptionStatus? state,
@@ -624,17 +635,6 @@ class _QuizChoiceWidgetState extends State<QuizChoiceWidget> {
             : theme.colorScheme.primary;
     }
     return color;
-  }
-
-  /// 验证答案
-  void _handleCheckAnswer() {
-    final practiceProvider = Provider.of<PracticeProvider>(
-      context,
-      listen: false,
-    );
-    final quizProvider = Provider.of<QuizProvider>(context, listen: false);
-    quizProvider.submitAnswer();
-    practiceProvider.markQuizResult(quiz);
   }
 }
 

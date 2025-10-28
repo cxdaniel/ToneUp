@@ -46,6 +46,399 @@ class _HomePageState extends State<HomePage> {
     context.go(AppRoutes.GOAL_LIST);
   }
 
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Consumer<PlanProvider>(
+        builder: (context, provider, child) {
+          planProvider = provider;
+          _planData = planProvider.activePlan;
+          if (planProvider.isLoading) {
+            return _buildLoadingState(planProvider);
+          }
+          if (planProvider.errorMessage != null) {
+            return _buildErrorState(planProvider);
+          }
+          if (_planData == null) {
+            return _buildCreateState(planProvider);
+          } else {
+            return _buildDataState();
+          }
+        },
+      ),
+    );
+  }
+
+  /// ⏳ 加载中状态
+  Widget _buildLoadingState(PlanProvider planProvider) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          CircularProgressIndicator(
+            strokeCap: StrokeCap.round,
+            backgroundColor: theme.colorScheme.secondaryContainer,
+          ),
+          const SizedBox(height: 20),
+          Text(
+            planProvider.loadingMessage ?? "Loading...",
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.outline,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// ⛔️ 错误状态
+  Widget _buildErrorState(PlanProvider planProvider) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.error_outline, color: theme.colorScheme.error, size: 50.0),
+          const SizedBox(height: 20),
+          Text(
+            planProvider.errorMessage ?? "Loading Failed, Please Try Again.",
+            textAlign: TextAlign.center,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.outline,
+            ),
+          ),
+          const SizedBox(height: 20),
+          if (planProvider.retryFunc != null)
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: theme.colorScheme.primary,
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(32),
+                ),
+              ),
+              onPressed: () {
+                planProvider.retryFunc!();
+              },
+              child: Text(
+                planProvider.retryLabel ?? "Retry",
+                style: theme.textTheme.titleMedium?.copyWith(
+                  color: theme.colorScheme.onPrimary,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// 无可用计划状态
+  Widget _buildCreateState(PlanProvider planProvider) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        spacing: 12,
+        children: [
+          Icon(
+            Icons.celebration_rounded,
+            color: theme.colorScheme.primary,
+            size: 60,
+          ),
+          const SizedBox(height: 20),
+          Text(
+            "Your have no Active Goal yet.",
+            style: theme.textTheme.bodyLarge?.copyWith(
+              color: theme.colorScheme.secondary,
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              minimumSize: Size(180, 40),
+              backgroundColor: theme.colorScheme.primary,
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(32),
+              ),
+            ),
+            onPressed: () async {
+              planProvider.createPlan();
+            },
+            child: Text(
+              "Create a New Goal",
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: theme.colorScheme.onPrimary,
+              ),
+            ),
+          ),
+          OutlinedButton(
+            style: ElevatedButton.styleFrom(
+              minimumSize: Size(180, 40),
+              side: BorderSide(width: 1, color: theme.colorScheme.primary),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(32),
+              ),
+            ),
+            onPressed: _gotoPagePlan,
+            child: Text(
+              "View Your All Goals",
+              style: theme.textTheme.titleMedium?.copyWith(
+                color: theme.colorScheme.primary,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// ✅ 正常数据状态
+  Widget _buildDataState() {
+    final int currentLevel = _planData!.level;
+    final String topicTag = _planData!.topicTitle!;
+    final double progress = calculatePlanProgress(_planData);
+    final planProvider = Provider.of<PlanProvider>(context, listen: false);
+    if (progress == 1) {
+      planProvider.completeActivePlan();
+    }
+    final viewPadding = MediaQuery.of(context).viewPadding;
+    return SingleChildScrollView(
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
+          24,
+          viewPadding.top + 60,
+          24,
+          viewPadding.bottom + 90,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          spacing: 24,
+          children: [
+            /// 标题与进度卡片
+            Column(
+              spacing: 16,
+              children: [
+                SizedBox(
+                  width: double.infinity,
+                  child: Text(
+                    'Keep Advancing Your Goal',
+                    style: theme.textTheme.headlineLarge?.copyWith(
+                      color: theme.colorScheme.secondary,
+                      fontWeight: FontWeight.w300,
+                    ),
+                  ),
+                ),
+                FeedbackButton(
+                  borderRadius: BorderRadius.circular(16),
+                  onTap: _gotoPagePlan,
+                  child: Ink(
+                    decoration: ShapeDecoration(
+                      shape: RoundedRectangleBorder(
+                        side: BorderSide(
+                          width: 1,
+                          color: Theme.of(context).colorScheme.outlineVariant,
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        spacing: 8,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            decoration: ShapeDecoration(
+                              color: const Color(0xFFFF9500),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                            ),
+                            child: Text(
+                              'HSK $currentLevel',
+                              style: theme.textTheme.labelLarge?.copyWith(
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                          Text(
+                            topicTag,
+                            style: theme.textTheme.titleLarge?.copyWith(
+                              color: Theme.of(context).colorScheme.secondary,
+                            ),
+                          ),
+                          LinearProgressIndicator(
+                            minHeight: 10,
+                            borderRadius: BorderRadius.circular(10),
+                            value: progress,
+                            color: theme.colorScheme.primary,
+                            backgroundColor: theme.colorScheme.primary
+                                .withAlpha(40),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+
+            /// 计划全部完成
+            if (progress == 1) _buildCelebration(),
+
+            /// 活动卡片模块
+            SizedBox(
+              width: double.infinity,
+              child: Wrap(
+                alignment: WrapAlignment.start,
+                spacing: 16,
+                runSpacing: 16,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        'Practices',
+                        style: theme.textTheme.headlineMedium?.copyWith(
+                          color: Theme.of(context).colorScheme.secondary,
+                          fontWeight: FontWeight.w300,
+                        ),
+                      ),
+                      Spacer(),
+                      Text(
+                        'score: ${(_planData!.practiceData!.fold<double>(0, (s, p) => (s + p.score)) / _planData!.practiceData!.length * 100).toStringAsFixed(1)}',
+                        style: theme.textTheme.bodyLarge?.copyWith(
+                          color: Theme.of(context).colorScheme.secondary,
+                          // fontWeight: FontWeight.w300,
+                        ),
+                      ),
+                    ],
+                  ),
+                  ..._buildActivityCards(),
+                ],
+              ),
+            ),
+
+            /// 关键笔记模块
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              spacing: 16,
+              children: [
+                const Divider(),
+                Text(
+                  'Key Notes',
+                  style: theme.textTheme.headlineMedium?.copyWith(
+                    color: theme.colorScheme.secondary,
+                    fontWeight: FontWeight.w300,
+                  ),
+                ),
+                // 目标词汇
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  spacing: 10,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      decoration: ShapeDecoration(
+                        color: theme.colorScheme.secondaryContainer,
+                        shape: RoundedRectangleBorder(
+                          side: BorderSide(
+                            width: 1,
+                            strokeAlign: BorderSide.strokeAlignCenter,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSecondaryContainer.withAlpha(40),
+                          ),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      child: Text(
+                        'Targets Words',
+                        style: theme.textTheme.labelLarge?.copyWith(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSecondaryContainer,
+                        ),
+                      ),
+                    ),
+                    _buildTargetWords(),
+                  ],
+                ),
+                // 常用句子
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  spacing: 10,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      decoration: ShapeDecoration(
+                        color: theme.colorScheme.secondaryContainer,
+                        shape: RoundedRectangleBorder(
+                          side: BorderSide(
+                            width: 1,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSecondaryContainer.withAlpha(40),
+                          ),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      child: Text(
+                        'Common Sentences',
+                        style: theme.textTheme.labelLarge?.copyWith(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSecondaryContainer,
+                        ),
+                      ),
+                    ),
+                    ..._buildCommonSentences(),
+                  ],
+                ),
+                // 核心语法
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  spacing: 10,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      decoration: ShapeDecoration(
+                        color: theme.colorScheme.secondaryContainer,
+                        shape: RoundedRectangleBorder(
+                          side: BorderSide(
+                            width: 1,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSecondaryContainer.withAlpha(40),
+                          ),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      child: Text(
+                        'key Grammar Points',
+                        style: theme.textTheme.labelLarge?.copyWith(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSecondaryContainer,
+                        ),
+                      ),
+                    ),
+                    _buildKeyGrammar(),
+                  ],
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   // 生成活动卡片
   List<Widget> _buildActivityCards() {
     if (_planData == null) return [];
@@ -330,399 +723,6 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
             ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// 正常数据状态
-  Widget _buildDataState() {
-    final int currentLevel = _planData!.level;
-    final String topicTag = _planData!.topicTitle!;
-    final double progress = calculatePlanProgress(_planData);
-    final planProvider = Provider.of<PlanProvider>(context, listen: false);
-    if (progress == 1) {
-      planProvider.completeActivePlan();
-    }
-    final viewPadding = MediaQuery.of(context).viewPadding;
-    return SingleChildScrollView(
-      child: Padding(
-        padding: EdgeInsets.fromLTRB(
-          24,
-          viewPadding.top + 60,
-          24,
-          viewPadding.bottom + 90,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.start,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          spacing: 24,
-          children: [
-            /// 标题与进度卡片
-            Column(
-              spacing: 16,
-              children: [
-                SizedBox(
-                  width: double.infinity,
-                  child: Text(
-                    'Keep Advancing Your Goal',
-                    style: theme.textTheme.headlineLarge?.copyWith(
-                      color: theme.colorScheme.secondary,
-                      fontWeight: FontWeight.w300,
-                    ),
-                  ),
-                ),
-                FeedbackButton(
-                  borderRadius: BorderRadius.circular(16),
-                  onTap: _gotoPagePlan,
-                  child: Ink(
-                    decoration: ShapeDecoration(
-                      shape: RoundedRectangleBorder(
-                        side: BorderSide(
-                          width: 1,
-                          color: Theme.of(context).colorScheme.outlineVariant,
-                        ),
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                    ),
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        spacing: 8,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8),
-                            decoration: ShapeDecoration(
-                              color: const Color(0xFFFF9500),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                            ),
-                            child: Text(
-                              'HSK $currentLevel',
-                              style: theme.textTheme.labelLarge?.copyWith(
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                          Text(
-                            topicTag,
-                            style: theme.textTheme.titleLarge?.copyWith(
-                              color: Theme.of(context).colorScheme.secondary,
-                            ),
-                          ),
-                          LinearProgressIndicator(
-                            minHeight: 10,
-                            borderRadius: BorderRadius.circular(10),
-                            value: progress,
-                            color: theme.colorScheme.primary,
-                            backgroundColor: theme.colorScheme.primary
-                                .withAlpha(40),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-
-            /// 计划全部完成
-            if (progress == 1) _buildCelebration(),
-
-            /// 活动卡片模块
-            SizedBox(
-              width: double.infinity,
-              child: Wrap(
-                alignment: WrapAlignment.start,
-                spacing: 16,
-                runSpacing: 16,
-                children: [
-                  Row(
-                    children: [
-                      Text(
-                        'Practices',
-                        style: theme.textTheme.headlineMedium?.copyWith(
-                          color: Theme.of(context).colorScheme.secondary,
-                          fontWeight: FontWeight.w300,
-                        ),
-                      ),
-                      Spacer(),
-                      Text(
-                        'score: ${(_planData!.practiceData!.fold<double>(0, (s, p) => (s + p.score)) / _planData!.practiceData!.length * 100).toStringAsFixed(1)}',
-                        style: theme.textTheme.bodyLarge?.copyWith(
-                          color: Theme.of(context).colorScheme.secondary,
-                          // fontWeight: FontWeight.w300,
-                        ),
-                      ),
-                    ],
-                  ),
-                  ..._buildActivityCards(),
-                ],
-              ),
-            ),
-
-            /// 关键笔记模块
-            Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              spacing: 16,
-              children: [
-                const Divider(),
-                Text(
-                  'Key Notes',
-                  style: theme.textTheme.headlineMedium?.copyWith(
-                    color: theme.colorScheme.secondary,
-                    fontWeight: FontWeight.w300,
-                  ),
-                ),
-                // 目标词汇
-                Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  spacing: 10,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10),
-                      decoration: ShapeDecoration(
-                        color: theme.colorScheme.secondaryContainer,
-                        shape: RoundedRectangleBorder(
-                          side: BorderSide(
-                            width: 1,
-                            strokeAlign: BorderSide.strokeAlignCenter,
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.onSecondaryContainer.withAlpha(40),
-                          ),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                      child: Text(
-                        'Targets Words',
-                        style: theme.textTheme.labelLarge?.copyWith(
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.onSecondaryContainer,
-                        ),
-                      ),
-                    ),
-                    _buildTargetWords(),
-                  ],
-                ),
-                // 常用句子
-                Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  spacing: 10,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10),
-                      decoration: ShapeDecoration(
-                        color: theme.colorScheme.secondaryContainer,
-                        shape: RoundedRectangleBorder(
-                          side: BorderSide(
-                            width: 1,
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.onSecondaryContainer.withAlpha(40),
-                          ),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                      child: Text(
-                        'Common Sentences',
-                        style: theme.textTheme.labelLarge?.copyWith(
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.onSecondaryContainer,
-                        ),
-                      ),
-                    ),
-                    ..._buildCommonSentences(),
-                  ],
-                ),
-                // 核心语法
-                Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  spacing: 10,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10),
-                      decoration: ShapeDecoration(
-                        color: theme.colorScheme.secondaryContainer,
-                        shape: RoundedRectangleBorder(
-                          side: BorderSide(
-                            width: 1,
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.onSecondaryContainer.withAlpha(40),
-                          ),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                      child: Text(
-                        'key Grammar Points',
-                        style: theme.textTheme.labelLarge?.copyWith(
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.onSecondaryContainer,
-                        ),
-                      ),
-                    ),
-                    _buildKeyGrammar(),
-                  ],
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Consumer<PlanProvider>(
-        builder: (context, provider, child) {
-          planProvider = provider;
-          _planData = planProvider.activePlan;
-          if (planProvider.isLoading) {
-            return _buildLoadingState(planProvider);
-          }
-          if (planProvider.errorMessage != null) {
-            return _buildErrorState(planProvider);
-          }
-          if (_planData == null) {
-            return _buildCreateState(planProvider);
-          } else {
-            return _buildDataState();
-          }
-        },
-      ),
-    );
-  }
-
-  /// 加载中状态
-  Widget _buildLoadingState(PlanProvider planProvider) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          CircularProgressIndicator(
-            strokeCap: StrokeCap.round,
-            backgroundColor: theme.colorScheme.secondaryContainer,
-          ),
-          const SizedBox(height: 20),
-          Text(
-            planProvider.loadingMessage ?? "Loading...",
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.outline,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// 错误状态
-  Widget _buildErrorState(PlanProvider planProvider) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.error_outline, color: theme.colorScheme.error, size: 50.0),
-          const SizedBox(height: 20),
-          Text(
-            planProvider.errorMessage ?? "Loading Failed, Please Try Again.",
-            textAlign: TextAlign.center,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.outline,
-            ),
-          ),
-          const SizedBox(height: 20),
-          if (planProvider.retryFunc != null)
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: theme.colorScheme.primary,
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(32),
-                ),
-              ),
-              onPressed: () {
-                planProvider.retryFunc!();
-              },
-              child: Text(
-                planProvider.retryLabel ?? "Retry",
-                style: theme.textTheme.titleMedium?.copyWith(
-                  color: theme.colorScheme.onPrimary,
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  /// 无可用计划状态
-  Widget _buildCreateState(PlanProvider planProvider) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        spacing: 12,
-        children: [
-          Icon(
-            Icons.celebration_rounded,
-            color: theme.colorScheme.primary,
-            size: 60,
-          ),
-          const SizedBox(height: 20),
-          Text(
-            "Your have no Active Goal yet.",
-            style: theme.textTheme.bodyLarge?.copyWith(
-              color: theme.colorScheme.secondary,
-            ),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              minimumSize: Size(180, 40),
-              backgroundColor: theme.colorScheme.primary,
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(32),
-              ),
-            ),
-            onPressed: () async {
-              planProvider.createPlan();
-            },
-            child: Text(
-              "Create a New Goal",
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: theme.colorScheme.onPrimary,
-              ),
-            ),
-          ),
-          OutlinedButton(
-            style: ElevatedButton.styleFrom(
-              minimumSize: Size(180, 40),
-              side: BorderSide(width: 1, color: theme.colorScheme.primary),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(32),
-              ),
-            ),
-            onPressed: _gotoPagePlan,
-            child: Text(
-              "View Your All Goals",
-              style: theme.textTheme.titleMedium?.copyWith(
-                color: theme.colorScheme.primary,
-              ),
-            ),
           ),
         ],
       ),

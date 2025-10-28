@@ -4,7 +4,7 @@ part 'act_ins_material_model.g.dart';
 
 @JsonSerializable()
 class ActInsMaterialModel {
-  final MaterialType type;
+  final MaterialContentType type;
   final String content;
 
   ActInsMaterialModel({required this.type, required this.content});

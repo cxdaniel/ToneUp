@@ -2,7 +2,7 @@ import 'package:toneup_app/models/enumerated_types.dart';
 
 class QuizResultModel {
   double score;
-  final MaterialType category;
+  final MaterialContentType category;
   final String item;
   int? itemId;
 

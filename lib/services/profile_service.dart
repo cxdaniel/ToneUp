@@ -38,9 +38,9 @@ class ProfileService {
           .eq('user_id', userId)
           .gt('score', 0)
           .inFilter('category', [
-            MaterialType.character.name,
-            MaterialType.word.name,
-            MaterialType.sentence.name,
+            MaterialContentType.character.name,
+            MaterialContentType.word.name,
+            MaterialContentType.sentence.name,
           ]);
 
       final records = data

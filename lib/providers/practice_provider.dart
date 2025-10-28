@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:toneup_app/models/enumerated_types.dart';
 import 'package:toneup_app/models/quizzes/quiz_model.dart';
 import 'package:toneup_app/models/quizzes/quiz_choice_model.dart';
+import 'package:toneup_app/models/user_activity_instances/act_ins_material_model.dart';
 import 'package:toneup_app/models/user_activity_instances_model.dart';
 import 'package:toneup_app/models/user_practice_model.dart';
 import 'package:toneup_app/models/user_weekly_plan_model.dart';
@@ -33,6 +34,7 @@ class PracticeProvider extends ChangeNotifier {
   bool _disposed = false;
   VoidCallback? retryFunc;
   String? retryLabel;
+  List<ActInsMaterialModel> materials = [];
 
   @override
   void dispose() {
@@ -48,36 +50,64 @@ class PracticeProvider extends ChangeNotifier {
     }
   }
 
+  /// 重置练习状态
+  void _resetPracticeState() {
+    _errorMessage = null;
+    _currentQuizIndex = 0;
+    _isPracticeCompleted = false;
+    currentTouchedCount = 0;
+    materials = [];
+    _quizzes.clear();
+  }
+
   /// 初始化练习数据（根据 instanceId 加载）
   Future<void> initialize(
-    UserPracticeModel data,
-    UserWeeklyPlanModel plan,
+    UserPracticeModel practiceData,
+    UserWeeklyPlanModel weeklyPlan,
     String topic,
     String culture,
   ) async {
-    _practiceData = data;
+    _resetPracticeState();
+    _practiceData = practiceData;
     retryFunc = null;
     try {
       final User? user = Supabase.instance.client.auth.currentUser;
       if (user == null) throw Exception("用户未登录");
 
       _isLoading = true;
-      _errorMessage = null;
-      _currentQuizIndex = 0;
-      _isPracticeCompleted = false;
       notifyListeners();
 
-      final ins = await _service.getPracticeData(
-        data.instances,
-        topic,
-        culture,
+      List<UserActivityInstanceModel> instances = await _service
+          .getPracticeInstances(practiceData.instances);
+
+      final actMaterials = instances.map((ins) => ins.materials).toList();
+      materials.addAll(
+        Set<ActInsMaterialModel>.from(
+          actMaterials.where(
+            (m) =>
+                (m.type == MaterialContentType.character ||
+                m.type == MaterialContentType.word ||
+                m.type == MaterialContentType.sentence),
+          ),
+        ),
       );
-      _quizzes = _extractQuizzesFromInstances(ins);
+      notifyListeners();
+
+      final quizexist = instances.fold(true, (a, b) => a && b.quiz != null);
+      if (!quizexist) {
+        instances = await _service.generatePracticeQuiz(
+          practiceData.instances,
+          topic,
+          culture,
+        );
+      }
+      final insWithAct = await _service.addActivityToInstances(instances);
+      _quizzes = _extractQuizzesFromInstances(insWithAct);
       retryFunc = null;
     } catch (e) {
       _errorMessage = e.toString();
       retryLabel = 'Retry';
-      retryFunc = () => initialize(data, plan, topic, culture);
+      retryFunc = () => initialize(practiceData, weeklyPlan, topic, culture);
       if (kDebugMode) debugPrint('练习初始化失败: $e');
     } finally {
       _isLoading = false;

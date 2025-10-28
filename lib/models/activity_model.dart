@@ -13,7 +13,7 @@ class ActivityModel {
   @JsonKey(name: "quiz_type")
   final QuizType quizType; // 题型
   @JsonKey(name: "material_type")
-  final List<MaterialType> materialType; // 素材类型数组
+  final List<MaterialContentType> materialType; // 素材类型数组
   @JsonKey(name: "time_cost")
   final int? timeCost; // 耗时（默认30）
   @JsonKey(name: "created_at")

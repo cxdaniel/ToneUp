@@ -55,7 +55,7 @@ enum QuizType {
 }
 
 /// 素材类型枚举（匹配 material_type 数组）
-enum MaterialType {
+enum MaterialContentType {
   @JsonValue('character')
   character,
   @JsonValue('word')
@@ -156,13 +156,13 @@ const _$QuizTypeEnumMap = {
 };
 
 const _$MaterialTypeEnumMap = {
-  MaterialType.character: 'character',
-  MaterialType.word: 'word',
-  MaterialType.sentence: 'sentence',
-  MaterialType.dialog: 'dialog',
-  MaterialType.paragraph: 'paragraph',
-  MaterialType.syllable: 'syllable',
-  MaterialType.grammar: 'grammar',
+  MaterialContentType.character: 'character',
+  MaterialContentType.word: 'word',
+  MaterialContentType.sentence: 'sentence',
+  MaterialContentType.dialog: 'dialog',
+  MaterialContentType.paragraph: 'paragraph',
+  MaterialContentType.syllable: 'syllable',
+  MaterialContentType.grammar: 'grammar',
 };
 
 const _$IndicatorCategoryEnumMap = {

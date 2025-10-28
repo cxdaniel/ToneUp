@@ -19,6 +19,8 @@ class _PlanPageState extends State<PlanPage> {
   final ScrollController _scrollController = ScrollController();
   int? _activeItemGlobalIndex;
   late ThemeData theme;
+  late PlanProvider planProvider;
+
   @override
   void initState() {
     super.initState();
@@ -54,6 +56,7 @@ class _PlanPageState extends State<PlanPage> {
     }
   }
 
+  /// 切换计划
   Future<void> _changeGoal(UserWeeklyPlanModel plan) async {
     PlanProvider planProvider = Provider.of<PlanProvider>(
       context,
@@ -95,6 +98,7 @@ class _PlanPageState extends State<PlanPage> {
     }
   }
 
+  /// 滚动到当前计划锚点
   void _scrollToActiveItem() {
     if (_activeItemGlobalIndex == null) return;
     // 计算每个item的高度（根据你的_planItem高度估算，或动态获取）
@@ -106,13 +110,55 @@ class _PlanPageState extends State<PlanPage> {
       0,
       _scrollController.position.maxScrollExtent,
     );
-
     // debugPrint('targetOffset...$targetOffset');
     // 执行滚动（带动画）
     _scrollController.animateTo(
       targetOffset,
       duration: const Duration(milliseconds: 500),
       curve: Curves.easeInOutQuad,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      top: false,
+      child: Scaffold(
+        // backgroundColor: theme.colorScheme.surfaceContainerHigh,
+        //TODO: 改到主导航，暂时去掉顶部appBar
+        // appBar: AppBar(title: const Text('Goals'), centerTitle: true),
+        body: Consumer<PlanProvider>(
+          builder: (context, provider, child) {
+            planProvider = provider;
+            // 加载状态
+            if (planProvider.isLoading) {
+              return _buildLoadingState(context, planProvider);
+            }
+            // 加载错误状态
+            if (planProvider.errorMessage != null) {
+              return _buildErrorState(context, planProvider);
+            }
+            // 空状态
+            if (planProvider.allPlans.isEmpty) {
+              return Center(
+                child: Text(
+                  "Your have no Active Goal yet.",
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    color: theme.colorScheme.onSecondaryContainer,
+                  ),
+                ),
+              );
+            }
+            // 延迟执行滚动
+            WidgetsBinding.instance.addPostFrameCallback(
+              (_) => _scrollToActiveItem(),
+            );
+
+            // 正常数据状态
+            return _buildDataState();
+          },
+        ),
+      ),
     );
   }
 
@@ -129,7 +175,7 @@ class _PlanPageState extends State<PlanPage> {
           const SizedBox(height: 20),
           Text(
             planProvider.loadingMessage ?? "Loading...",
-            style: theme.textTheme.titleMedium?.copyWith(
+            style: theme.textTheme.bodyMedium?.copyWith(
               color: theme.colorScheme.outline,
             ),
           ),
@@ -177,145 +223,113 @@ class _PlanPageState extends State<PlanPage> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      top: false,
-      child: Scaffold(
-        // backgroundColor: theme.colorScheme.surfaceContainerHigh,
-        //TODO: 改到主导航，暂时去掉顶部appBar
-        // appBar: AppBar(title: const Text('Goals'), centerTitle: true),
-        body: Consumer<PlanProvider>(
-          builder: (context, planProvider, child) {
-            // 加载状态
-            if (planProvider.isLoading) {
-              return _buildLoadingState(context, planProvider);
-            }
-            // 加载错误状态
-            if (planProvider.errorMessage != null) {
-              return _buildErrorState(context, planProvider);
-            }
-            // 空状态
-            if (planProvider.allPlans.isEmpty) {
-              return Center(
+  /// ✅ 正常数据状态
+  Widget _buildDataState() {
+    // 从 Provider 获取分组数据
+    final groupedPlans = planProvider.groupPlansByLevelAndMonth();
+    // 按级别升序排序
+    final levelKeys = groupedPlans.keys.toList()..sort();
+    final allPlans = groupedPlans.values
+        .expand((l) => l.values)
+        .expand((m) => m)
+        .toList();
+
+    // 激活计划的索引
+    _calculateActiveItemIndex(allPlans, planProvider.activePlan);
+
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewPadding.bottom,
+      ),
+      child: RefreshIndicator(
+        onRefresh: () async {
+          await planProvider.getAllPlans();
+        },
+        backgroundColor: theme.colorScheme.secondaryContainer,
+        child: CustomScrollView(
+          controller: _scrollController,
+          slivers: [
+            SliverAppBar(
+              toolbarHeight: 10,
+              expandedHeight: 60 + 40,
+              surfaceTintColor: theme.colorScheme.surface,
+              backgroundColor: theme.colorScheme.surface,
+              leadingWidth: double.infinity,
+              flexibleSpace: Padding(
+                padding: EdgeInsetsGeometry.only(
+                  left: 24,
+                  top: MediaQuery.of(context).viewPadding.top + 60,
+                ),
                 child: Text(
-                  "Your have no Active Goal yet.",
-                  style: theme.textTheme.titleMedium?.copyWith(
+                  'Goals',
+                  style: theme.textTheme.headlineLarge?.copyWith(
                     color: theme.colorScheme.onSecondaryContainer,
+                    fontWeight: FontWeight.w300,
                   ),
                 ),
-              );
-            }
-            // 延迟执行滚动
-            WidgetsBinding.instance.addPostFrameCallback(
-              (_) => _scrollToActiveItem(),
-            );
-            // 从 Provider 获取分组数据
-            final groupedPlans = planProvider.groupPlansByLevelAndMonth();
-            // 按级别升序排序
-            final levelKeys = groupedPlans.keys.toList()..sort();
-            final allPlans = groupedPlans.values
-                .expand((l) => l.values)
-                .expand((m) => m)
-                .toList();
-
-            // 激活计划的索引
-            _calculateActiveItemIndex(allPlans, planProvider.activePlan);
-
-            return Padding(
-              padding: EdgeInsets.only(
-                // top: 0, //MediaQuery.of(context).viewPadding.top,
-                bottom: MediaQuery.of(context).viewPadding.bottom + 56,
               ),
-              child: RefreshIndicator(
-                onRefresh: () async {
-                  await planProvider.getAllPlans();
-                },
-                backgroundColor: theme.colorScheme.secondaryContainer,
-                child: CustomScrollView(
-                  controller: _scrollController,
-                  slivers: [
-                    SliverAppBar(
-                      toolbarHeight: 10,
-                      expandedHeight: 60 + 40,
-                      surfaceTintColor: theme.colorScheme.surface,
-                      backgroundColor: theme.colorScheme.surface,
-                      leadingWidth: double.infinity,
-                      flexibleSpace: Padding(
-                        padding: EdgeInsetsGeometry.only(
-                          left: 24,
-                          top: MediaQuery.of(context).viewPadding.top + 60,
-                        ),
-                        child: Text(
-                          'Goals',
-                          style: theme.textTheme.headlineLarge?.copyWith(
-                            color: theme.colorScheme.onSecondaryContainer,
-                            fontWeight: FontWeight.w300,
-                          ),
-                        ),
-                      ),
-                      pinned: true,
-                    ),
-                    // 遍历所有级别分组
-                    ...levelKeys.expand((level) {
-                      final monthGroups = groupedPlans[level]!;
-                      // 按月份升序排序
-                      final monthKeys = monthGroups.keys.toList()..sort();
-                      return [
-                        // 级别吸顶头
-                        SliverPersistentHeader(
-                          delegate: LevelHeaderDelegate(title: 'HSK $level'),
-                          pinned: true, // 吸顶效果
-                        ),
-                        // 遍历该级别下的所有月份分组
-                        ...monthKeys.expand((monthKey) {
-                          final plansInMonth = monthGroups[monthKey]!;
-                          // 生成月份显示文本（如 "Aug. 2025"，保留你的格式）
-                          final monthLabel = DateFormat(
-                            'MMM. yyyy',
-                          ).format(plansInMonth.first.createdAt);
+              pinned: true,
+            ),
+            // 遍历所有级别分组
+            ...levelKeys.expand((level) {
+              final monthGroups = groupedPlans[level]!;
+              // 按月份升序排序
+              final monthKeys = monthGroups.keys.toList()..sort();
+              return [
+                // 级别吸顶头
+                SliverPersistentHeader(
+                  delegate: LevelHeaderDelegate(title: 'HSK $level'),
+                  pinned: true, // 吸顶效果
+                ),
+                // 遍历该级别下的所有月份分组
+                ...monthKeys.expand((monthKey) {
+                  final plansInMonth = monthGroups[monthKey]!;
+                  // 生成月份显示文本（如 "Aug. 2025"，保留你的格式）
+                  final monthLabel = DateFormat(
+                    'MMM. yyyy',
+                  ).format(plansInMonth.first.createdAt);
 
-                          return [
-                            // 月份吸顶头（复用你的 MonthHeaderDelegate）
-                            SliverPersistentHeader(
-                              delegate: MonthHeaderDelegate(title: monthLabel),
-                              pinned: true, // 吸顶效果
-                            ),
-                            // 该月份下的计划列表（保留你的列表结构）
-                            SliverList(
-                              delegate: SliverChildBuilderDelegate((
-                                context,
-                                index,
-                              ) {
-                                final plan = plansInMonth[index];
-                                // 判断当前计划是否为激活状态（从 Provider 获取）
-                                final isActive =
-                                    plan.status == PlanStatus.active ||
-                                    plan.status == PlanStatus.reactive;
-                                // planProvider.activePlan?.id == plan.id;
-                                return _buildPlanItem(
-                                  plan: plan,
-                                  isActive: isActive,
-                                  theme: theme,
-                                  onTap: () => _changeGoal(plan),
-                                );
-                              }, childCount: plansInMonth.length),
-                            ),
-                          ];
-                        }),
-                      ];
-                    }),
-                    SliverPadding(
-                      padding: EdgeInsetsGeometry.only(top: 20, bottom: 100),
-                      sliver: SliverToBoxAdapter(
-                        child: Center(child: Text('No more data')),
-                      ),
+                  return [
+                    // 月份吸顶头（复用你的 MonthHeaderDelegate）
+                    SliverPersistentHeader(
+                      delegate: MonthHeaderDelegate(title: monthLabel),
+                      pinned: true, // 吸顶效果
                     ),
-                  ],
+                    // 该月份下的计划列表（保留你的列表结构）
+                    SliverList(
+                      delegate: SliverChildBuilderDelegate((context, index) {
+                        final plan = plansInMonth[index];
+                        // 判断当前计划是否为激活状态（从 Provider 获取）
+                        final isActive =
+                            plan.status == PlanStatus.active ||
+                            plan.status == PlanStatus.reactive;
+                        // planProvider.activePlan?.id == plan.id;
+                        return _buildPlanItem(
+                          plan: plan,
+                          isActive: isActive,
+                          theme: theme,
+                          onTap: () => _changeGoal(plan),
+                        );
+                      }, childCount: plansInMonth.length),
+                    ),
+                  ];
+                }),
+              ];
+            }),
+            SliverPadding(
+              padding: EdgeInsetsGeometry.only(top: 20, bottom: 100),
+              sliver: SliverToBoxAdapter(
+                child: Center(
+                  child: Text(
+                    'All goals have been loaded.',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.outline,
+                    ),
+                  ),
                 ),
               ),
-            );
-          },
+            ),
+          ],
         ),
       ),
     );
