@@ -9,7 +9,7 @@ part of 'user_score_records_model.dart';
 UserScoreRecordsModel _$UserScoreRecordsModelFromJson(
   Map<String, dynamic> json,
 ) => UserScoreRecordsModel(
-  category: $enumDecode(_$MaterialTypeEnumMap, json['category']),
+  category: $enumDecode(_$MaterialContentTypeEnumMap, json['category']),
   item: json['item'] as String,
   id: (json['id'] as num?)?.toInt(),
   userId: json['user_id'] as String?,
@@ -27,10 +27,10 @@ Map<String, dynamic> _$UserScoreRecordsModelToJson(
   'score': instance.score,
   'created_at': instance.createdAt?.toIso8601String(),
   'item': instance.item,
-  'category': _$MaterialTypeEnumMap[instance.category]!,
+  'category': _$MaterialContentTypeEnumMap[instance.category]!,
 };
 
-const _$MaterialTypeEnumMap = {
+const _$MaterialContentTypeEnumMap = {
   MaterialContentType.character: 'character',
   MaterialContentType.word: 'word',
   MaterialContentType.sentence: 'sentence',

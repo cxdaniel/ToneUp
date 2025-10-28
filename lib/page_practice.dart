@@ -138,6 +138,7 @@ class _PracticePageState extends State<PracticePage> {
         enlargeFactor: 10,
         enlargeCenterPage: true,
         enableInfiniteScroll: true, // 无限循环
+        disableCenter: true,
       ),
       items: tags.map((tag) {
         return Wrap(

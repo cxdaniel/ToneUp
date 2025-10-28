@@ -43,11 +43,6 @@ class UserActivityService {
     String culture,
   ) async {
     try {
-      final acts = await _supabase
-          .from('user_activity_instances')
-          .select()
-          .inFilter('id', data);
-
       final response = await _supabase.functions.invoke(
         "get_activity_instances",
         body: {
@@ -156,23 +151,6 @@ class UserActivityService {
           .insert(abilityData)
           .select();
 
-      /// 循环更新 user_activity_instances 的score
-      /// TODO: 减少多余数据交互，去掉练习实例的score保存
-      // for (var i = 0; i < quizzes.length; i++) {
-      //   final res = await _supabase
-      //       .from('user_activity_instances')
-      //       .update({
-      //         'score': quizzes[i].result.score,
-      //         'update_at': DateTime.now().toIso8601String(),
-      //       })
-      //       .eq('id', quizzes[i].actInstance.id)
-      //       .select();
-      //   if (kDebugMode) {
-      //     debugPrint(
-      //       'user_activity_instances保存成功:${quizzes[i].actInstance.id}>>>$res',
-      //     );
-      //   }
-      // }
       if (kDebugMode) {
         debugPrint('user_score_records 保存练习数据成功: $recordData');
         debugPrint('user_ability_history 用户能力保存成功: $userAbilityData');

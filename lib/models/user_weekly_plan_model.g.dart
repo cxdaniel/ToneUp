@@ -15,11 +15,6 @@ UserWeeklyPlanModel _$UserWeeklyPlanModelFromJson(Map<String, dynamic> json) =>
       targetIndicators: (json['target_indicators'] as List<dynamic>)
           .map((e) => (e as num).toInt())
           .toList(),
-      targetActivities: (json['target_activities'] as List<dynamic>?)
-          ?.map(
-            (e) => (e as List<dynamic>).map((e) => (e as num).toInt()).toList(),
-          )
-          .toList(),
       progress: (json['progress'] as num?)?.toDouble() ?? 0.0,
       status:
           $enumDecodeNullable(_$PlanStatusEnumMap, json['status']) ??
@@ -47,7 +42,6 @@ Map<String, dynamic> _$UserWeeklyPlanModelToJson(
   'start_date': instance.startDate.toIso8601String(),
   'end_date': instance.endDate.toIso8601String(),
   'target_indicators': instance.targetIndicators,
-  'target_activities': instance.targetActivities,
   'progress': instance.progress,
   'status': _$PlanStatusEnumMap[instance.status]!,
   'created_at': instance.createdAt.toIso8601String(),

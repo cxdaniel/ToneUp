@@ -211,6 +211,15 @@ class PlanProvider extends ChangeNotifier {
 
     return levelMap;
   }
+
+  /// 更新计划进度
+  Future<void> updateProgress() async {
+    if (_activePlan == null) return;
+    _planService.updatePlanProgress(
+      planId: _activePlan!.id,
+      progress: calculatePlanProgress(_activePlan),
+    );
+  }
 }
 
 double calculatePlanProgress(UserWeeklyPlanModel? plan) {

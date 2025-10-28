@@ -16,7 +16,7 @@ IndicatorsModel _$IndicatorsModelFromJson(Map<String, dynamic> json) =>
       weight: (json['weight'] as num).toDouble(),
       createdAt: DateTime.parse(json['created_at'] as String),
       materialTypes: (json['material_types'] as List<dynamic>)
-          .map((e) => $enumDecode(_$MaterialTypeEnumMap, e))
+          .map((e) => $enumDecode(_$MaterialContentTypeEnumMap, e))
           .toList(),
     );
 
@@ -30,7 +30,7 @@ Map<String, dynamic> _$IndicatorsModelToJson(IndicatorsModel instance) =>
       'weight': instance.weight,
       'created_at': instance.createdAt.toIso8601String(),
       'material_types': instance.materialTypes
-          .map((e) => _$MaterialTypeEnumMap[e]!)
+          .map((e) => _$MaterialContentTypeEnumMap[e]!)
           .toList(),
     };
 
@@ -61,7 +61,7 @@ const _$SkillGroupEnumMap = {
   SkillGroup.translation: '译',
 };
 
-const _$MaterialTypeEnumMap = {
+const _$MaterialContentTypeEnumMap = {
   MaterialContentType.character: 'character',
   MaterialContentType.word: 'word',
   MaterialContentType.sentence: 'sentence',

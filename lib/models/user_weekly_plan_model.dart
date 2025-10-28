@@ -18,8 +18,6 @@ class UserWeeklyPlanModel {
   final DateTime endDate;
   @JsonKey(name: "target_indicators")
   final List<int> targetIndicators;
-  @JsonKey(name: "target_activities")
-  final List<List<int>>? targetActivities;
   @JsonKey(name: "progress")
   final double? progress;
   @JsonKey(name: "status")
@@ -36,6 +34,8 @@ class UserWeeklyPlanModel {
   final int level;
   final List<int> practices;
   List<UserPracticeModel>? practiceData;
+  // @JsonKey(name: "target_activities")
+  // final List<List<int>>? targetActivities;
 
   // 构造函数（必填，且参数名要和字段名一致）
   UserWeeklyPlanModel({
@@ -44,7 +44,6 @@ class UserWeeklyPlanModel {
     required this.startDate, // 表中 not null，模型用 required 强制非空
     required this.endDate,
     required this.targetIndicators,
-    this.targetActivities,
     this.progress = 0.0, // 表中默认 0，模型给默认值
     this.status = PlanStatus.active, // 表中默认 'active'，模型给默认值
     required this.createdAt,

@@ -228,4 +228,22 @@ class UserPlanService {
       rethrow;
     }
   }
+
+  /// 更新计划的进度数据
+  Future<void> updatePlanProgress({
+    required int planId,
+    required double progress,
+  }) async {
+    try {
+      await _supabase
+          .from('user_weekly_plans')
+          .update({'progress': progress})
+          .eq('id', planId);
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint("更新计划的进度异常：${e.toString()}");
+      }
+      rethrow;
+    }
+  }
 }

@@ -13,7 +13,7 @@ ActivityModel _$ActivityModelFromJson(Map<String, dynamic> json) =>
       activityTitle: json['activity_title'] as String,
       quizType: $enumDecode(_$QuizTypeEnumMap, json['quiz_type']),
       materialType: (json['material_type'] as List<dynamic>)
-          .map((e) => $enumDecode(_$MaterialTypeEnumMap, e))
+          .map((e) => $enumDecode(_$MaterialContentTypeEnumMap, e))
           .toList(),
       timeCost: (json['time_cost'] as num?)?.toInt(),
       createdAt: DateTime.parse(json['created_at'] as String),
@@ -29,7 +29,7 @@ Map<String, dynamic> _$ActivityModelToJson(ActivityModel instance) =>
       'quiz_template': _$QuizTemplateEnumMap[instance.quizTemplate]!,
       'quiz_type': _$QuizTypeEnumMap[instance.quizType]!,
       'material_type': instance.materialType
-          .map((e) => _$MaterialTypeEnumMap[e]!)
+          .map((e) => _$MaterialContentTypeEnumMap[e]!)
           .toList(),
       'time_cost': instance.timeCost,
       'created_at': instance.createdAt.toIso8601String(),
@@ -60,7 +60,7 @@ const _$QuizTypeEnumMap = {
   QuizType.typing: '文本输入',
 };
 
-const _$MaterialTypeEnumMap = {
+const _$MaterialContentTypeEnumMap = {
   MaterialContentType.character: 'character',
   MaterialContentType.word: 'word',
   MaterialContentType.sentence: 'sentence',

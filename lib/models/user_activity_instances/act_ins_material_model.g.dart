@@ -8,18 +8,18 @@ part of 'act_ins_material_model.dart';
 
 ActInsMaterialModel _$ActInsMaterialModelFromJson(Map<String, dynamic> json) =>
     ActInsMaterialModel(
-      type: $enumDecode(_$MaterialTypeEnumMap, json['type']),
+      type: $enumDecode(_$MaterialContentTypeEnumMap, json['type']),
       content: json['content'] as String,
     );
 
 Map<String, dynamic> _$ActInsMaterialModelToJson(
   ActInsMaterialModel instance,
 ) => <String, dynamic>{
-  'type': _$MaterialTypeEnumMap[instance.type]!,
+  'type': _$MaterialContentTypeEnumMap[instance.type]!,
   'content': instance.content,
 };
 
-const _$MaterialTypeEnumMap = {
+const _$MaterialContentTypeEnumMap = {
   MaterialContentType.character: 'character',
   MaterialContentType.word: 'word',
   MaterialContentType.sentence: 'sentence',
