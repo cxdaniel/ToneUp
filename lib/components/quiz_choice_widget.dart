@@ -1,21 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:jieba_flutter/analysis/jieba_segmenter.dart';
 import 'package:provider/provider.dart';
 import 'package:toneup_app/components/chars_with_pinyin.dart';
 import 'package:toneup_app/components/feedback_button.dart';
 import 'package:toneup_app/components/quiz_feedback_board.dart';
 import 'package:toneup_app/components/wave_animation.dart';
 import 'package:toneup_app/models/enumerated_types.dart';
+import 'package:toneup_app/models/quizzes/quiz_material_model.dart';
 import 'package:toneup_app/models/quizzes/quiz_model.dart';
 import 'package:toneup_app/models/quizzes/quiz_options_model.dart';
 import 'package:toneup_app/providers/quiz_provider.dart';
 import 'package:toneup_app/providers/tts_provider.dart';
 import 'package:toneup_app/theme_data.dart';
-import '../providers/practice_provider.dart';
 
 /// Quiz 答题页面：展示单个练习实例的具体题目和答题交互
 class QuizChoiceWidget extends StatefulWidget {
-  const QuizChoiceWidget({super.key});
+  final VoidCallback? callNextQuiz;
+  const QuizChoiceWidget({this.callNextQuiz, super.key});
   @override
   State<QuizChoiceWidget> createState() => _QuizChoiceWidgetState();
 }
@@ -24,10 +26,9 @@ enum ColorState { fill, border, above }
 
 class _QuizChoiceWidgetState extends State<QuizChoiceWidget> {
   dynamic voicePosition;
-  bool _isBottomSheetShowing = false;
+  bool _isShowPinyin = false;
   late QuizChoice quiz;
   late QuizProvider quizProvider;
-  late PracticeProvider practiceProvider;
   late ThemeData theme;
   late TTSProvider tts;
 
@@ -41,26 +42,24 @@ class _QuizChoiceWidgetState extends State<QuizChoiceWidget> {
   @override
   void initState() {
     super.initState();
-    practiceProvider = Provider.of<PracticeProvider>(context, listen: false);
-
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      tts = Provider.of<TTSProvider>(context, listen: false);
-      quizProvider = Provider.of<QuizProvider>(context, listen: false);
-      quiz = quizProvider.quiz as QuizChoice;
-      if (quiz.actInstance.activity!.quizTemplate == QuizTemplate.voiceToText) {
-        voicePosition = quiz.material;
-        tts.play(quiz.material.voice);
-      }
+      _autoplayMaterial();
     });
   }
 
+  /// 自动播放题干
+  void _autoplayMaterial() {
+    if (quiz.activity.quizTemplate == QuizTemplate.voiceToText) {
+      voicePosition = quiz.material;
+      final voice = (voicePosition is QuizMaterialModel)
+          ? voicePosition.text
+          : voicePosition;
+      tts.play(voice);
+    }
+  }
+
   /// 弹出反馈面板
-  void _showFeedbackBottomSheet({
-    required BuildContext context,
-    required QuizProvider quizProvider,
-    required PracticeProvider practiceProvider,
-  }) {
-    _isBottomSheetShowing = true;
+  void _showFeedbackBottomSheet() {
     showModalBottomSheet(
       context: context,
       isDismissible: false,
@@ -73,11 +72,11 @@ class _QuizChoiceWidgetState extends State<QuizChoiceWidget> {
       barrierColor: theme.colorScheme.shadow.withAlpha(40),
       builder: (context) => QuizFeedbackBoard(
         quizProvider: quizProvider,
-        practiceProvider: practiceProvider,
         theme: theme,
+        callNext: widget.callNextQuiz,
       ),
     ).whenComplete(() {
-      _isBottomSheetShowing = false;
+      // _isBottomSheetShowing = false;
     });
   }
 
@@ -98,21 +97,6 @@ class _QuizChoiceWidgetState extends State<QuizChoiceWidget> {
       builder: (ctx, provider, _) {
         quizProvider = provider;
         quiz = provider.quiz as QuizChoice;
-
-        if ((quizProvider.state == QuizState.fail ||
-                quizProvider.state == QuizState.pass) &&
-            mounted &&
-            !_isBottomSheetShowing) {
-          Future.microtask(() {
-            if (ctx.mounted) {
-              _showFeedbackBottomSheet(
-                context: ctx,
-                quizProvider: quizProvider,
-                practiceProvider: practiceProvider,
-              );
-            }
-          });
-        }
         return Stack(
           children: [
             SingleChildScrollView(
@@ -135,7 +119,7 @@ class _QuizChoiceWidgetState extends State<QuizChoiceWidget> {
                         Column(
                           children: [
                             Text(
-                              'actId: ${quizProvider.quiz.actInstance.id} / ${quiz.actInstance.activity!.quizTemplate}',
+                              'instanceId: ${quizProvider.quiz.id} / ${quiz.activity.quizTemplate}',
                               // 'screen:$screenHeight - appBar:$appBarHeight - statusBar: $statusBarHeight = $effectiveMinHeight',
                               style: theme.textTheme.labelSmall!.copyWith(
                                 color:
@@ -178,7 +162,7 @@ class _QuizChoiceWidgetState extends State<QuizChoiceWidget> {
 
   /// 题干区工具条
   Widget _buildMaterialTools(QuizProvider provider, QuizChoice quiz) {
-    if (quiz.actInstance.activity!.quizTemplate == QuizTemplate.textToVoice) {
+    if (quiz.activity.quizTemplate == QuizTemplate.textToVoice) {
       return SizedBox.shrink();
     }
     return Row(
@@ -192,7 +176,10 @@ class _QuizChoiceWidgetState extends State<QuizChoiceWidget> {
               : () {
                   HapticFeedback.heavyImpact();
                   voicePosition = quiz.material;
-                  tts.play(quiz.material.voice);
+                  final voice = (voicePosition is QuizMaterialModel)
+                      ? voicePosition.text
+                      : voicePosition;
+                  tts.play(voice);
                 },
           borderRadius: BorderRadius.circular(24),
           child: Container(
@@ -232,6 +219,12 @@ class _QuizChoiceWidgetState extends State<QuizChoiceWidget> {
             OutlinedButton.icon(
               label: Text('Pinyin'),
               style: OutlinedButton.styleFrom(
+                foregroundColor: _isShowPinyin
+                    ? theme.colorScheme.primary
+                    : theme.colorScheme.primary,
+                backgroundColor: _isShowPinyin
+                    ? theme.colorScheme.primary.withAlpha(40)
+                    : Colors.transparent,
                 side: BorderSide(
                   color: theme.colorScheme.primary.withAlpha(40),
                 ),
@@ -239,22 +232,24 @@ class _QuizChoiceWidgetState extends State<QuizChoiceWidget> {
                 padding: EdgeInsets.symmetric(horizontal: 12),
               ),
               icon: Icon(size: 20, Icons.bubble_chart_outlined),
-              //TODO: 点击拼音显示逻辑
-              onPressed: () {},
+              onPressed: () {
+                setState(() {
+                  _isShowPinyin = !_isShowPinyin;
+                });
+              },
             ),
-            OutlinedButton.icon(
-              label: Text('1.0x'),
-              style: OutlinedButton.styleFrom(
-                side: BorderSide(
-                  color: theme.colorScheme.primary.withAlpha(40),
-                ),
-                minimumSize: Size(0, 32),
-                padding: EdgeInsets.symmetric(horizontal: 12),
-              ),
-              icon: Icon(size: 20, Icons.speed),
-              //TODO: 点击切换速度逻辑
-              onPressed: () {},
-            ),
+            // OutlinedButton.icon(
+            //   label: Text('1.0x'),
+            //   style: OutlinedButton.styleFrom(
+            //     side: BorderSide(
+            //       color: theme.colorScheme.primary.withAlpha(40),
+            //     ),
+            //     minimumSize: Size(0, 32),
+            //     padding: EdgeInsets.symmetric(horizontal: 12),
+            //   ),
+            //   icon: Icon(size: 20, Icons.speed),
+            //   onPressed: () {},
+            // ),
           ],
         ),
       ],
@@ -263,7 +258,7 @@ class _QuizChoiceWidgetState extends State<QuizChoiceWidget> {
 
   /// 构建题干区
   Widget _buildMaterial(QuizProvider provider, QuizChoice quiz) {
-    switch (quiz.actInstance.activity!.quizTemplate) {
+    switch (quiz.activity.quizTemplate) {
       case QuizTemplate.voiceToText: //听音选文
         return _voiceToTextMaterial(provider, quiz);
       default:
@@ -273,6 +268,9 @@ class _QuizChoiceWidgetState extends State<QuizChoiceWidget> {
 
   /// 题干组件-文本选文本
   Widget _textToTextMaterial(QuizProvider provider, QuizChoice quiz) {
+    final material = (quiz.material is QuizMaterialModel)
+        ? quiz.material.text
+        : quiz.material;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
@@ -292,15 +290,18 @@ class _QuizChoiceWidgetState extends State<QuizChoiceWidget> {
             child: Wrap(
               alignment: WrapAlignment.start,
               runAlignment: WrapAlignment.center,
-              spacing: 4,
-              runSpacing: 4,
-              children: quiz.material.text.split('').map<Widget>((char) {
-                if (quiz.material.text.length < 20) {
-                  return CharsWithPinyin(chinese: char, size: 48);
-                } else {
-                  return CharsWithPinyin(chinese: char, size: 32);
-                }
-              }).toList(),
+              spacing: 8,
+              runSpacing: 8,
+              children: JiebaSegmenter()
+                  .sentenceProcess(material)
+                  .map<Widget>(
+                    (char) => CharsWithPinyin(
+                      chinese: char,
+                      showPinyin: _isShowPinyin,
+                      size: (material.length < 20) ? 48 : 32,
+                    ),
+                  )
+                  .toList(),
             ),
           ),
         ],
@@ -382,7 +383,7 @@ class _QuizChoiceWidgetState extends State<QuizChoiceWidget> {
 
   /// 构建选项组件
   Widget _buildQuizOptions(QuizProvider provider, QuizChoice quiz) {
-    switch (quiz.actInstance.activity!.quizTemplate) {
+    switch (quiz.activity.quizTemplate) {
       case QuizTemplate.textToText: //看文选文
         return _textToTextOptions(provider, quiz);
       case QuizTemplate.textToVoice: //看文选音
@@ -462,7 +463,7 @@ class _QuizChoiceWidgetState extends State<QuizChoiceWidget> {
           onTap: () {
             provider.updateAnswer(option);
             voicePosition = option;
-            tts.play(option.voice);
+            tts.play(option.text);
           },
           child: Ink(
             decoration: ShapeDecoration(
@@ -584,13 +585,9 @@ class _QuizChoiceWidgetState extends State<QuizChoiceWidget> {
 
   /// 验证答案
   void _handleCheckAnswer() {
-    final practiceProvider = Provider.of<PracticeProvider>(
-      context,
-      listen: false,
-    );
-    final quizProvider = Provider.of<QuizProvider>(context, listen: false);
     quizProvider.submitAnswer();
-    practiceProvider.markQuizResult(quiz);
+    quiz.calculateScore();
+    _showFeedbackBottomSheet();
   }
 
   /// 通过选项状态和位置获取颜色

@@ -1,19 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:toneup_app/components/feedback_button.dart';
 import 'package:toneup_app/models/quizzes/quiz_model.dart';
-import 'package:toneup_app/providers/practice_provider.dart';
 import 'package:toneup_app/providers/quiz_provider.dart';
 import 'package:toneup_app/theme_data.dart';
 
 class QuizFeedbackBoard extends StatelessWidget {
   final QuizProvider quizProvider;
-  final PracticeProvider practiceProvider;
   final ThemeData theme;
+  final VoidCallback? callNext;
 
   const QuizFeedbackBoard({
     super.key,
     required this.quizProvider,
-    required this.practiceProvider,
+    this.callNext,
     required this.theme,
   });
 
@@ -35,7 +34,6 @@ class QuizFeedbackBoard extends StatelessWidget {
           _buildActionButton(
             theme: theme,
             quizProvider: quizProvider,
-            practiceProvider: practiceProvider,
             context: context,
           ),
         ],
@@ -117,7 +115,6 @@ class QuizFeedbackBoard extends StatelessWidget {
   Widget _buildActionButton({
     required ThemeData theme,
     required QuizProvider quizProvider,
-    required PracticeProvider practiceProvider,
     required BuildContext context,
   }) {
     String label;
@@ -135,7 +132,9 @@ class QuizFeedbackBoard extends StatelessWidget {
       label = 'Continue';
       icon = Icons.arrow_right_alt_rounded;
       onTap = () {
-        practiceProvider.nextQuiz();
+        if (callNext != null) {
+          callNext!();
+        }
         Navigator.pop(context);
       };
     }

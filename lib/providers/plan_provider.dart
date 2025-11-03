@@ -2,17 +2,16 @@ import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:toneup_app/models/enumerated_types.dart';
 import 'package:toneup_app/providers/profile_provider.dart';
-import '../services/user_plan_service.dart';
+import 'package:toneup_app/services/data_service.dart';
 import '../models/user_weekly_plan_model.dart';
 
 class PlanProvider extends ChangeNotifier {
-  final UserPlanService _planService = UserPlanService();
   UserWeeklyPlanModel? _activePlan; // 当前激活的计划
   List<UserWeeklyPlanModel> _allPlans = []; // 所有计划
-  bool _isLoading = false;
+  bool _isLoading = true;
   String? _errorMessage;
   String? _loadingMessage;
-  Function? _retryFunc;
+  VoidCallback? _retryFunc;
   String? _retryLabel;
 
   //  getter 方法（供UI获取状态）
@@ -21,7 +20,7 @@ class PlanProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   String? get loadingMessage => _loadingMessage;
-  Function? get retryFunc => _retryFunc;
+  VoidCallback? get retryFunc => _retryFunc;
   String? get retryLabel => _retryLabel;
 
   // 单例
@@ -64,11 +63,11 @@ class PlanProvider extends ChangeNotifier {
       // 获取激活计划和所有计划
       _loadingMessage = "Fetch Active Goal...";
       notifyListeners();
-      final plan = await _planService.fetchActivePlan(user.id);
+      final plan = await DataService().fetchActivePlan(user.id);
       if (plan != null) {
         _loadingMessage = "Setup Practices...";
         notifyListeners();
-        _activePlan = await _planService.fetchPracticeByPlan(plan);
+        _activePlan = await DataService().fetchPracticeByPlan(plan);
       }
     } catch (e) {
       _errorMessage = e.toString();
@@ -92,10 +91,11 @@ class PlanProvider extends ChangeNotifier {
       _errorMessage = null;
       _loadingMessage = "Loading All Goals...";
       notifyListeners();
-      _allPlans = await _planService.fetchPlans(user.id);
+      _allPlans = await DataService().fetchPlans(user.id);
+      //TODO：这里可以优化去掉在获取allplan的时候指定激活计划
       _loadingMessage = "Fetch Active Goal...";
       notifyListeners();
-      _activePlan = await _planService.fetchPracticeByPlan(
+      _activePlan = await DataService().fetchPracticeByPlan(
         allPlans
             .where(
               (plan) =>
@@ -126,11 +126,11 @@ class PlanProvider extends ChangeNotifier {
 
       _loadingMessage = "Creating a New Goal...";
       notifyListeners();
-      await _planService.updateOldActivePlansToPending(
+      await DataService().updateOldActivePlansToPending(
         userId: user.id,
         plans: _allPlans,
       );
-      final newPlan = await _planService.createNewActivePlan(user.id);
+      final newPlan = await DataService().createNewActivePlan(user.id);
       ProfileProvider().updateLevel(newPlan.level);
       _loadingMessage = "Updating All Goals...";
       notifyListeners();
@@ -160,11 +160,11 @@ class PlanProvider extends ChangeNotifier {
       final User? user = Supabase.instance.client.auth.currentUser;
       if (user == null) throw Exception("用户未登录");
 
-      await _planService.updateOldActivePlansToPending(
+      await DataService().updateOldActivePlansToPending(
         userId: user.id,
         plans: _allPlans,
       );
-      await _planService.markPlanAsActive(userId: user.id, plan: plan);
+      await DataService().markPlanAsActive(userId: user.id, plan: plan);
 
       _loadingMessage = "Updating All Goals...";
       notifyListeners();
@@ -215,7 +215,7 @@ class PlanProvider extends ChangeNotifier {
   /// 更新计划进度
   Future<void> updateProgress() async {
     if (_activePlan == null) return;
-    _planService.updatePlanProgress(
+    DataService().updatePlanProgress(
       planId: _activePlan!.id,
       progress: calculatePlanProgress(_activePlan),
     );

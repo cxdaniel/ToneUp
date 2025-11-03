@@ -9,4 +9,6 @@ class AppRoutes {
   static const ACTIVE = '/active';
   static const PROFILE = '/profile';
   static const PODCASTS = '/podcasts';
+  static const EVALUATION = '/evaluation';
+  static const WELCOME = '/welcome';
 }

@@ -9,7 +9,7 @@ part of 'quiz_options_model.dart';
 QuizOptionsModel _$QuizOptionsModelFromJson(Map<String, dynamic> json) =>
     QuizOptionsModel(
         text: json['text'] as String,
-        voice: json['voice'] as String,
+        voice: json['voice'] as String?,
         isCorrect: json['is_correct'] as bool?,
       )
       ..state = $enumDecodeNullable(_$OptionStatusEnumMap, json['state'])

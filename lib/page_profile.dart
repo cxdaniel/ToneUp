@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:toneup_app/components/feedback_button.dart';
@@ -39,7 +38,6 @@ class _ProfilePageState extends State<ProfilePage> {
           bottom: false,
           top: false,
           child: Scaffold(
-            // backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
             body: SingleChildScrollView(
               child: Padding(
                 padding: EdgeInsets.fromLTRB(

@@ -1,36 +1,33 @@
 import 'dart:math';
-import 'package:toneup_app/models/quizzes/quiz_material_model.dart';
+import 'package:toneup_app/models/activity_model.dart';
 import 'package:toneup_app/models/quizzes/quiz_options_model.dart';
 import 'package:toneup_app/models/quizzes/quiz_result_model.dart';
-import 'package:toneup_app/models/user_activity_instances_model.dart';
 
 enum QuizState { initial, intouch, touched, fail, pass }
 
 /// Quiz 基类：定义通用属性与方法
 abstract class QuizBase {
-  final int insid;
-  final UserActivityInstanceModel actInstance;
+  final int id;
+  final ActivityModel activity;
+  final int indicatorId;
   final String question;
   final dynamic correctAnswer; // 正确答案
   late final String? explain;
   QuizResultModel result;
   QuizState state = QuizState.initial;
-  int maxRetryTime; // 可重试次数，默认2次
+  int maxRetryTime; // 可重试次数，默认2次, 0为不可重试
   int retryCount = 0; // 已重试次数
   bool isRenewal = false;
 
   QuizBase({
-    required this.insid,
-    required this.actInstance,
+    required this.id,
+    required this.activity,
+    required this.indicatorId,
     required this.question,
     required this.correctAnswer,
     this.explain,
     this.maxRetryTime = 2,
-  }) : result = QuizResultModel(
-         score: 0,
-         category: actInstance.materials.type,
-         item: actInstance.materials.content,
-       );
+  }) : result = QuizResultModel(score: 0);
 
   void updateStatus(dynamic userAnswer);
   bool validateAnswer(dynamic userAnswer) {
@@ -51,22 +48,25 @@ abstract class QuizBase {
 ///通用题型
 class QuizDefault extends QuizBase {
   QuizDefault({
-    required super.insid,
-    required super.actInstance,
+    required super.id,
+    required super.indicatorId,
+    required super.activity,
     required super.question,
     required super.correctAnswer,
+    super.maxRetryTime = 1,
   });
   @override
   void updateStatus(dynamic userAnswer) {}
 }
 
 /// 选择题
-class QuizChoice extends QuizBase {
+class QuizChoice<T> extends QuizBase {
   final List<QuizOptionsModel> options;
-  final QuizMaterialModel material;
+  final T material;
   QuizChoice({
-    required super.insid,
-    required super.actInstance,
+    required super.id,
+    required super.indicatorId,
+    required super.activity,
     required super.question,
     required this.options,
     required this.material,
@@ -74,7 +74,6 @@ class QuizChoice extends QuizBase {
     super.explain,
     super.maxRetryTime = 1,
   });
-  // : super(type: QuizType.choice);
 
   @override
   void updateStatus(dynamic userAnswer) {

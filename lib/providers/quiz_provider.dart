@@ -12,7 +12,7 @@ class QuizProvider with ChangeNotifier {
   QuizState get state => _quiz.state;
   String get feedbackMessage => _feedback;
 
-  /// 初始化题目（核心方法，设置初始状态）
+  /// 初始化题目
   void initQuiz(QuizBase quiz) {
     _quiz = quiz;
     _answer = null;
@@ -27,7 +27,7 @@ class QuizProvider with ChangeNotifier {
     });
   }
 
-  /// 更新用户答案（核心属性变更）
+  /// 更新用户答案
   void updateAnswer(dynamic answer) {
     _answer = answer;
     _quiz.state = QuizState.touched;
@@ -35,13 +35,13 @@ class QuizProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  /// 提交答案（状态流转核心逻辑）
+  /// 提交答案
   void submitAnswer() {
     if (_quiz.state != QuizState.touched) return;
     final isCorrect = _quiz.validateAnswer(_answer);
     _quiz.state = isCorrect ? QuizState.pass : QuizState.fail;
-    // _feedback = isCorrect ? 'Well done!' : '${_quiz.explain}';
     _feedback = _quiz.explain!;
+    // _feedback = isCorrect ? 'Well done!' : '${_quiz.explain}';
     _quiz.updateStatus(_answer);
     notifyListeners();
   }

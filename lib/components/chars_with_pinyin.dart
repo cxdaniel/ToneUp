@@ -5,13 +5,13 @@ import 'package:toneup_app/services/chinese_words_service.dart';
 class CharsWithPinyin extends StatefulWidget {
   final String chinese;
   final bool showPinyin;
-  final double? size;
+  final double size;
 
   const CharsWithPinyin({
     super.key,
     required this.chinese,
     this.showPinyin = true,
-    this.size,
+    this.size = 36,
   });
 
   @override
@@ -21,7 +21,6 @@ class CharsWithPinyin extends StatefulWidget {
 class _CharsWithPinyinState extends State<CharsWithPinyin> {
   @override
   Widget build(BuildContext context) {
-    final fontsize = (widget.size != null) ? widget.size : 36.0;
     final pinyin = isChinese(widget.chinese)
         ? PinyinHelper.getPinyin(
             widget.chinese,
@@ -40,7 +39,8 @@ class _CharsWithPinyinState extends State<CharsWithPinyin> {
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               fontWeight: FontWeight.w400,
               color: Theme.of(context).colorScheme.onSecondaryContainer,
-              fontSize: fontsize! * 0.5,
+              height: 1,
+              fontSize: widget.size * .5,
             ),
           ),
         Text(
@@ -49,7 +49,8 @@ class _CharsWithPinyinState extends State<CharsWithPinyin> {
           style: Theme.of(context).textTheme.headlineSmall?.copyWith(
             fontWeight: FontWeight.w700,
             color: Theme.of(context).colorScheme.primary,
-            fontSize: fontsize,
+            height: 1.2,
+            fontSize: widget.size,
           ),
         ),
       ],

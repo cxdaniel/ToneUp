@@ -1,4 +1,3 @@
-import 'package:faker/faker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -82,27 +81,27 @@ class _SignUpPageState extends State<SignUpPage> {
         password: password,
       );
       if (signUpResponse.user != null) {
-        // 注册成功后创建profile
-        final existProfile = await supabase
-            .from('profiles')
-            .select()
-            .eq('id', signUpResponse.user!.id)
-            .maybeSingle();
-        if (existProfile == null) {
-          final faker = Faker();
-          await supabase.from('profiles').insert([
-            {
-              'id': signUpResponse.user!.id,
-              'nickname': faker.internet.userName(),
-            },
-          ]);
-        }
         // 注册成功后立即登录
-        final loginResponse = await supabase.auth.signInWithPassword(
-          email: email,
-          password: password,
-        );
-        if (loginResponse.user != null && mounted) {
+        // final loginResponse = await supabase.auth.signInWithPassword(
+        //   email: email,
+        //   password: password,
+        // );
+        // // 注册成功后创建profile
+        // final existProfile = await supabase
+        //     .from('profiles')
+        //     .select()
+        //     .eq('id', signUpResponse.user!.id)
+        //     .maybeSingle();
+        // if (existProfile == null) {
+        //   await supabase.from('profiles').insert([
+        //     {
+        //       'id': signUpResponse.user!.id,
+        //       'nickname': Faker().internet.userName(),
+        //     },
+        //   ]);
+        // }
+        if (signUpResponse.user != null && mounted) {
+          // context.go(AppRoutes.WELCOME);
           context.go(AppRoutes.HOME);
         }
       }

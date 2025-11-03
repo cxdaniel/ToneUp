@@ -4,7 +4,7 @@ import 'package:toneup_app/models/enumerated_types.dart';
 import 'package:toneup_app/models/profile_model.dart';
 import 'package:toneup_app/models/user_score_records_model.dart';
 import 'package:toneup_app/providers/plan_provider.dart';
-import 'package:toneup_app/services/profile_service.dart';
+import 'package:toneup_app/services/data_service.dart';
 
 class ProfileProvider extends ChangeNotifier {
   // 单例
@@ -20,7 +20,6 @@ class ProfileProvider extends ChangeNotifier {
     });
   }
 
-  final ProfileService _service = ProfileService();
   ProfileModel? _profileModel;
   List<UserScoreRecordsModel>? _records;
   // getter..
@@ -59,7 +58,7 @@ class ProfileProvider extends ChangeNotifier {
     final User? user = Supabase.instance.client.auth.currentUser;
     if (user == null) throw Exception("用户未登录");
     try {
-      final data = await _service.fetchUserScoreRecord(user.id);
+      final data = await DataService().fetchUserScoreRecord(user.id);
       final uniqueMap = <String, UserScoreRecordsModel>{};
       for (var record in data) {
         uniqueMap[record.item] = record;
@@ -86,19 +85,18 @@ class ProfileProvider extends ChangeNotifier {
   }
 
   /// 获取个人资料
-  Future<void> fetchProfile() async {
+  Future<ProfileModel?> fetchProfile() async {
     final User? user = Supabase.instance.client.auth.currentUser;
     if (user == null) throw Exception("用户未登录");
     try {
-      final data = await _service.fetchProfile(user.id);
-      if (data != null) {
-        _profileModel = data;
-      }
+      final data = await DataService().fetchProfile(user.id);
+      _profileModel = data;
     } catch (e) {
       if (kDebugMode) print("获取个人资料-失败：$e");
     } finally {
       notifyListeners();
     }
+    return _profileModel;
   }
 
   /// 保存个人资料
@@ -107,7 +105,7 @@ class ProfileProvider extends ChangeNotifier {
     if (user == null) throw Exception("用户未登录");
     try {
       if (_profileModel != null) {
-        _service.saveProfile(_profileModel!);
+        DataService().saveProfile(_profileModel!);
       }
     } catch (e) {
       if (kDebugMode) print("保存个人资料失败：$e");

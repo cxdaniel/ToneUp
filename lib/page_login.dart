@@ -1,6 +1,5 @@
 // ignore_for_file: use_build_context_synchronously, library_private_types_in_public_api
 // import 'package:google_fonts/google_fonts.dart';
-import 'package:faker/faker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -51,13 +50,14 @@ class _LoginPageState extends State<LoginPage> {
             .maybeSingle();
         if (!mounted) return;
         if (existProfile == null) {
-          final faker = Faker();
-          await supabase.from('profiles').insert([
-            {'id': response.user!.id, 'nickname': faker.internet.userName()},
-          ]);
-          if (!mounted) return;
+          // await supabase.from('profiles').insert([
+          //   {'id': response.user!.id, 'nickname': Faker().internet.userName()},
+          // ]);
+          // if (!mounted) return;
+          context.go(AppRoutes.WELCOME);
+        } else {
+          context.go(AppRoutes.HOME);
         }
-        context.go(AppRoutes.HOME);
       }
     } catch (e) {
       debugPrint("登录失败：$e");

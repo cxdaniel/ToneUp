@@ -1,30 +1,25 @@
-import 'package:carousel_slider/carousel_slider.dart';
-import 'package:jieba_flutter/analysis/jieba_segmenter.dart';
-import 'package:toneup_app/components/chars_with_pinyin.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:toneup_app/components/quiz_choice_widget.dart';
-import 'package:toneup_app/models/user_practice_model.dart';
-import 'package:toneup_app/models/user_weekly_plan_model.dart';
+import 'package:toneup_app/providers/evaluation_provider.dart';
 import 'package:toneup_app/providers/quiz_provider.dart';
 import 'package:toneup_app/providers/tts_provider.dart';
 import 'package:toneup_app/theme_data.dart';
-import '../providers/practice_provider.dart';
 
-class PracticePage extends StatefulWidget {
-  const PracticePage({super.key});
+class EvaluationPage extends StatefulWidget {
+  const EvaluationPage({super.key});
 
   @override
-  State<PracticePage> createState() => _PracticePageState();
+  State<EvaluationPage> createState() => _EvaluationPageState();
 }
 
-class _PracticePageState extends State<PracticePage> {
+class _EvaluationPageState extends State<EvaluationPage> {
   bool _isSubmitting = false;
   late TTSProvider ttsProvider;
   late ThemeData theme;
-  late PracticeProvider practiceProvider;
+  late EvaluationProvider evaluationProvider;
 
   @override
   void initState() {
@@ -51,17 +46,12 @@ class _PracticePageState extends State<PracticePage> {
   @override
   Widget build(BuildContext context) {
     final extra = GoRouterState.of(context).extra as Map<String, dynamic>;
-    final UserPracticeModel practiceData = extra['practiceData'];
-    final UserWeeklyPlanModel planData = extra['planData'];
-    final String topic = planData.materialSnapshot.topicTag;
-    final String culture = planData.materialSnapshot.cultureTag;
+    final int targetLevel = extra['level'];
     return ChangeNotifierProvider(
-      create: (ctx) =>
-          PracticeProvider()
-            ..initialize(practiceData, planData, topic, culture),
-      child: Consumer<PracticeProvider>(
+      create: (ctx) => EvaluationProvider()..initialize(targetLevel),
+      child: Consumer<EvaluationProvider>(
         builder: (ctx, provider, _) {
-          practiceProvider = provider;
+          evaluationProvider = provider;
           final quizzes = provider.quizzes;
           return Scaffold(
             appBar: (!provider.isPracticeCompleted)
@@ -117,39 +107,8 @@ class _PracticePageState extends State<PracticePage> {
               color: theme.colorScheme.outline,
             ),
           ),
-          _buildMaterialCarousel(),
-          SizedBox(height: 10),
         ],
       ),
-    );
-  }
-
-  /// 加载轮播组件
-  Widget _buildMaterialCarousel() {
-    final tags = practiceProvider.materials.map((m) => m.content).toList();
-    return CarouselSlider(
-      options: CarouselOptions(
-        height: 90,
-        autoPlay: true, // 自动播放
-        autoPlayInterval: const Duration(seconds: 3), // 播放间隔
-        autoPlayAnimationDuration: const Duration(milliseconds: 500), // 动画时长
-        viewportFraction: 0.8, // 显示比例
-        enlargeFactor: 10,
-        enlargeCenterPage: true,
-        enableInfiniteScroll: true, // 无限循环
-        disableCenter: true,
-      ),
-      items: tags.map((tag) {
-        return Wrap(
-          alignment: WrapAlignment.center,
-          runAlignment: WrapAlignment.center,
-          spacing: 4,
-          runSpacing: 4,
-          children: JiebaSegmenter().sentenceProcess(tag).map<Widget>((char) {
-            return CharsWithPinyin(chinese: char, size: 24);
-          }).toList(),
-        );
-      }).toList(),
     );
   }
 
@@ -166,7 +125,7 @@ class _PracticePageState extends State<PracticePage> {
             size: 50.0,
           ),
           Text(
-            'Practice is Empty',
+            'Evaluation is Empty',
             style: theme.textTheme.bodyMedium?.copyWith(
               color: theme.colorScheme.outline,
             ),
@@ -200,7 +159,7 @@ class _PracticePageState extends State<PracticePage> {
       duration: const Duration(milliseconds: 500),
       transitionBuilder: (child, animation) {
         final isNewChild =
-            child.key == ValueKey(practiceProvider.currentTouchedCount);
+            child.key == ValueKey(evaluationProvider.currentTouchedCount);
         final inOffset = const Offset(1.0, 0.0); //从右进入
         final outOffset = const Offset(-1.0, 0.0); // 往左出
         final inAnimation = Tween<Offset>(begin: inOffset, end: Offset.zero)
@@ -224,10 +183,10 @@ class _PracticePageState extends State<PracticePage> {
         );
       },
       child: ChangeNotifierProvider(
-        key: ValueKey(practiceProvider.currentTouchedCount),
+        key: ValueKey(evaluationProvider.currentTouchedCount),
         create: (context) =>
-            QuizProvider()..initQuiz(practiceProvider.currentQuiz),
-        child: QuizChoiceWidget(callNextQuiz: practiceProvider.nextQuiz),
+            QuizProvider()..initQuiz(evaluationProvider.currentQuiz),
+        child: QuizChoiceWidget(callNextQuiz: nextQuiz),
       ),
     );
   }
@@ -247,12 +206,12 @@ class _PracticePageState extends State<PracticePage> {
               size: 50.0,
             ),
             Text(
-              'Loading failed: ${practiceProvider.errorMessage}',
+              'Loading failed: ${evaluationProvider.errorMessage}',
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.outline,
               ),
             ),
-            if (practiceProvider.retryFunc != null || true)
+            if (evaluationProvider.retryFunc != null || true)
               TextButton(
                 style: TextButton.styleFrom(
                   backgroundColor: theme.colorScheme.primary,
@@ -266,9 +225,9 @@ class _PracticePageState extends State<PracticePage> {
                     borderRadius: BorderRadius.circular(24),
                   ),
                 ),
-                onPressed: practiceProvider.retryFunc,
+                onPressed: evaluationProvider.retryFunc,
                 child: Text(
-                  practiceProvider.retryLabel ?? "Retry",
+                  evaluationProvider.retryLabel ?? "Retry",
                   style: theme.textTheme.titleMedium?.copyWith(
                     color: theme.colorScheme.onPrimary,
                   ),
@@ -278,6 +237,12 @@ class _PracticePageState extends State<PracticePage> {
         ),
       ),
     );
+  }
+
+  /// 下一题
+  void nextQuiz() {
+    ttsProvider.stop();
+    evaluationProvider.nextQuiz();
   }
 
   /// 练习完成状态
@@ -312,7 +277,7 @@ class _PracticePageState extends State<PracticePage> {
                   ? null
                   : () {
                       HapticFeedback.heavyImpact();
-                      _submitHandeller(practiceProvider);
+                      _submitHandeller();
                     },
               child: _isSubmitting
                   ? Row(
@@ -350,12 +315,12 @@ class _PracticePageState extends State<PracticePage> {
   }
 
   /// 提交练习结果
-  Future<void> _submitHandeller(PracticeProvider provider) async {
+  Future<void> _submitHandeller() async {
     setState(() {
       _isSubmitting = true;
     });
     try {
-      await provider.submitPracticeResult();
+      await evaluationProvider.submitPracticeResult();
       if (mounted) {
         context.pop();
       }

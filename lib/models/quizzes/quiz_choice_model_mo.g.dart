@@ -1,25 +1,27 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'quiz_choice_model.dart';
+part of 'quiz_choice_model_mo.dart';
 
 // **************************************************************************
 // JsonSerializableGenerator
 // **************************************************************************
 
-QuizChoiceModel _$QuizChoiceModelFromJson(Map<String, dynamic> json) =>
-    QuizChoiceModel(
-      material: json['material'] as String,
+QuizChoiceModelMO _$QuizChoiceModelMOFromJson(Map<String, dynamic> json) =>
+    QuizChoiceModelMO(
+      explain: json['explain'] as String,
       question: json['question'] as String,
+      material: QuizMaterialModel.fromJson(
+        json['material'] as Map<String, dynamic>,
+      ),
       options: (json['options'] as List<dynamic>)
           .map((e) => QuizOptionsModel.fromJson(e as Map<String, dynamic>))
           .toList(),
-      explain: json['explain'] as String,
     );
 
-Map<String, dynamic> _$QuizChoiceModelToJson(QuizChoiceModel instance) =>
+Map<String, dynamic> _$QuizChoiceModelMOToJson(QuizChoiceModelMO instance) =>
     <String, dynamic>{
+      'explain': instance.explain,
       'question': instance.question,
       'material': instance.material,
       'options': instance.options,
-      'explain': instance.explain,
     };

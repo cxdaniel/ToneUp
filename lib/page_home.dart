@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -6,11 +5,10 @@ import 'package:toneup_app/components/feedback_button.dart';
 import 'package:toneup_app/models/user_practice_model.dart';
 import 'package:toneup_app/models/user_weekly_plan_model.dart';
 import 'package:toneup_app/providers/plan_provider.dart';
+import 'package:toneup_app/providers/profile_provider.dart';
 import 'package:toneup_app/routes.dart';
 import 'package:toneup_app/theme_data.dart';
 
-// 1. 先定义 Tab 对应的页面（Practice 对应首页，其他页面占位，后续可补充）
-// 首页（原 HomePage，对应 Practice Tab）
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
@@ -26,12 +24,14 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    if (Provider.of<PlanProvider>(context, listen: false).activePlan == null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        Provider.of<PlanProvider>(context, listen: false).initialize();
-        // Provider.of<PlanProvider>(context, listen: false).getAllPlans();
-      });
-    }
+    _checkProfile();
+    planProvider = Provider.of<PlanProvider>(context, listen: false);
+    // if (Provider.of<PlanProvider>(context, listen: false).activePlan == null) {
+    //   WidgetsBinding.instance.addPostFrameCallback((_) {
+    //     Provider.of<PlanProvider>(context, listen: false).initialize();
+    //     // Provider.of<PlanProvider>(context, listen: false).getAllPlans();
+    //   });
+    // }
   }
 
   @override
@@ -40,10 +40,46 @@ class _HomePageState extends State<HomePage> {
     theme = Theme.of(context);
   }
 
+  /// 检查用户资料完整性
+  Future<void> _checkProfile() async {
+    final profile = await ProfileProvider().fetchProfile();
+    if (profile == null && mounted) {
+      context.go(AppRoutes.WELCOME);
+    } else {
+      _initializePlan();
+    }
+  }
+
+  /// 初始化计划
+  Future<void> _initializePlan() async {
+    if (planProvider.activePlan == null) {
+      planProvider.initialize();
+    }
+  }
+
+  /// 去全部计划页
   void _gotoPagePlan() {
-    if (kDebugMode) debugPrint('on tap');
     // context.push(AppRoutes.GOAL_LIST);
     context.go(AppRoutes.GOAL_LIST);
+  }
+
+  /// 去测评页
+  void _gotoPageEvaluation() {
+    context.push(AppRoutes.EVALUATION, extra: {'level': 9});
+  }
+
+  /// 去练习页
+  Future<void> _gotoPractice({
+    required UserWeeklyPlanModel plan,
+    required UserPracticeModel practice,
+  }) async {
+    await context.push(
+      AppRoutes.PRACTICE,
+      extra: {'practiceData': practice, 'planData': plan},
+    );
+    if (context.mounted) {
+      planProvider.refreshPlan();
+    }
   }
 
   @override
@@ -51,7 +87,6 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
       body: Consumer<PlanProvider>(
         builder: (context, provider, child) {
-          planProvider = provider;
           _planData = planProvider.activePlan;
           if (planProvider.isLoading) {
             return _buildLoadingState(planProvider);
@@ -285,6 +320,8 @@ class _HomePageState extends State<HomePage> {
               ],
             ),
 
+            _buildGoEvaluation(),
+
             /// 计划全部完成
             if (progress == 1) _buildCelebration(),
 
@@ -439,6 +476,17 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  /// 测评按钮
+  Widget _buildGoEvaluation() {
+    return SizedBox(
+      height: 50,
+      child: OutlinedButton.icon(
+        onPressed: _gotoPageEvaluation,
+        label: Text('Go Evaluate', style: theme.textTheme.titleMedium),
+      ),
+    );
+  }
+
   // 生成活动卡片
   List<Widget> _buildActivityCards() {
     if (_planData == null) return [];
@@ -462,15 +510,7 @@ class _HomePageState extends State<HomePage> {
       activityCards.add(
         FeedbackButton(
           borderRadius: BorderRadius.circular(16),
-          onTap: () async {
-            await context.push(
-              AppRoutes.PRACTICE,
-              extra: {'practiceData': practiceData, 'planData': _planData},
-            );
-            if (context.mounted) {
-              planProvider.refreshPlan();
-            }
-          },
+          onTap: () => _gotoPractice(plan: _planData!, practice: practiceData),
           child: Ink(
             decoration: ShapeDecoration(
               color: (practiceData.score > 0)

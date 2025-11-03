@@ -2,24 +2,23 @@ import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:toneup_app/models/enumerated_types.dart';
 import 'package:toneup_app/models/quizzes/quiz_model.dart';
-import 'package:toneup_app/models/quizzes/quiz_choice_model.dart';
+import 'package:toneup_app/models/quizzes/quiz_choice_model_mo.dart';
+import 'package:toneup_app/models/quizzes/quiz_result_model.dart';
 import 'package:toneup_app/models/user_activity_instances/act_ins_material_model.dart';
 import 'package:toneup_app/models/user_activity_instances_model.dart';
 import 'package:toneup_app/models/user_practice_model.dart';
 import 'package:toneup_app/models/user_weekly_plan_model.dart';
 import 'package:toneup_app/providers/plan_provider.dart';
 import 'package:toneup_app/providers/profile_provider.dart';
-import '../services/user_activity_service.dart';
+import 'package:toneup_app/services/data_service.dart';
 
 class PracticeProvider extends ChangeNotifier {
-  final UserActivityService _service = UserActivityService();
   List<QuizBase> _quizzes = []; // 所有 Quiz 列表
   int _currentQuizIndex = 0; // 当前 Quiz 索引
   bool _isLoading = false;
   String? _errorMessage;
   bool _isPracticeCompleted = false; // 练习是否完成
   UserPracticeModel? _practiceData;
-  // final List<QuizResultModel> _result = [];
   // Getters
   List<QuizBase> get quizzes => _quizzes;
   int get currentQuizIndex => _currentQuizIndex;
@@ -78,9 +77,10 @@ class PracticeProvider extends ChangeNotifier {
       _isLoading = true;
       notifyListeners();
 
-      List<UserActivityInstanceModel> instances = await _service
+      List<UserActivityInstanceModel> instances = await DataService()
           .getPracticeInstances(practiceData.instances);
 
+      // 提取练习的材料在loading显示
       final actMaterials = instances.map((ins) => ins.materials).toList();
       materials.addAll(
         Set<ActInsMaterialModel>.from(
@@ -96,14 +96,14 @@ class PracticeProvider extends ChangeNotifier {
 
       final quizexist = instances.fold(true, (a, b) => a && b.quiz != null);
       if (!quizexist) {
-        instances = await _service.generatePracticeQuiz(
+        instances = await DataService().generatePracticeQuiz(
           practiceData.instances,
           topic,
           culture,
         );
       }
-      final insWithAct = await _service.addActivityToInstances(instances);
-      _quizzes = _extractQuizzesFromInstances(insWithAct);
+      final insWithAct = await DataService().addActivityToInstances(instances);
+      _quizzes = _extractQuizzesbyType(insWithAct);
       retryFunc = null;
     } catch (e) {
       _errorMessage = e.toString();
@@ -116,48 +116,55 @@ class PracticeProvider extends ChangeNotifier {
     }
   }
 
-  /// 从 UserActivityInstanceModel 中提取 Quiz
-  List<QuizBase> _extractQuizzesFromInstances(
+  /// 从 按类别提取 Quiz
+  List<QuizBase> _extractQuizzesbyType(
     List<UserActivityInstanceModel> instances,
   ) {
     final List<QuizBase> quizList = [];
     for (var instance in instances) {
       switch (instance.activity!.quizType) {
         case QuizType.choice:
-          final quizdata = QuizChoiceModel.fromJson(instance.quiz!);
+          final quizdata = QuizChoiceModelMO.fromJson(instance.quiz!);
           final correctOption = quizdata.options.firstWhere(
             (o) => o.isCorrect == true,
             orElse: () => quizdata.options.first,
           );
           quizList.add(
             QuizChoice(
-              insid: instance.id,
-              actInstance: instance,
-              question: quizdata.question,
-              options: quizdata.options,
-              correctAnswer: correctOption,
-              material: quizdata.material,
-              explain: quizdata.explain,
-            ),
+                id: instance.id,
+                indicatorId: instance.indicatorId,
+                activity: instance.activity!,
+                question: quizdata.question,
+                options: quizdata.options,
+                correctAnswer: correctOption,
+                material: quizdata.material,
+                explain: quizdata.explain,
+              )
+              ..result = QuizResultModel(
+                score: 0,
+                category: instance.materials.type,
+                item: instance.materials.content,
+              ),
           );
           break;
         default:
           quizList.add(
             QuizDefault(
-              insid: instance.id,
-              actInstance: instance,
-              question: instance.quiz!['question'],
-              correctAnswer: null,
-            ),
+                id: instance.id,
+                indicatorId: instance.indicatorId,
+                activity: instance.activity!,
+                question: instance.quiz!['question'],
+                correctAnswer: null,
+              )
+              ..result = QuizResultModel(
+                score: 0,
+                category: instance.materials.type,
+                item: instance.materials.content,
+              ),
           );
       }
     }
     return quizList;
-  }
-
-  /// 标记实例为已完成
-  void markQuizResult(QuizBase quiz) {
-    quiz.calculateScore();
   }
 
   /// 进入下一个 Quiz
@@ -186,7 +193,7 @@ class PracticeProvider extends ChangeNotifier {
 
   /// 提交练习数据
   Future<void> submitPracticeResult() async {
-    await _service.saveResultScores(_quizzes, _practiceData!);
+    await DataService().saveResultScores(_quizzes, _practiceData!);
     notifyListeners();
     // 更新用户档案数据
     PlanProvider().updateProgress();

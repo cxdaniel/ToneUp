@@ -17,11 +17,9 @@ UserActivityInstanceModel _$UserActivityInstanceModelFromJson(
   ),
   createdAt: DateTime.parse(json['created_at'] as String),
   quiz: json['quiz'] as Map<String, dynamic>?,
-  materialId: (json['material_id'] as num?)?.toInt(),
   activity: json['activity'] == null
       ? null
       : ActivityModel.fromJson(json['activity'] as Map<String, dynamic>),
-  isCompleted: json['isCompleted'] as bool? ?? false,
 );
 
 Map<String, dynamic> _$UserActivityInstanceModelToJson(
@@ -33,7 +31,5 @@ Map<String, dynamic> _$UserActivityInstanceModelToJson(
   'materials': instance.materials,
   'created_at': instance.createdAt.toIso8601String(),
   'quiz': instance.quiz,
-  'material_id': instance.materialId,
   'activity': instance.activity,
-  'isCompleted': instance.isCompleted,
 };

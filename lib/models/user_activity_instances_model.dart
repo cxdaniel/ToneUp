@@ -16,14 +16,11 @@ class UserActivityInstanceModel {
   final DateTime createdAt;
   @JsonKey(name: "quiz")
   final Map<String, dynamic>? quiz; // 题目内容（jsonb 类型）
-  @JsonKey(name: "material_id")
-  final int? materialId;
+  // @JsonKey(name: "material_id")
+  // final int? materialId;
 
   /// 关联属性
   ActivityModel? activity;
-
-  /// provider需求
-  bool? isCompleted;
 
   UserActivityInstanceModel({
     required this.id,
@@ -32,9 +29,7 @@ class UserActivityInstanceModel {
     required this.materials,
     required this.createdAt,
     this.quiz,
-    this.materialId,
     this.activity,
-    this.isCompleted = false,
   });
 
   // 序列化方法（需运行 build_runner 生成）
