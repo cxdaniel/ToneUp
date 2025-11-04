@@ -1,5 +1,9 @@
+import 'package:carousel_slider/carousel_slider.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:jieba_flutter/conversion/common_conversion_definition.dart';
 import 'package:toneup_app/components/feedback_button.dart';
+import 'package:toneup_app/routes.dart';
 import 'package:toneup_app/services/utils.dart';
 
 class WelcomePage extends StatefulWidget {
@@ -8,17 +12,58 @@ class WelcomePage extends StatefulWidget {
   State<WelcomePage> createState() => _WelcomePageState();
 }
 
+enum STEPS { nickname, purpose, duration, level }
+
 class _WelcomePageState extends State<WelcomePage> {
-  final nikenameCtrl = TextEditingController();
   late PageController _pageController;
+  late CarouselSliderController _sliderController;
   late ThemeData theme;
   late MediaQueryData screen;
   int _currentStep = 0;
+
+  final nikenameCtrl = TextEditingController();
+
+  final Map<STEPS, bool> validations = {
+    STEPS.nickname: false,
+    STEPS.purpose: false,
+    STEPS.duration: false,
+    STEPS.level: false,
+  };
+
+  final Map<STEPS, dynamic> stepData = {
+    STEPS.nickname: '',
+    STEPS.purpose: '',
+    STEPS.duration: null,
+    STEPS.level: 1,
+  };
+
+  void validateCurrentStep() {
+    switch (_currentStep) {
+      case 0:
+        stepData[STEPS.nickname] = nikenameCtrl.text;
+        validations[STEPS.nickname] = nikenameCtrl.text.length >= 2;
+        break;
+      case 1:
+        validations[STEPS.purpose] = stepData[STEPS.purpose].isNotEmpty;
+        break;
+      case 2:
+        validations[STEPS.duration] = stepData[STEPS.duration].isNotEmpty;
+        break;
+      case 3:
+        validations[STEPS.level] = true;
+        break;
+    }
+    setState(() {});
+  }
 
   @override
   void initState() {
     super.initState();
     _pageController = PageController(initialPage: _currentStep, keepPage: true);
+    _sliderController = CarouselSliderController();
+    nikenameCtrl.addListener(() {
+      validateCurrentStep();
+    });
   }
 
   @override
@@ -79,6 +124,11 @@ class _WelcomePageState extends State<WelcomePage> {
     });
   }
 
+  /// 去测评
+  void gotoEvaluation(int level) {
+    context.push(AppRoutes.EVALUATION, extra: {'level': level});
+  }
+
   ///  昵称部分
   Widget _sectionNickname() {
     return SingleChildScrollView(
@@ -112,10 +162,6 @@ class _WelcomePageState extends State<WelcomePage> {
                     text: 'Start Your Chinese Journey!\n',
                     style: TextStyle(fontSize: 26),
                   ),
-                  TextSpan(
-                    text: 'Let’s start with a learning nickname',
-                    style: TextStyle(fontSize: 20),
-                  ),
                 ],
               ),
               textAlign: TextAlign.center,
@@ -128,13 +174,23 @@ class _WelcomePageState extends State<WelcomePage> {
             Column(
               spacing: 24,
               children: [
-                CircleAvatar(
-                  radius: 60,
-                  backgroundColor: theme.colorScheme.secondaryContainer,
-                  child: Icon(
-                    Icons.person,
-                    size: 80,
-                    color: theme.colorScheme.primary,
+                // AvatarUploadWidget(
+                //   radius: 60,
+                //   onAvatarChanged: (bytes) {
+                //     _localAvatarBytes = bytes;
+                //     validateCurrentStep();
+                //   },
+                //   initialAvatar: _localAvatarBytes,
+                // ),
+                Text.rich(
+                  style: TextStyle(
+                    height: 2,
+                    fontWeight: FontWeight.w300,
+                    color: theme.colorScheme.secondary,
+                  ),
+                  TextSpan(
+                    text: 'Let’s start with a learning nickname',
+                    style: TextStyle(fontSize: 20),
                   ),
                 ),
                 Row(
@@ -143,7 +199,7 @@ class _WelcomePageState extends State<WelcomePage> {
                   children: [
                     SizedBox(width: 40),
                     SizedBox(
-                      width: 160,
+                      width: 200,
                       child: TextField(
                         textAlign: TextAlign.center,
                         style: theme.textTheme.titleLarge,
@@ -210,7 +266,9 @@ class _WelcomePageState extends State<WelcomePage> {
                 _mainActButton(
                   label: 'Continue',
                   icon: Icons.arrow_right_alt_rounded,
-                  callback: nikenameCtrl.text.isEmpty ? null : nextStep,
+                  onTap: validations.get(STEPS.nickname) ?? false
+                      ? nextStep
+                      : null,
                 ),
               ],
             ),
@@ -254,10 +312,49 @@ class _WelcomePageState extends State<WelcomePage> {
                 ],
               ),
             ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              spacing: 16,
+              children: [
+                _optionItem(
+                  label: 'For Interest',
+                  description: 'Massive fun content, from poetry to slang.',
+                  selected: stepData,
+                  step: STEPS.purpose,
+                ),
+                _optionItem(
+                  label: 'For Work',
+                  description: 'Business Chinese scenario library.',
+                  selected: stepData,
+                  step: STEPS.purpose,
+                ),
+                _optionItem(
+                  label: 'For Travel',
+                  description:
+                      'Scenario-based dialogue cards offline translation.',
+                  selected: stepData,
+                  step: STEPS.purpose,
+                ),
+                _optionItem(
+                  label: 'For HSK Exam',
+                  description:
+                      'Break down test points review mistakes, sprint to high scores efficiently.',
+                  selected: stepData,
+                  step: STEPS.purpose,
+                ),
+                _optionItem(
+                  label: 'For Study/Life',
+                  description:
+                      'Essential for international students: opening a bank account, seeing a doctor, campus socializing.',
+                  selected: stepData,
+                  step: STEPS.purpose,
+                ),
+              ],
+            ),
             _mainActButton(
               label: 'Continue',
               icon: Icons.arrow_right_alt_rounded,
-              callback: nikenameCtrl.text.isEmpty ? null : nextStep,
+              onTap: validations.get(STEPS.purpose) ?? false ? nextStep : null,
             ),
           ],
         ),
@@ -299,10 +396,37 @@ class _WelcomePageState extends State<WelcomePage> {
                 ],
               ),
             ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              spacing: 16,
+              children: [
+                _optionItem(
+                  label: '10 mins/day',
+                  description:
+                      'Perfect for fragmented time! Master core word and  practical sentence in 10 minutes~',
+                  selected: stepData,
+                  step: STEPS.duration,
+                ),
+                _optionItem(
+                  label: '20 mins/day',
+                  description:
+                      'Golden learning duration! Complete a full module of ‘vocabulary + grammar + dialogue’ and see progress clearly~',
+                  selected: stepData,
+                  step: STEPS.duration,
+                ),
+                _optionItem(
+                  label: '30 mins/day',
+                  description:
+                      'Deep learning mode! Support ‘thematic courses + extended reading’ to improve Chinese comprehensively~',
+                  selected: stepData,
+                  step: STEPS.duration,
+                ),
+              ],
+            ),
             _mainActButton(
               label: 'Continue',
               icon: Icons.arrow_right_alt_rounded,
-              callback: nikenameCtrl.text.isEmpty ? null : nextStep,
+              onTap: validations.get(STEPS.duration) ?? false ? nextStep : null,
             ),
           ],
         ),
@@ -324,7 +448,7 @@ class _WelcomePageState extends State<WelcomePage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          spacing: 36,
+          spacing: 16,
           children: [
             Text.rich(
               TextSpan(
@@ -335,7 +459,7 @@ class _WelcomePageState extends State<WelcomePage> {
                 ),
                 children: [
                   TextSpan(
-                    text: 'What’s your current Chinese proficiency?',
+                    text: 'What’s your current Chinese proficiency?\n',
                     style: TextStyle(
                       fontSize: 28,
                       color: theme.colorScheme.primary,
@@ -344,10 +468,151 @@ class _WelcomePageState extends State<WelcomePage> {
                 ],
               ),
             ),
-            _mainActButton(
-              label: 'Continue',
-              icon: Icons.arrow_right_alt_rounded,
-              callback: nikenameCtrl.text.isEmpty ? null : nextStep,
+            Text(
+              'Please select the Chinese level you think you’re at. We’ll help you verify and start learning right away~',
+              style: TextStyle(
+                fontSize: 16,
+                color: theme.colorScheme.secondary,
+              ),
+            ),
+            CarouselSlider(
+              carouselController: _sliderController,
+              disableGesture: true,
+              options: CarouselOptions(
+                initialPage: 0,
+                autoPlayCurve: Curves.fastOutSlowIn,
+                clipBehavior: Clip.none,
+                height: 480,
+                autoPlay: false, // 自动播放
+                autoPlayInterval: const Duration(seconds: 5), // 播放间隔
+                autoPlayAnimationDuration: const Duration(
+                  milliseconds: 500,
+                ), // 动画时长
+                viewportFraction: 0.99, // 显示比例
+                enlargeFactor: 0.2,
+                enlargeCenterPage: true,
+                enableInfiniteScroll: false, // 无限循环
+                pageSnapping: true,
+                disableCenter: true,
+                onPageChanged: (index, reason) {
+                  stepData[STEPS.level] = index + 1;
+                  validateCurrentStep();
+                },
+              ),
+              items: [
+                _levelCard(
+                  level: 1,
+                  title: "Introductory Greeting Level",
+                  example: [
+                    'Can say 5 basic greetings like "你好 (Hello), 再见 (Goodbye), 谢谢 (Thank you), 对不起 (Sorry)"',
+                    'Recognize less than 10 high-frequency characters like "你 (you), 好 (good), 谢 (thank), 再 (again)"',
+                    'Can understand simple questions like "你叫什么名字？(What\'s your name?)"',
+                  ],
+                ),
+                _levelCard(
+                  level: 2,
+                  title: "Basic Self-Intro & Daily Tasks",
+                  example: [
+                    'Can introduce yourself with "我叫___，我来自___" (I’m ___, I’m from ___)',
+                    'Recognize numbers 1-20 and time expressions like "早上 (morning), 下午 (afternoon)"',
+                    'Follow simple instructions like "请坐 (Please sit down), 打开书 (Open the book)"',
+                  ],
+                ),
+                _levelCard(
+                  level: 3,
+                  title: "Daily Conversation & Life Scenarios",
+                  example: [
+                    'Can shop by asking "这个多少钱？(How much is this?), 我要一个___ (I want one ___)"',
+                    'Talk about family, weather, and directions like "你家有几口人？(How many people are in your family?)"',
+                    'Hold short conversations with 5-8 sentences on daily topics',
+                  ],
+                ),
+                _levelCard(
+                  level: 4,
+                  title: "Practical Life & Social Interaction",
+                  example: [
+                    'Order food with "我想点一份___，不要辣 (I’d like to order ___, no spicy)"',
+                    'Discuss work, school, and travel plans like "你在哪里工作？(Where do you work?)"',
+                    'Understand complex sentences with conjunctions (因为… 所以…, 虽然… 但是…)',
+                  ],
+                ),
+                _levelCard(
+                  level: 5,
+                  title: "Hobbies, Social Issues & Extended Reading",
+                  example: [
+                    'Talk about hobbies: "我喜欢看电影，周末常去电影院 (I like watching movies, I often go to the cinema on weekends)"',
+                    'Discuss social topics like environmental protection, technology impact',
+                    'Read and summarize 300-500 character articles on daily life',
+                  ],
+                ),
+                _levelCard(
+                  level: 6,
+                  title: "Cultural Discussion & Academic Expression",
+                  example: [
+                    'Express opinions: "我认为___，因为___ (I think ___, because ___)"',
+                    'Discuss Chinese culture (festivals, history) and global issues',
+                    'Read and analyze 600-800 character essays with logical structures',
+                  ],
+                ),
+                _levelCard(
+                  level: 7,
+                  title: "Professional Communication & Classical Chinese",
+                  example: [
+                    'Conduct business talks: "我们想和贵公司合作 (We want to cooperate with your company)"',
+                    'Understand basic classical Chinese phrases like "三人行，必有我师焉 (When three people walk together, one can be my teacher)"',
+                    'Write 300-500 character reports on professional topics',
+                  ],
+                ),
+                _levelCard(
+                  level: 8,
+                  title: "Intercultural Communication & Advanced Writing",
+                  example: [
+                    'Communicate across cultures on topics like international business, education',
+                    'Read and interpret academic papers or literary works in Chinese',
+                    'Write 800-1000 character speeches or research summaries',
+                  ],
+                ),
+                _levelCard(
+                  level: 9,
+                  title: "Near-Native Proficiency & Scholarly",
+                  example: [
+                    'Understand complex classical Chinese and modern literature deeply',
+                    'Conduct research and write academic theses in Chinese',
+                    'Engage in high-level debates on global issues with nuanced expression',
+                  ],
+                ),
+              ],
+            ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              spacing: 4,
+              children: [
+                for (int i = 0; i < 9; i++)
+                  Container(
+                    width: (i == stepData[STEPS.level] - 1) ? 24 : 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.rectangle,
+                      borderRadius: BorderRadius.circular(20),
+                      color: (i == stepData[STEPS.level] - 1)
+                          ? theme.colorScheme.primary
+                          : theme.colorScheme.outlineVariant,
+                    ),
+                  ),
+              ],
+            ),
+            Column(
+              spacing: 24,
+              children: [
+                Text(
+                  'Not sure? Start with HSK 1 and we’ll adjust based on your performance.',
+                  style: TextStyle(
+                    color: theme.colorScheme.onSurfaceVariant,
+                    fontWeight: FontWeight.normal,
+                    fontSize: 16,
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -358,18 +623,18 @@ class _WelcomePageState extends State<WelcomePage> {
   /// 主操作按钮
   Widget _mainActButton({
     required String label,
-    VoidCallback? callback,
+    VoidCallback? onTap,
     IconData? icon,
   }) {
     return Material(
       color: Colors.transparent,
       child: FeedbackButton(
         borderRadius: BorderRadius.circular(16),
-        onTap: callback,
+        onTap: onTap,
         child: Ink(
           padding: const EdgeInsets.all(12),
           decoration: ShapeDecoration(
-            color: callback == null
+            color: onTap == null
                 ? theme.colorScheme.secondaryFixed
                 : theme.colorScheme.primary,
             shape: RoundedRectangleBorder(
@@ -392,6 +657,153 @@ class _WelcomePageState extends State<WelcomePage> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  /// 选项组件
+  Widget _optionItem({
+    required String label,
+    required String description,
+    required Map<STEPS, dynamic> selected,
+    required STEPS step,
+  }) {
+    return FeedbackButton(
+      onTap: () {
+        selected[step] = label;
+        // setState(() {});
+        validateCurrentStep();
+      },
+      borderRadius: BorderRadius.circular(16),
+      child: Ink(
+        padding: const EdgeInsets.all(16),
+        decoration: ShapeDecoration(
+          color: selected[step] == label
+              ? theme.colorScheme.primaryContainer
+              : theme.colorScheme.surfaceContainer,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.start,
+          spacing: 10,
+          children: [
+            Icon(
+              selected[step] == label
+                  ? Icons.radio_button_checked_rounded
+                  : Icons.radio_button_off_rounded,
+              color: selected[step] == label
+                  ? theme.colorScheme.primary
+                  : theme.colorScheme.outlineVariant,
+            ),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: theme.textTheme.titleMedium!.copyWith(
+                      color: theme.colorScheme.onSurface,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(
+                    description,
+                    style: theme.textTheme.bodyMedium!.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 级别轮播卡片
+  Widget _levelCard({
+    int level = 1,
+    String title = 'Title text here.',
+    List<String> example = const [
+      'Can say 5 basic greetings like "你好 (Hello), 再见 (Goodbye), 谢谢 (Thank you), 对不起 (Sorry)"',
+      'Recognize less than 10 high-frequency characters like "你 (you), 好 (good), 谢 (thank), 再 (again)"',
+      'Can understand simple questions like "你叫什么名字？(What\'s your name?)"',
+    ],
+  }) {
+    return Container(
+      padding: EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+      decoration: ShapeDecoration(
+        color: theme.colorScheme.primaryContainer,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        spacing: 16,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            decoration: ShapeDecoration(
+              color: const Color(0xFFFF9500),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+            ),
+            child: Text(
+              'HSK $level',
+              style: theme.textTheme.labelLarge?.copyWith(color: Colors.white),
+            ),
+          ),
+          Text(
+            title,
+            style: theme.textTheme.titleLarge!.copyWith(
+              color: theme.colorScheme.primary,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          Text(
+            'Let\'s see what you can do ➞',
+            style: theme.textTheme.bodyMedium,
+          ),
+          Expanded(
+            child: Container(
+              // padding: EdgeInsets.only(left: 16),
+              // decoration: BoxDecoration(
+              //   border: BoxBorder.fromLTRB(
+              //     left: BorderSide(
+              //       width: 1,
+              //       color: theme.colorScheme.primaryFixedDim,
+              //     ),
+              //   ),
+              // ),
+              child: Column(
+                spacing: 10,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Text(
+                  //   'Let\'s see what you can do ➞'.padRight(2, '>>'),
+                  //   style: theme.textTheme.bodyMedium,
+                  // ),
+                  ...example.map((e) {
+                    return Text(
+                      e,
+                      style: theme.textTheme.bodyLarge!.copyWith(
+                        color: theme.colorScheme.onSurface,
+                      ),
+                    );
+                  }).toList(),
+                ],
+              ),
+            ),
+          ),
+          _mainActButton(
+            label: 'Start HSK $level',
+            icon: Icons.arrow_right_alt_rounded,
+            onTap: () => gotoEvaluation(level),
+          ),
+        ],
       ),
     );
   }

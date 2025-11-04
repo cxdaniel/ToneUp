@@ -6,10 +6,16 @@ class WaveAnimation extends StatefulWidget {
   final bool isLoading;
   final Size size;
   final int barWidth;
+  final Color color;
+  final Color highlight;
+  final Color idle;
   const WaveAnimation({
     super.key,
     required this.isPlaying,
     required this.isLoading,
+    required this.color,
+    required this.highlight,
+    required this.idle,
     Size? size,
     int? barWidth,
   }) : size = size ?? const Size(60, 24),
@@ -109,7 +115,12 @@ class _WaveAnimationState extends State<WaveAnimation>
                 width: widget.barWidth.toDouble(),
                 height: height,
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primary,
+                  //  color; highlight; idle;
+                  color: widget.isLoading
+                      ? widget.idle
+                      : widget.isPlaying
+                      ? widget.highlight
+                      : widget.color,
                   borderRadius: BorderRadius.circular(10),
                 ),
               );

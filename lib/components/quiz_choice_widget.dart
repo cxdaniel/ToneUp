@@ -329,6 +329,9 @@ class _QuizChoiceWidgetState extends State<QuizChoiceWidget> {
             constraints: BoxConstraints(minHeight: 80),
             child: Center(
               child: WaveAnimation(
+                color: theme.colorScheme.primary,
+                highlight: theme.colorScheme.primary,
+                idle: theme.colorScheme.primary,
                 isPlaying: tts.state == TTSState.playing,
                 isLoading: tts.state == TTSState.loading,
                 size: Size(320, 40),
@@ -507,6 +510,9 @@ class _QuizChoiceWidgetState extends State<QuizChoiceWidget> {
                   ),
                   Spacer(),
                   WaveAnimation(
+                    color: theme.colorScheme.primary,
+                    highlight: theme.colorScheme.onPrimary,
+                    idle: theme.colorScheme.primaryFixedDim,
                     isPlaying:
                         tts.state == TTSState.playing &&
                         voicePosition == option,
