@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:jieba_flutter/conversion/common_conversion_definition.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:toneup_app/models/enumerated_types.dart';
 import 'package:toneup_app/models/evaluation_model.dart';
@@ -25,6 +26,34 @@ class EvaluationProvider extends ChangeNotifier {
       totalQuizzes > 0 ? (_currentQuizIndex + 1) / totalQuizzes : 0;
   VoidCallback? retryFunc;
   String? retryLabel;
+  bool _disposed = false;
+  Map<QuizBase, EvaluationModel> evaluationQuizMap = {};
+  double get score {
+    final totalScore = quizzes.fold<double>(
+      0,
+      (sum, quiz) =>
+          sum +
+          quiz.result.score * evaluationQuizMap.get(quiz)!.indicator!.weight,
+    );
+    final totalWeight = quizzes.fold<double>(
+      0,
+      (sum, quiz) => sum + evaluationQuizMap.get(quiz)!.indicator!.weight,
+    );
+    return totalScore / totalWeight;
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
+
+  @override
+  void notifyListeners() {
+    if (!_disposed) {
+      super.notifyListeners();
+    }
+  }
 
   /// 初始化评测数据
   Future<void> initialize(int level) async {
@@ -37,11 +66,13 @@ class EvaluationProvider extends ChangeNotifier {
       notifyListeners();
 
       final evaluations = await DataService().fetchEvaluations(level);
-      final evaluationWithActivity = await DataService()
-          .addActivityToEvaluation(evaluations);
-
-      _quizzes = _extractQuizzesbyType(evaluationWithActivity);
-
+      final withActivity = await DataService().addActivityToEvaluation(
+        evaluations,
+      );
+      final withIndicator = await DataService().addIndicatorToEvaluation(
+        withActivity,
+      );
+      _quizzes = _extractQuizzesbyType(withIndicator);
       retryFunc = null;
     } catch (e) {
       _errorMessage = e.toString();
@@ -58,6 +89,7 @@ class EvaluationProvider extends ChangeNotifier {
   List<QuizBase> _extractQuizzesbyType(List<EvaluationModel> evaluations) {
     final List<QuizBase> quizList = [];
     for (var evl in evaluations) {
+      QuizBase quiz;
       switch (evl.activity!.quizType) {
         case QuizType.choice:
           final quizdata = QuizChoiceModel.fromJson(evl.quiz);
@@ -65,32 +97,30 @@ class EvaluationProvider extends ChangeNotifier {
             (o) => o.isCorrect == true,
             orElse: () => quizdata.options.first,
           );
-          quizList.add(
-            QuizChoice<String>(
-              id: evl.id,
-              activity: evl.activity!,
-              indicatorId: evl.indicatorId,
-              question: quizdata.question,
-              options: quizdata.options,
-              correctAnswer: correctOption,
-              material: quizdata.material,
-              explain: quizdata.explain,
-              maxRetryTime: 0,
-            ),
+          quiz = QuizChoice(
+            id: evl.id,
+            activity: evl.activity!,
+            indicatorId: evl.indicatorId,
+            question: quizdata.question,
+            options: quizdata.options,
+            correctAnswer: correctOption,
+            material: quizdata.material,
+            explain: quizdata.explain,
+            maxRetryTime: 0,
           );
           break;
         default:
-          quizList.add(
-            QuizDefault(
-              id: evl.id,
-              activity: evl.activity!,
-              indicatorId: evl.indicatorId,
-              question: evl.quiz['question'],
-              correctAnswer: null,
-              maxRetryTime: 0,
-            ),
+          quiz = QuizDefault(
+            id: evl.id,
+            activity: evl.activity!,
+            indicatorId: evl.indicatorId,
+            question: evl.quiz['question'],
+            correctAnswer: null,
+            maxRetryTime: 0,
           );
       }
+      evaluationQuizMap.put(quiz, evl);
+      quizList.add(quiz);
     }
     return quizList;
   }
@@ -118,7 +148,4 @@ class EvaluationProvider extends ChangeNotifier {
     currentTouchedCount++;
     notifyListeners();
   }
-
-  /// 提交练习数据
-  Future<void> submitPracticeResult() async {}
 }

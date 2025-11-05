@@ -36,7 +36,7 @@ UserMaterialsModel _$UserMaterialsModelFromJson(Map<String, dynamic> json) =>
           .map((e) => e as String)
           .toList(),
       dialogs: (json['dialogs'] as List<dynamic>)
-          .map((e) => DialogModel.fromJson(e as Map<String, dynamic>))
+          .map((e) => ChatModel.fromJson(e as Map<String, dynamic>))
           .toList(),
     );
 

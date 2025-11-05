@@ -8,7 +8,6 @@ part of 'profile_model.dart';
 
 ProfileModel _$ProfileModelFromJson(Map<String, dynamic> json) => ProfileModel(
   id: json['id'] as String,
-  createdAt: DateTime.parse(json['created_at'] as String),
   nickname: json['nickname'] as String?,
   planDurationMinutes: (json['plan_duration_minutes'] as num?)?.toInt(),
   exp: (json['exp'] as num?)?.toInt(),
@@ -20,6 +19,10 @@ ProfileModel _$ProfileModelFromJson(Map<String, dynamic> json) => ProfileModel(
   words: (json['words'] as num?)?.toInt(),
   sentences: (json['sentences'] as num?)?.toInt(),
   grammars: (json['grammars'] as num?)?.toInt(),
+  purpose: $enumDecodeNullable(_$PurposeTypeEnumMap, json['purpose']),
+  createdAt: json['created_at'] == null
+      ? null
+      : DateTime.parse(json['created_at'] as String),
   updatedAt: json['updated_at'] == null
       ? null
       : DateTime.parse(json['updated_at'] as String),
@@ -39,6 +42,15 @@ Map<String, dynamic> _$ProfileModelToJson(ProfileModel instance) =>
       'words': instance.words,
       'sentences': instance.sentences,
       'grammars': instance.grammars,
-      'created_at': instance.createdAt.toIso8601String(),
+      'purpose': _$PurposeTypeEnumMap[instance.purpose],
+      'created_at': instance.createdAt?.toIso8601String(),
       'updated_at': instance.updatedAt?.toIso8601String(),
     };
+
+const _$PurposeTypeEnumMap = {
+  PurposeType.interest: 'interest',
+  PurposeType.work: 'work',
+  PurposeType.travel: 'travel',
+  PurposeType.exam: 'exam',
+  PurposeType.life: 'life',
+};

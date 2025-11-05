@@ -1,4 +1,5 @@
 import 'package:json_annotation/json_annotation.dart';
+import 'package:toneup_app/models/enumerated_types.dart';
 
 part 'profile_model.g.dart';
 
@@ -18,14 +19,14 @@ class ProfileModel {
   int? words;
   int? sentences;
   int? grammars;
+  PurposeType? purpose;
   @JsonKey(name: "created_at")
-  final DateTime createdAt;
+  DateTime? createdAt;
   @JsonKey(name: "updated_at")
   DateTime? updatedAt;
 
   ProfileModel({
     required this.id,
-    required this.createdAt,
     this.nickname,
     this.planDurationMinutes,
     this.exp,
@@ -37,6 +38,8 @@ class ProfileModel {
     this.words,
     this.sentences,
     this.grammars,
+    this.purpose,
+    this.createdAt,
     this.updatedAt,
   });
 

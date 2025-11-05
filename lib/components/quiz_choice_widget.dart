@@ -52,8 +52,8 @@ class _QuizChoiceWidgetState extends State<QuizChoiceWidget> {
     if (quiz.activity.quizTemplate == QuizTemplate.voiceToText) {
       voicePosition = quiz.material;
       final voice = (voicePosition is QuizMaterialModel)
-          ? voicePosition.text
-          : voicePosition;
+          ? quiz.material.text
+          : quiz.material;
       tts.play(voice);
     }
   }
@@ -330,8 +330,6 @@ class _QuizChoiceWidgetState extends State<QuizChoiceWidget> {
             child: Center(
               child: WaveAnimation(
                 color: theme.colorScheme.primary,
-                highlight: theme.colorScheme.primary,
-                idle: theme.colorScheme.primary,
                 isPlaying: tts.state == TTSState.playing,
                 isLoading: tts.state == TTSState.loading,
                 size: Size(320, 40),
@@ -510,9 +508,9 @@ class _QuizChoiceWidgetState extends State<QuizChoiceWidget> {
                   ),
                   Spacer(),
                   WaveAnimation(
-                    color: theme.colorScheme.primary,
-                    highlight: theme.colorScheme.onPrimary,
-                    idle: theme.colorScheme.primaryFixedDim,
+                    color: option.state == OptionStatus.normal
+                        ? theme.colorScheme.primary
+                        : theme.colorScheme.onPrimary,
                     isPlaying:
                         tts.state == TTSState.playing &&
                         voicePosition == option,

@@ -1,5 +1,5 @@
 import 'package:json_annotation/json_annotation.dart';
-import 'package:toneup_app/models/material_snapshot/dialog_model.dart';
+import 'package:toneup_app/models/material_snapshot/chat_model.dart';
 
 part 'user_materials_model.g.dart';
 
@@ -27,7 +27,7 @@ class UserMaterialsModel {
   final List<String> grammars;
   final List<String> sentences;
   final List<String> paragraphs;
-  final List<DialogModel> dialogs;
+  final List<ChatModel> dialogs;
 
   UserMaterialsModel({
     required this.id,

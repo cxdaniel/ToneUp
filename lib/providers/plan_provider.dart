@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:toneup_app/models/enumerated_types.dart';
+import 'package:toneup_app/models/indicator_result_model.dart';
 import 'package:toneup_app/providers/profile_provider.dart';
 import 'package:toneup_app/services/data_service.dart';
 import '../models/user_weekly_plan_model.dart';
@@ -13,6 +14,8 @@ class PlanProvider extends ChangeNotifier {
   String? _loadingMessage;
   VoidCallback? _retryFunc;
   String? _retryLabel;
+  bool _disposed = false;
+  IndicatorResultModel? indicatorResult;
 
   //  getter 方法（供UI获取状态）
   UserWeeklyPlanModel? get activePlan => _activePlan;
@@ -22,6 +25,7 @@ class PlanProvider extends ChangeNotifier {
   String? get loadingMessage => _loadingMessage;
   VoidCallback? get retryFunc => _retryFunc;
   String? get retryLabel => _retryLabel;
+  bool showUpgrade = false;
 
   // 单例
   static final PlanProvider _instance = PlanProvider._internal();
@@ -37,6 +41,19 @@ class PlanProvider extends ChangeNotifier {
     });
   }
 
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
+
+  @override
+  void notifyListeners() {
+    if (!_disposed) {
+      super.notifyListeners();
+    }
+  }
+
   /// 用户退出登录初始当前数据
   void cleanAllPlans() {
     _activePlan = null;
@@ -45,6 +62,19 @@ class PlanProvider extends ChangeNotifier {
 
   /// 刷新当前激活的计划（供外部调用）
   void refreshPlan() {
+    notifyListeners();
+  }
+
+  Future<void> checkForUpgrade() async {
+    final User? user = Supabase.instance.client.auth.currentUser;
+    if (user == null) throw Exception("用户未登录");
+    final res = await DataService().getUserIndicatorResult(
+      user.id,
+      _activePlan!.level,
+    );
+    showUpgrade = res.isEligibleForUpgrade;
+    indicatorResult = res;
+    debugPrint('checkForUpgrade>> ${res.toJson()}');
     notifyListeners();
   }
 
@@ -116,7 +146,7 @@ class PlanProvider extends ChangeNotifier {
   }
 
   /// 创建计划
-  Future<void> createPlan() async {
+  Future<void> createPlan({int level = 1}) async {
     try {
       _retryFunc = null;
       _isLoading = true;
@@ -130,8 +160,7 @@ class PlanProvider extends ChangeNotifier {
         userId: user.id,
         plans: _allPlans,
       );
-      final newPlan = await DataService().createNewActivePlan(user.id);
-      ProfileProvider().updateLevel(newPlan.level);
+      await DataService().createNewActivePlan(user.id, level);
       _loadingMessage = "Updating All Goals...";
       notifyListeners();
       await getAllPlans();
@@ -140,7 +169,7 @@ class PlanProvider extends ChangeNotifier {
     } catch (e) {
       _errorMessage = e.toString();
       _retryLabel = 'Retry';
-      _retryFunc = createPlan;
+      _retryFunc = () => createPlan(level: level);
       if (kDebugMode) debugPrint("创建计划失败：$e");
     } finally {
       _isLoading = false;

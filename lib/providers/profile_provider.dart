@@ -18,9 +18,14 @@ class ProfileProvider extends ChangeNotifier {
         cleanProfile();
       }
     });
+    final User? user = Supabase.instance.client.auth.currentUser;
+    if (user == null) throw Exception("用户未登录");
+    tempProfile = ProfileModel(id: user.id, level: 1);
   }
 
+  final User? user = Supabase.instance.client.auth.currentUser;
   ProfileModel? _profileModel;
+  late ProfileModel tempProfile;
   List<UserScoreRecordsModel>? _records;
   // getter..
   ProfileModel? get profile => _profileModel;
@@ -89,8 +94,7 @@ class ProfileProvider extends ChangeNotifier {
     final User? user = Supabase.instance.client.auth.currentUser;
     if (user == null) throw Exception("用户未登录");
     try {
-      final data = await DataService().fetchProfile(user.id);
-      _profileModel = data;
+      _profileModel = await DataService().fetchProfile(user.id);
     } catch (e) {
       if (kDebugMode) print("获取个人资料-失败：$e");
     } finally {
@@ -105,10 +109,25 @@ class ProfileProvider extends ChangeNotifier {
     if (user == null) throw Exception("用户未登录");
     try {
       if (_profileModel != null) {
+        tempProfile.updatedAt = DateTime.now();
         DataService().saveProfile(_profileModel!);
       }
     } catch (e) {
       if (kDebugMode) print("保存个人资料失败：$e");
+    } finally {
+      notifyListeners();
+    }
+  }
+
+  /// 创建个人资料
+  Future<void> createProfile() async {
+    final User? user = Supabase.instance.client.auth.currentUser;
+    if (user == null) throw Exception("用户未登录");
+    try {
+      tempProfile.createdAt = DateTime.now();
+      DataService().saveProfile(tempProfile);
+    } catch (e) {
+      if (kDebugMode) print("创建个人资料-失败：$e");
     } finally {
       notifyListeners();
     }

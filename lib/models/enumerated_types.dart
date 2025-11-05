@@ -126,6 +126,16 @@ enum SkillGroup {
   translation,
 }
 
+enum PurposeType {
+  interest,
+  work,
+  travel,
+  exam,
+  life;
+
+  String get name => toString().split('.').last;
+}
+
 const _$QuizTemplateEnumMap = {
   QuizTemplate.textToText: '看文选文',
   QuizTemplate.textToVoice: '看文选音',

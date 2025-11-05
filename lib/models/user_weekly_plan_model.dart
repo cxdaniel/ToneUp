@@ -34,8 +34,6 @@ class UserWeeklyPlanModel {
   final int level;
   final List<int> practices;
   List<UserPracticeModel>? practiceData;
-  // @JsonKey(name: "target_activities")
-  // final List<List<int>>? targetActivities;
 
   // 构造函数（必填，且参数名要和字段名一致）
   UserWeeklyPlanModel({

@@ -1,6 +1,6 @@
 // models/material_snapshot/material_snapshot_model.dart
 import 'package:json_annotation/json_annotation.dart';
-import 'dialog_model.dart'; // 导入 DialogModel
+import 'package:toneup_app/models/material_snapshot/chat_model.dart';
 
 part 'material_snapshot_model.g.dart';
 
@@ -30,7 +30,7 @@ class MaterialSnapshotModel {
   final List<String> wordsNew; // 新单词列表（如 ["你好", "早上好", ...]）
 
   @JsonKey(name: "paragraphs")
-  final List<String> paragraphs; // 段落列表（如 ["早上，小红见到老师...", ...]）
+  final List<List<String>> paragraphs; // 段落列表（如 ["早上，小红见到老师...", ...]）
 
   @JsonKey(name: "chars_review")
   final List<String> charsReview; // 复习字符列表（示例为空数组）
@@ -40,7 +40,7 @@ class MaterialSnapshotModel {
 
   // 3. 嵌套子模型数组
   @JsonKey(name: "dialogs")
-  final List<DialogModel> dialogs; // 对话列表（嵌套 DialogModel）
+  final List<List<ChatModel>> dialogs; // 对话列表
 
   // 4. 嵌套子模型（可选字段：假设 culture_tag 可能为 null，设为可空）
   @JsonKey(name: "topic_tag")
@@ -63,7 +63,7 @@ class MaterialSnapshotModel {
     required this.wordsReview,
     required this.dialogs,
     required this.topicTag,
-    required this.cultureTag, // 可选字段，无需 required
+    required this.cultureTag,
   });
 
   factory MaterialSnapshotModel.fromJson(Map<String, dynamic> json) =>

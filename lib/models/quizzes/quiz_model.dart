@@ -63,6 +63,8 @@ class QuizDefault extends QuizBase {
 class QuizChoice<T> extends QuizBase {
   final List<QuizOptionsModel> options;
   final T material;
+
+  /// 指定题干类型`<T>`
   QuizChoice({
     required super.id,
     required super.indicatorId,

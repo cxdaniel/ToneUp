@@ -133,7 +133,7 @@ class _ProfilePageState extends State<ProfilePage> {
               Text(
                 (provider.profile == null)
                     ? ''
-                    : 'joined in ${provider.profile!.createdAt.year}-${provider.profile!.createdAt.month}',
+                    : 'joined in ${provider.profile!.createdAt!.year}-${provider.profile!.createdAt!.month}',
                 style: theme.textTheme.labelMedium!.copyWith(
                   color: theme.colorScheme.secondary,
                 ),
@@ -194,7 +194,8 @@ class _ProfilePageState extends State<ProfilePage> {
               _buildInfoCard(
                 icon: Icons.signal_cellular_alt_rounded,
                 title:
-                    (provider.profile == null || provider.profile!.exp == null)
+                    (provider.profile == null ||
+                        provider.profile!.level == null)
                     ? '--'
                     : 'HSK ${provider.profile!.level}',
                 sub: 'Level',

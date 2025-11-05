@@ -5,6 +5,8 @@ import 'package:flutter/foundation.dart';
 import 'package:toneup_app/models/activity_model.dart';
 import 'package:toneup_app/models/enumerated_types.dart';
 import 'package:toneup_app/models/evaluation_model.dart';
+import 'package:toneup_app/models/indicator_result_model.dart';
+import 'package:toneup_app/models/indicators_model.dart';
 import 'package:toneup_app/models/profile_model.dart';
 import 'package:toneup_app/models/quizzes/quiz_model.dart';
 import 'package:toneup_app/models/user_activity_instances_model.dart';
@@ -99,7 +101,6 @@ class DataService {
           .maybeSingle();
 
       final plan = (data != null) ? UserWeeklyPlanModel.fromJson(data) : null;
-
       return plan;
     } catch (e) {
       if (kDebugMode) {
@@ -144,12 +145,15 @@ class DataService {
   /// 创建新的 active 计划（通过Edge Function，同时将旧active改为pending）
   /// @param userId：当前用户ID
   /// @return 新创建的计划数据（包含id、status等）
-  Future<UserWeeklyPlanModel> createNewActivePlan(String userId) async {
+  Future<UserWeeklyPlanModel> createNewActivePlan(
+    String userId,
+    int level,
+  ) async {
     try {
       // await updateOldActivePlansToPending(userId);
       final createResponse = await _supabase.functions.invoke(
         "get-focus-indicators",
-        body: {"user_id": userId},
+        body: {"user_id": userId, "level": level},
       );
 
       if (createResponse.status != 200) {
@@ -408,6 +412,7 @@ class DataService {
           .select()
           .eq('id', userId)
           .maybeSingle();
+      debugPrint('fetchProfile::${json.encode(data)}');
       return data != null ? ProfileModel.fromJson(data) : null;
     } catch (e) {
       if (kDebugMode) {
@@ -489,7 +494,7 @@ class DataService {
     }
   }
 
-  /// 更新关联数据activity到活动实例instance
+  /// 更新关联数据activity到测试数据Evaluation
   Future<List<EvaluationModel>> addActivityToEvaluation(
     List<EvaluationModel> datas,
   ) async {
@@ -512,6 +517,56 @@ class DataService {
         debugPrint("addActivityToEvaluation 更新关联数据-异常：${e.toString()}");
       }
       throw Exception("addActivityToEvaluation 更新关联数据-失败：${e.toString()}");
+    }
+  }
+
+  /// 更新关联数据indicator到测试数据Evaluation
+  Future<List<EvaluationModel>> addIndicatorToEvaluation(
+    List<EvaluationModel> datas,
+  ) async {
+    final indIds = datas.map((a) => a.indicatorId).toList();
+    try {
+      final data = await _supabase
+          .schema('research_core')
+          .from('indicators')
+          .select()
+          .inFilter('id', indIds);
+
+      final indicators = data.map((e) => IndicatorsModel.fromJson(e)).toList();
+
+      for (EvaluationModel evl in datas) {
+        evl.indicator = indicators.firstWhere(
+          (ind) => ind.id == evl.indicatorId,
+        );
+      }
+      return datas;
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint("addIndicatorToEvaluation 更新关联数据-异常：${e.toString()}");
+      }
+      throw Exception("addIndicatorToEvaluation 更新关联数据-失败：${e.toString()}");
+    }
+  }
+
+  /// 获取用户当前级别指标完成情况(是否可升级)
+  Future<IndicatorResultModel> getUserIndicatorResult(
+    String userId,
+    int level,
+  ) async {
+    try {
+      final res = await _supabase.functions.invoke(
+        "check_for_upgrade",
+        body: {"user_id": userId, "level": level},
+      );
+      if (res.status != 200) {
+        throw Exception("获取用户当前级别指标完成情况失败：状态码 ${res.status}");
+      }
+      return IndicatorResultModel.fromJson(res.data);
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint("获取用户当前级别指标完成情况-异常：${e.toString()}");
+      }
+      throw Exception("获取用户当前级别指标完成情况-失败：${e.toString()}");
     }
   }
 }

@@ -65,7 +65,10 @@ class _HomePageState extends State<HomePage> {
 
   /// 去测评页
   void _gotoPageEvaluation() {
-    context.push(AppRoutes.EVALUATION, extra: {'level': 9});
+    context.push(
+      AppRoutes.EVALUATION,
+      extra: {'level': planProvider.activePlan!.level},
+    );
   }
 
   /// 去练习页
@@ -79,6 +82,15 @@ class _HomePageState extends State<HomePage> {
     );
     if (context.mounted) {
       planProvider.refreshPlan();
+      planProvider.checkForUpgrade();
+    }
+  }
+
+  Future<void> _createNewGoal() async {
+    if (planProvider.activePlan != null) {
+      planProvider.createPlan(level: planProvider.activePlan!.level);
+    } else {
+      planProvider.createPlan(level: ProfileProvider().profile?.level ?? 1);
     }
   }
 
@@ -194,9 +206,7 @@ class _HomePageState extends State<HomePage> {
                 borderRadius: BorderRadius.circular(32),
               ),
             ),
-            onPressed: () async {
-              planProvider.createPlan();
-            },
+            onPressed: _createNewGoal,
             child: Text(
               "Create a New Goal",
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
@@ -320,7 +330,8 @@ class _HomePageState extends State<HomePage> {
               ],
             ),
 
-            _buildGoEvaluation(),
+            /// 显示升级卡片
+            if (planProvider.showUpgrade) _buildGoEvaluation(),
 
             /// 计划全部完成
             if (progress == 1) _buildCelebration(),
@@ -745,9 +756,7 @@ class _HomePageState extends State<HomePage> {
                     borderRadius: BorderRadius.circular(32),
                   ),
                 ),
-                onPressed: () async {
-                  planProvider.createPlan();
-                },
+                onPressed: _createNewGoal,
                 icon: Icon(
                   Icons.golf_course,
                   color: theme.colorScheme.onPrimary,

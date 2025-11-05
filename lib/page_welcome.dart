@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:jieba_flutter/conversion/common_conversion_definition.dart';
 import 'package:toneup_app/components/feedback_button.dart';
+import 'package:toneup_app/models/enumerated_types.dart';
+import 'package:toneup_app/providers/profile_provider.dart';
 import 'package:toneup_app/routes.dart';
 import 'package:toneup_app/services/utils.dart';
 
@@ -29,25 +31,18 @@ class _WelcomePageState extends State<WelcomePage> {
     STEPS.duration: false,
     STEPS.level: false,
   };
-
-  final Map<STEPS, dynamic> stepData = {
-    STEPS.nickname: '',
-    STEPS.purpose: '',
-    STEPS.duration: null,
-    STEPS.level: 1,
-  };
-
   void validateCurrentStep() {
     switch (_currentStep) {
       case 0:
-        stepData[STEPS.nickname] = nikenameCtrl.text;
         validations[STEPS.nickname] = nikenameCtrl.text.length >= 2;
         break;
       case 1:
-        validations[STEPS.purpose] = stepData[STEPS.purpose].isNotEmpty;
+        validations[STEPS.purpose] =
+            ProfileProvider().tempProfile.purpose != null;
         break;
       case 2:
-        validations[STEPS.duration] = stepData[STEPS.duration].isNotEmpty;
+        validations[STEPS.duration] =
+            ProfileProvider().tempProfile.planDurationMinutes != null;
         break;
       case 3:
         validations[STEPS.level] = true;
@@ -91,7 +86,7 @@ class _WelcomePageState extends State<WelcomePage> {
               padding: EdgeInsets.only(top: screen.padding.top),
               child: PageView(
                 physics: NeverScrollableScrollPhysics(),
-                // physics: const AlwaysScrollableScrollPhysics(),
+                // physics: AlwaysScrollableScrollPhysics(),
                 controller: _pageController,
                 onPageChanged: (index) {
                   setState(() {
@@ -124,9 +119,67 @@ class _WelcomePageState extends State<WelcomePage> {
     });
   }
 
+  void lastStep() {
+    setState(() {
+      FocusManager.instance.primaryFocus?.unfocus();
+      _pageController.animateToPage(
+        (_currentStep - 1) % 4,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    });
+  }
+
   /// 去测评
-  void gotoEvaluation(int level) {
-    context.push(AppRoutes.EVALUATION, extra: {'level': level});
+  Future<void> gotoEvaluation(int level) async {
+    showModalBottomSheet(
+      context: context,
+      isDismissible: true,
+      enableDrag: true,
+      useSafeArea: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      backgroundColor: theme.colorScheme.primary,
+      barrierColor: theme.colorScheme.shadow.withAlpha(40),
+      builder: (ctx) {
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(24, 24, 24, 48), // 保持原padding
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            spacing: 16,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Quick Warm-Up',
+                style: theme.textTheme.titleLarge!.copyWith(
+                  color: theme.colorScheme.onPrimary,
+                ),
+              ),
+              Text(
+                'To make sure this level is just right for you, we’ve prepared a quick warm-up test~ After completing it, you’ll know if this level matches your actual proficiency!',
+                style: theme.textTheme.bodyMedium!.copyWith(
+                  color: theme.colorScheme.onPrimary,
+                ),
+              ),
+              _mainActButton(
+                icon: Icons.text_snippet,
+                label: 'Start Test',
+                backColor: theme.colorScheme.primaryContainer,
+                frontColor: theme.colorScheme.onPrimaryContainer,
+                onTap: () {
+                  Navigator.pop(ctx);
+                  ctx.push(AppRoutes.EVALUATION, extra: {'level': level});
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+    // .whenComplete(() {
+    //   debugPrint('sheet compelte....');
+    // });
   }
 
   ///  昵称部分
@@ -267,7 +320,11 @@ class _WelcomePageState extends State<WelcomePage> {
                   label: 'Continue',
                   icon: Icons.arrow_right_alt_rounded,
                   onTap: validations.get(STEPS.nickname) ?? false
-                      ? nextStep
+                      ? () {
+                          ProfileProvider().tempProfile.nickname =
+                              nikenameCtrl.text;
+                          nextStep();
+                        }
                       : null,
                 ),
               ],
@@ -288,29 +345,43 @@ class _WelcomePageState extends State<WelcomePage> {
               screen.padding.top -
               screen.viewInsets.bottom,
         ),
-        padding: EdgeInsets.fromLTRB(24, 40, 24, 80),
+        padding: EdgeInsets.fromLTRB(24, 24, 24, 80),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           spacing: 36,
           children: [
-            Text.rich(
-              TextSpan(
-                style: TextStyle(
-                  color: theme.colorScheme.onSurfaceVariant,
-                  fontWeight: FontWeight.normal,
-                  fontSize: 16,
-                ),
-                children: [
-                  TextSpan(
-                    text: 'What’s your main purpose for learning Chinese?',
-                    style: TextStyle(
-                      fontSize: 28,
-                      color: theme.colorScheme.primary,
-                    ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                TextButton.icon(
+                  onPressed: lastStep,
+                  label: Text('nickname'),
+                  icon: Icon(Icons.arrow_back_rounded),
+                  style: TextButton.styleFrom(
+                    foregroundColor: theme.colorScheme.primary,
+                    enableFeedback: true,
                   ),
-                ],
-              ),
+                ),
+                Text.rich(
+                  TextSpan(
+                    style: TextStyle(
+                      color: theme.colorScheme.onSurfaceVariant,
+                      fontWeight: FontWeight.normal,
+                      fontSize: 16,
+                    ),
+                    children: [
+                      TextSpan(
+                        text: 'What’s your main purpose for learning Chinese?',
+                        style: TextStyle(
+                          fontSize: 28,
+                          color: theme.colorScheme.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
             Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -319,35 +390,47 @@ class _WelcomePageState extends State<WelcomePage> {
                 _optionItem(
                   label: 'For Interest',
                   description: 'Massive fun content, from poetry to slang.',
-                  selected: stepData,
-                  step: STEPS.purpose,
+                  selected:
+                      ProfileProvider().tempProfile.purpose ==
+                      PurposeType.interest,
+                  onTap: () => ProfileProvider().tempProfile.purpose =
+                      PurposeType.interest,
                 ),
                 _optionItem(
                   label: 'For Work',
                   description: 'Business Chinese scenario library.',
-                  selected: stepData,
-                  step: STEPS.purpose,
+                  selected:
+                      ProfileProvider().tempProfile.purpose == PurposeType.work,
+                  onTap: () =>
+                      ProfileProvider().tempProfile.purpose = PurposeType.work,
                 ),
                 _optionItem(
                   label: 'For Travel',
                   description:
                       'Scenario-based dialogue cards offline translation.',
-                  selected: stepData,
-                  step: STEPS.purpose,
+                  selected:
+                      ProfileProvider().tempProfile.purpose ==
+                      PurposeType.travel,
+                  onTap: () => ProfileProvider().tempProfile.purpose =
+                      PurposeType.travel,
                 ),
                 _optionItem(
                   label: 'For HSK Exam',
                   description:
                       'Break down test points review mistakes, sprint to high scores efficiently.',
-                  selected: stepData,
-                  step: STEPS.purpose,
+                  selected:
+                      ProfileProvider().tempProfile.purpose == PurposeType.exam,
+                  onTap: () =>
+                      ProfileProvider().tempProfile.purpose = PurposeType.exam,
                 ),
                 _optionItem(
                   label: 'For Study/Life',
                   description:
                       'Essential for international students: opening a bank account, seeing a doctor, campus socializing.',
-                  selected: stepData,
-                  step: STEPS.purpose,
+                  selected:
+                      ProfileProvider().tempProfile.purpose == PurposeType.life,
+                  onTap: () =>
+                      ProfileProvider().tempProfile.purpose = PurposeType.life,
                 ),
               ],
             ),
@@ -372,29 +455,43 @@ class _WelcomePageState extends State<WelcomePage> {
               screen.padding.top -
               screen.viewInsets.bottom,
         ),
-        padding: EdgeInsets.fromLTRB(24, 40, 24, 80),
+        padding: EdgeInsets.fromLTRB(24, 24, 24, 80),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           spacing: 36,
           children: [
-            Text.rich(
-              TextSpan(
-                style: TextStyle(
-                  color: theme.colorScheme.onSurfaceVariant,
-                  fontWeight: FontWeight.normal,
-                  fontSize: 16,
-                ),
-                children: [
-                  TextSpan(
-                    text: 'How much time can you spend learning each day?',
-                    style: TextStyle(
-                      fontSize: 28,
-                      color: theme.colorScheme.primary,
-                    ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                TextButton.icon(
+                  onPressed: lastStep,
+                  label: Text('main purpose'),
+                  icon: Icon(Icons.arrow_back_rounded),
+                  style: TextButton.styleFrom(
+                    foregroundColor: theme.colorScheme.primary,
+                    enableFeedback: true,
                   ),
-                ],
-              ),
+                ),
+                Text.rich(
+                  TextSpan(
+                    style: TextStyle(
+                      color: theme.colorScheme.onSurfaceVariant,
+                      fontWeight: FontWeight.normal,
+                      fontSize: 16,
+                    ),
+                    children: [
+                      TextSpan(
+                        text: 'How much time can you spend learning each day?',
+                        style: TextStyle(
+                          fontSize: 28,
+                          color: theme.colorScheme.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
             Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -404,22 +501,28 @@ class _WelcomePageState extends State<WelcomePage> {
                   label: '10 mins/day',
                   description:
                       'Perfect for fragmented time! Master core word and  practical sentence in 10 minutes~',
-                  selected: stepData,
-                  step: STEPS.duration,
+                  selected:
+                      ProfileProvider().tempProfile.planDurationMinutes == 60,
+                  onTap: () =>
+                      ProfileProvider().tempProfile.planDurationMinutes = 60,
                 ),
                 _optionItem(
                   label: '20 mins/day',
                   description:
                       'Golden learning duration! Complete a full module of ‘vocabulary + grammar + dialogue’ and see progress clearly~',
-                  selected: stepData,
-                  step: STEPS.duration,
+                  selected:
+                      ProfileProvider().tempProfile.planDurationMinutes == 100,
+                  onTap: () =>
+                      ProfileProvider().tempProfile.planDurationMinutes = 100,
                 ),
                 _optionItem(
                   label: '30 mins/day',
                   description:
                       'Deep learning mode! Support ‘thematic courses + extended reading’ to improve Chinese comprehensively~',
-                  selected: stepData,
-                  step: STEPS.duration,
+                  selected:
+                      ProfileProvider().tempProfile.planDurationMinutes == 150,
+                  onTap: () =>
+                      ProfileProvider().tempProfile.planDurationMinutes = 150,
                 ),
               ],
             ),
@@ -444,29 +547,43 @@ class _WelcomePageState extends State<WelcomePage> {
               screen.padding.top -
               screen.viewInsets.bottom,
         ),
-        padding: EdgeInsets.fromLTRB(24, 40, 24, 80),
+        padding: EdgeInsets.fromLTRB(24, 24, 24, 80),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          spacing: 16,
+          // spacing: 40,
           children: [
-            Text.rich(
-              TextSpan(
-                style: TextStyle(
-                  color: theme.colorScheme.onSurfaceVariant,
-                  fontWeight: FontWeight.normal,
-                  fontSize: 16,
-                ),
-                children: [
-                  TextSpan(
-                    text: 'What’s your current Chinese proficiency?\n',
-                    style: TextStyle(
-                      fontSize: 28,
-                      color: theme.colorScheme.primary,
-                    ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                TextButton.icon(
+                  onPressed: lastStep,
+                  label: Text('spend time each day'),
+                  icon: Icon(Icons.arrow_back_rounded),
+                  style: TextButton.styleFrom(
+                    foregroundColor: theme.colorScheme.primary,
+                    enableFeedback: true,
                   ),
-                ],
-              ),
+                ),
+                Text.rich(
+                  TextSpan(
+                    style: TextStyle(
+                      color: theme.colorScheme.onSurfaceVariant,
+                      fontWeight: FontWeight.normal,
+                      fontSize: 16,
+                    ),
+                    children: [
+                      TextSpan(
+                        text: 'What’s your current Chinese proficiency?',
+                        style: TextStyle(
+                          fontSize: 28,
+                          color: theme.colorScheme.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
             Text(
               'Please select the Chinese level you think you’re at. We’ll help you verify and start learning right away~',
@@ -495,7 +612,7 @@ class _WelcomePageState extends State<WelcomePage> {
                 pageSnapping: true,
                 disableCenter: true,
                 onPageChanged: (index, reason) {
-                  stepData[STEPS.level] = index + 1;
+                  ProfileProvider().tempProfile.level = index + 1;
                   validateCurrentStep();
                 },
               ),
@@ -589,12 +706,14 @@ class _WelcomePageState extends State<WelcomePage> {
               children: [
                 for (int i = 0; i < 9; i++)
                   Container(
-                    width: (i == stepData[STEPS.level] - 1) ? 24 : 8,
+                    width: (i == ProfileProvider().tempProfile.level! - 1)
+                        ? 24
+                        : 8,
                     height: 8,
                     decoration: BoxDecoration(
                       shape: BoxShape.rectangle,
                       borderRadius: BorderRadius.circular(20),
-                      color: (i == stepData[STEPS.level] - 1)
+                      color: (i == ProfileProvider().tempProfile.level! - 1)
                           ? theme.colorScheme.primary
                           : theme.colorScheme.outlineVariant,
                     ),
@@ -625,7 +744,11 @@ class _WelcomePageState extends State<WelcomePage> {
     required String label,
     VoidCallback? onTap,
     IconData? icon,
+    Color? backColor,
+    Color? frontColor,
   }) {
+    backColor = backColor ?? theme.colorScheme.primary;
+    frontColor = frontColor ?? theme.colorScheme.onPrimary;
     return Material(
       color: Colors.transparent,
       child: FeedbackButton(
@@ -634,9 +757,7 @@ class _WelcomePageState extends State<WelcomePage> {
         child: Ink(
           padding: const EdgeInsets.all(12),
           decoration: ShapeDecoration(
-            color: onTap == null
-                ? theme.colorScheme.secondaryFixed
-                : theme.colorScheme.primary,
+            color: onTap == null ? theme.colorScheme.secondaryFixed : backColor,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
             ),
@@ -649,11 +770,11 @@ class _WelcomePageState extends State<WelcomePage> {
               Text(
                 label,
                 style: theme.textTheme.titleMedium!.copyWith(
-                  color: theme.colorScheme.onPrimary,
+                  color: frontColor,
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              if (icon != null) Icon(icon, color: theme.colorScheme.onPrimary),
+              if (icon != null) Icon(icon, color: frontColor),
             ],
           ),
         ),
@@ -665,20 +786,19 @@ class _WelcomePageState extends State<WelcomePage> {
   Widget _optionItem({
     required String label,
     required String description,
-    required Map<STEPS, dynamic> selected,
-    required STEPS step,
+    required bool selected,
+    required VoidCallback onTap,
   }) {
     return FeedbackButton(
       onTap: () {
-        selected[step] = label;
-        // setState(() {});
+        onTap();
         validateCurrentStep();
       },
       borderRadius: BorderRadius.circular(16),
       child: Ink(
         padding: const EdgeInsets.all(16),
         decoration: ShapeDecoration(
-          color: selected[step] == label
+          color: selected
               ? theme.colorScheme.primaryContainer
               : theme.colorScheme.surfaceContainer,
           shape: RoundedRectangleBorder(
@@ -690,10 +810,10 @@ class _WelcomePageState extends State<WelcomePage> {
           spacing: 10,
           children: [
             Icon(
-              selected[step] == label
+              selected
                   ? Icons.radio_button_checked_rounded
                   : Icons.radio_button_off_rounded,
-              color: selected[step] == label
+              color: selected
                   ? theme.colorScheme.primary
                   : theme.colorScheme.outlineVariant,
             ),
@@ -727,11 +847,7 @@ class _WelcomePageState extends State<WelcomePage> {
   Widget _levelCard({
     int level = 1,
     String title = 'Title text here.',
-    List<String> example = const [
-      'Can say 5 basic greetings like "你好 (Hello), 再见 (Goodbye), 谢谢 (Thank you), 对不起 (Sorry)"',
-      'Recognize less than 10 high-frequency characters like "你 (you), 好 (good), 谢 (thank), 再 (again)"',
-      'Can understand simple questions like "你叫什么名字？(What\'s your name?)"',
-    ],
+    List<String> example = const ['descripts..'],
   }) {
     return Container(
       padding: EdgeInsets.symmetric(vertical: 24, horizontal: 16),

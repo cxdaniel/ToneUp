@@ -27,7 +27,7 @@ MaterialSnapshotModel _$MaterialSnapshotModelFromJson(
       .map((e) => e as String)
       .toList(),
   paragraphs: (json['paragraphs'] as List<dynamic>)
-      .map((e) => e as String)
+      .map((e) => (e as List<dynamic>).map((e) => e as String).toList())
       .toList(),
   charsReview: (json['chars_review'] as List<dynamic>)
       .map((e) => e as String)
@@ -36,7 +36,11 @@ MaterialSnapshotModel _$MaterialSnapshotModelFromJson(
       .map((e) => e as String)
       .toList(),
   dialogs: (json['dialogs'] as List<dynamic>)
-      .map((e) => DialogModel.fromJson(e as Map<String, dynamic>))
+      .map(
+        (e) => (e as List<dynamic>)
+            .map((e) => ChatModel.fromJson(e as Map<String, dynamic>))
+            .toList(),
+      )
       .toList(),
   topicTag: json['topic_tag'] as String,
   cultureTag: json['culture_tag'] as String,

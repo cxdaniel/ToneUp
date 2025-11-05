@@ -2,10 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:toneup_app/components/feedback_button.dart';
 import 'package:toneup_app/components/quiz_choice_widget.dart';
 import 'package:toneup_app/providers/evaluation_provider.dart';
+import 'package:toneup_app/providers/plan_provider.dart';
+import 'package:toneup_app/providers/profile_provider.dart';
 import 'package:toneup_app/providers/quiz_provider.dart';
 import 'package:toneup_app/providers/tts_provider.dart';
+import 'package:toneup_app/routes.dart';
 import 'package:toneup_app/theme_data.dart';
 
 class EvaluationPage extends StatefulWidget {
@@ -20,6 +24,7 @@ class _EvaluationPageState extends State<EvaluationPage> {
   late TTSProvider ttsProvider;
   late ThemeData theme;
   late EvaluationProvider evaluationProvider;
+  late int targetLevel;
 
   @override
   void initState() {
@@ -46,7 +51,7 @@ class _EvaluationPageState extends State<EvaluationPage> {
   @override
   Widget build(BuildContext context) {
     final extra = GoRouterState.of(context).extra as Map<String, dynamic>;
-    final int targetLevel = extra['level'];
+    targetLevel = extra['level'];
     return ChangeNotifierProvider(
       create: (ctx) => EvaluationProvider()..initialize(targetLevel),
       child: Consumer<EvaluationProvider>(
@@ -248,81 +253,322 @@ class _EvaluationPageState extends State<EvaluationPage> {
   /// 练习完成状态
   Widget _buildFinishedState() {
     return Scaffold(
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          spacing: 16,
+      body: Padding(
+        padding: const EdgeInsets.all(40),
+        child: Center(
+          child: evaluationProvider.score > .8
+              ? _resultExcellent()
+              : evaluationProvider.score > .25
+              ? _resultPass()
+              : _resultFail(),
+        ),
+      ),
+    );
+  }
+
+  Widget _resultPass() {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      spacing: 60,
+      children: [
+        Icon(
+          Icons.thumb_up_alt_rounded,
+          color: theme.extension<AppThemeExtensions>()?.statePassOnPrimary,
+          size: 80,
+        ),
+        Column(
+          spacing: 24,
           children: [
-            Icon(
-              Icons.check_circle,
-              color: theme.extension<AppThemeExtensions>()?.statePass,
-              size: 80,
+            Text(
+              'Perfect Match!',
+              style: theme.textTheme.headlineLarge!.copyWith(
+                color: theme.colorScheme.primary,
+                fontWeight: FontWeight.w500,
+                fontFamily: 'Righteous',
+              ),
             ),
             Text(
-              'Practice Completed!',
-              style: theme.textTheme.headlineSmall!.copyWith(
+              'Warm-up Result',
+              style: theme.textTheme.titleLarge!.copyWith(
                 color: theme.colorScheme.secondary,
-                // fontWeight: FontWeight.w300,
+                fontWeight: FontWeight.w500,
               ),
             ),
-            TextButton(
-              style: ElevatedButton.styleFrom(
-                minimumSize: Size(120, 48),
-                backgroundColor: theme.colorScheme.surfaceContainerLowest,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(24),
+            _scoreProgress(),
+            Text(
+              'Awesome! Your level fits like a glove~ Click “Let’s Start Now” to dive into your Chinese learning journey!',
+              style: theme.textTheme.bodyLarge!.copyWith(
+                color: theme.colorScheme.secondary,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+        _actButton(
+          iconRight: Icons.arrow_right_alt_rounded,
+          label: 'Let\'s Start Now',
+          waiting: 'Creating your Goal ...',
+          onTap: _confirmToStart,
+        ),
+      ],
+    );
+  }
+
+  Widget _resultFail() {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      spacing: 60,
+      children: [
+        Icon(
+          Icons.heart_broken_rounded,
+          color: theme.extension<AppThemeExtensions>()?.stateFailOnPrimary,
+          size: 80,
+        ),
+        Column(
+          spacing: 24,
+          children: [
+            Text(
+              'Take It Step by Step',
+              style: theme.textTheme.headlineLarge!.copyWith(
+                color: theme.colorScheme.primary,
+                fontWeight: FontWeight.w500,
+                fontFamily: 'Righteous',
+              ),
+            ),
+            Text(
+              'Warm-up Result',
+              style: theme.textTheme.titleLarge!.copyWith(
+                color: theme.colorScheme.secondary,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            _scoreProgress(),
+            Text(
+              'Don’t sweat it~ This level is a bit of a stretch right now.  We’d suggest going back to pick a lower level. Laying a solid foundation first will make your learning journey way smoother!',
+              style: theme.textTheme.bodyLarge!.copyWith(
+                color: theme.colorScheme.secondary,
+                fontWeight: FontWeight.w500,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+        _actButton(
+          iconLeft: Icons.arrow_back_rounded,
+          label: 'Back to Choose Another Level',
+          onTap: () {
+            context.pop();
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _resultExcellent() {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      spacing: 60,
+      children: [
+        Icon(
+          Icons.switch_access_shortcut_add_rounded,
+          color: theme.extension<AppThemeExtensions>()?.exp,
+          size: 80,
+        ),
+        Column(
+          spacing: 24,
+          children: [
+            Text(
+              'Level Up Ready!',
+              style: theme.textTheme.headlineLarge!.copyWith(
+                color: theme.colorScheme.primary,
+                fontWeight: FontWeight.w500,
+                fontFamily: 'Righteous',
+              ),
+            ),
+            Text(
+              'Warm-up Result',
+              style: theme.textTheme.titleLarge!.copyWith(
+                color: theme.colorScheme.secondary,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            _scoreProgress(),
+            Text(
+              'Wow! You crushed this level—you’re totally primed for a bigger challenge~ Head back to choose a higher level and keep leveling up your Chinese skills!',
+              style: theme.textTheme.bodyLarge!.copyWith(
+                color: theme.colorScheme.secondary,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+        Column(
+          spacing: 16,
+          children: [
+            _actButton(
+              iconLeft: Icons.arrow_back_rounded,
+              label: 'Back to Another Level',
+              onTap: () {
+                context.pop();
+              },
+            ),
+            _actButton(
+              iconRight: Icons.arrow_right_alt_rounded,
+              label: 'Start with Level HSK $targetLevel',
+              waiting: 'Creating your Goal ...',
+              onTap: _confirmToStart,
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  ///  分数进度条
+  Widget _scoreProgress() {
+    return SizedBox(
+      width: 240,
+      child: Stack(
+        children: [
+          LinearProgressIndicator(
+            value: evaluationProvider.score,
+            minHeight: 20,
+            borderRadius: BorderRadius.circular(20),
+            color: theme.extension<AppThemeExtensions>()!.exp,
+            backgroundColor: theme.colorScheme.surfaceContainerHigh,
+            // backgroundColor: theme.colorScheme.primary.withAlpha(40),
+          ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.start,
+            children: [
+              SizedBox(width: 240 * 0.25),
+              if (targetLevel != 1)
+                SizedBox(
+                  width: 0,
+                  height: 20,
+                  child: VerticalDivider(
+                    thickness: 2,
+                    color: theme.colorScheme.surface,
+                  ),
                 ),
-              ),
-              onPressed: _isSubmitting
-                  ? null
-                  : () {
-                      HapticFeedback.heavyImpact();
-                      _submitHandeller();
-                    },
-              child: _isSubmitting
-                  ? Row(
-                      mainAxisSize: MainAxisSize.min,
-                      spacing: 8,
-                      children: [
-                        SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        ),
-                        Text(
-                          'Submiting...',
-                          style: theme.textTheme.titleMedium!.copyWith(
-                            color: theme.colorScheme.outline,
-                          ),
-                        ),
-                      ],
-                    )
-                  : Text(
-                      'Submit',
-                      style: theme.textTheme.titleMedium!.copyWith(
-                        color: theme.colorScheme.primary,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+              SizedBox(width: 240 * 0.55),
+              if (targetLevel != 9)
+                SizedBox(
+                  width: 0,
+                  height: 20,
+                  child: VerticalDivider(
+                    thickness: 2,
+                    color: theme.colorScheme.surface,
+                  ),
+                ),
+            ],
+          ),
+          Padding(
+            padding: const EdgeInsets.only(top: 24, left: 4, right: 4),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  targetLevel == 1 ? '' : 'HSK ${targetLevel - 1}',
+                  style: theme.textTheme.labelMedium!.copyWith(
+                    color: theme.colorScheme.secondary,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                Text(
+                  'HSK $targetLevel',
+                  style: theme.textTheme.labelMedium!.copyWith(
+                    color: theme.colorScheme.secondary,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                Text(
+                  targetLevel == 9 ? '' : 'HSK ${targetLevel + 1}',
+                  style: theme.textTheme.labelMedium!.copyWith(
+                    color: theme.colorScheme.secondary,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 行动按钮
+  Widget _actButton({
+    required String label,
+    required VoidCallback onTap,
+    IconData? iconRight,
+    IconData? iconLeft,
+    waiting = 'Waiting...',
+  }) {
+    // _isSubmitting = false;
+    return FeedbackButton(
+      borderRadius: BorderRadius.circular(24),
+      onTap: _isSubmitting
+          ? null
+          : () {
+              HapticFeedback.heavyImpact();
+              onTap();
+            },
+      child: Ink(
+        padding: EdgeInsets.all(12),
+        decoration: ShapeDecoration(
+          color: _isSubmitting
+              ? theme.colorScheme.secondaryContainer
+              : theme.colorScheme.primary,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadiusGeometry.circular(24),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          spacing: 12,
+          children: [
+            iconLeft != null
+                ? Icon(iconLeft, size: 24, color: theme.colorScheme.onPrimary)
+                : SizedBox(width: 10),
+            Text(
+              _isSubmitting ? waiting : label,
+              style: theme.textTheme.titleMedium!.copyWith(
+                color: _isSubmitting
+                    ? theme.colorScheme.onSecondaryContainer
+                    : theme.colorScheme.onPrimary,
+              ),
+            ),
+            _isSubmitting
+                ? SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: theme.colorScheme.secondary,
+                    ),
+                  )
+                : iconRight != null
+                ? Icon(iconRight, size: 24, color: theme.colorScheme.onPrimary)
+                : SizedBox(width: 10),
           ],
         ),
       ),
     );
   }
 
-  /// 提交练习结果
-  Future<void> _submitHandeller() async {
+  /// 确定级别
+  Future<void> _confirmToStart() async {
     setState(() {
       _isSubmitting = true;
     });
     try {
-      await evaluationProvider.submitPracticeResult();
+      await ProfileProvider().createProfile();
+      await PlanProvider().createPlan(
+        level: ProfileProvider().tempProfile.level!,
+      );
       if (mounted) {
-        context.pop();
+        context.go(AppRoutes.HOME);
       }
     } catch (e) {
       // 处理错误，如显示错误提示

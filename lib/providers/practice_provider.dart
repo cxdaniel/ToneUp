@@ -1,8 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:toneup_app/models/enumerated_types.dart';
+import 'package:toneup_app/models/quizzes/quiz_choice_model.dart';
 import 'package:toneup_app/models/quizzes/quiz_model.dart';
-import 'package:toneup_app/models/quizzes/quiz_choice_model_mo.dart';
 import 'package:toneup_app/models/quizzes/quiz_result_model.dart';
 import 'package:toneup_app/models/user_activity_instances/act_ins_material_model.dart';
 import 'package:toneup_app/models/user_activity_instances_model.dart';
@@ -124,7 +124,7 @@ class PracticeProvider extends ChangeNotifier {
     for (var instance in instances) {
       switch (instance.activity!.quizType) {
         case QuizType.choice:
-          final quizdata = QuizChoiceModelMO.fromJson(instance.quiz!);
+          final quizdata = QuizChoiceModel.fromJson(instance.quiz!);
           final correctOption = quizdata.options.firstWhere(
             (o) => o.isCorrect == true,
             orElse: () => quizdata.options.first,

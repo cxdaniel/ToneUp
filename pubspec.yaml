@@ -56,6 +56,7 @@ dependencies:
   pinyin: ^3.3.0            # 拼音库
   image_picker: ^1.2.0      # 图片选择器
   image_cropper: ^11.0.0    # 图片裁剪
+  segmented_progress_bar: ^1.0.0  # 分段进度条
 
 dev_dependencies:
   flutter_test:

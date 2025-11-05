@@ -26,7 +26,6 @@ void main() async {
       url: SupabaseConfig.url,
       anonKey: SupabaseConfig.anonKey,
     );
-    // Jieba.init();
     await JiebaSegmenter.init();
     runApp(MyApp());
   } catch (e) {
