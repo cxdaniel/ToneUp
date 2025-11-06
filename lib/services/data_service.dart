@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/foundation.dart';
 import 'package:toneup_app/models/activity_model.dart';
@@ -567,6 +568,33 @@ class DataService {
         debugPrint("获取用户当前级别指标完成情况-异常：${e.toString()}");
       }
       throw Exception("获取用户当前级别指标完成情况-失败：${e.toString()}");
+    }
+  }
+
+  /// 保存用户头像
+  Future<void> saveImage(String url, Uint8List data) async {
+    try {
+      await _supabase.storage
+          .from('images')
+          .uploadBinary(url, data, fileOptions: FileOptions(upsert: true));
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint("保存用户头像-异常：${e.toString()}");
+      }
+      throw Exception("保存用户头像-失败：${e.toString()}");
+    }
+  }
+
+  /// 获取图片资源
+  Future<Uint8List> getImage(String url) async {
+    try {
+      final data = await _supabase.storage.from('images').download(url);
+      return data;
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint("获取图片资源-异常：${e.toString()}");
+      }
+      throw Exception("获取图片资源-失败：${e.toString()}");
     }
   }
 }

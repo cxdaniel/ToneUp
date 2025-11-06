@@ -884,34 +884,23 @@ class _WelcomePageState extends State<WelcomePage> {
             style: theme.textTheme.bodyMedium,
           ),
           Expanded(
-            child: Container(
-              // padding: EdgeInsets.only(left: 16),
-              // decoration: BoxDecoration(
-              //   border: BoxBorder.fromLTRB(
-              //     left: BorderSide(
-              //       width: 1,
-              //       color: theme.colorScheme.primaryFixedDim,
-              //     ),
-              //   ),
-              // ),
-              child: Column(
-                spacing: 10,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Text(
-                  //   'Let\'s see what you can do ➞'.padRight(2, '>>'),
-                  //   style: theme.textTheme.bodyMedium,
-                  // ),
-                  ...example.map((e) {
-                    return Text(
-                      e,
-                      style: theme.textTheme.bodyLarge!.copyWith(
-                        color: theme.colorScheme.onSurface,
-                      ),
-                    );
-                  }).toList(),
-                ],
-              ),
+            child: Column(
+              spacing: 10,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Text(
+                //   'Let\'s see what you can do ➞'.padRight(2, '>>'),
+                //   style: theme.textTheme.bodyMedium,
+                // ),
+                ...example.map((e) {
+                  return Text(
+                    e,
+                    style: theme.textTheme.bodyLarge!.copyWith(
+                      color: theme.colorScheme.onSurface,
+                    ),
+                  );
+                }),
+              ],
             ),
           ),
           _mainActButton(

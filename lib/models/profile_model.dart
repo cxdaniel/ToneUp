@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:json_annotation/json_annotation.dart';
 import 'package:toneup_app/models/enumerated_types.dart';
 
@@ -24,6 +26,8 @@ class ProfileModel {
   DateTime? createdAt;
   @JsonKey(name: "updated_at")
   DateTime? updatedAt;
+  String? avatar;
+  Uint8List? avatarBytes;
 
   ProfileModel({
     required this.id,
@@ -41,6 +45,7 @@ class ProfileModel {
     this.purpose,
     this.createdAt,
     this.updatedAt,
+    this.avatar,
   });
 
   factory ProfileModel.fromJson(Map<String, dynamic> json) =>

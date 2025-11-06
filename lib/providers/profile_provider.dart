@@ -27,9 +27,23 @@ class ProfileProvider extends ChangeNotifier {
   ProfileModel? _profileModel;
   late ProfileModel tempProfile;
   List<UserScoreRecordsModel>? _records;
+  bool _disposed = false;
   // getter..
   ProfileModel? get profile => _profileModel;
   List<UserScoreRecordsModel>? get records => _records;
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
+
+  @override
+  void notifyListeners() {
+    if (!_disposed) {
+      super.notifyListeners();
+    }
+  }
 
   /// 清除个人资料
   void cleanProfile() {
@@ -50,11 +64,27 @@ class ProfileProvider extends ChangeNotifier {
     }
   }
 
+  /// 更新头像
+  Future<void> updateAvatar(Uint8List data) async {
+    final User? user = Supabase.instance.client.auth.currentUser;
+    if (user == null) throw Exception("用户未登录");
+    if (_profileModel != null) {
+      _profileModel!.avatarBytes = data;
+      notifyListeners();
+      String url = 'avatas/${user.id}/avatar.jpg';
+      await DataService().saveImage(url, data);
+      _profileModel!.avatar = url;
+      if (kDebugMode) print("更新头像-成功：$url");
+      saveProfile();
+    }
+  }
+
   /// 更新级别
   Future<void> updateLevel(int level) async {
     if (_profileModel != null) {
       _profileModel!.level = level;
       notifyListeners();
+      await saveProfile();
     }
   }
 
@@ -95,6 +125,12 @@ class ProfileProvider extends ChangeNotifier {
     if (user == null) throw Exception("用户未登录");
     try {
       _profileModel = await DataService().fetchProfile(user.id);
+
+      if (_profileModel != null && _profileModel!.avatar != null) {
+        _profileModel!.avatarBytes = await DataService().getImage(
+          _profileModel!.avatar!,
+        );
+      }
     } catch (e) {
       if (kDebugMode) print("获取个人资料-失败：$e");
     } finally {
@@ -111,6 +147,7 @@ class ProfileProvider extends ChangeNotifier {
       if (_profileModel != null) {
         tempProfile.updatedAt = DateTime.now();
         DataService().saveProfile(_profileModel!);
+        if (kDebugMode) print("保存个人资料-成功：${_profileModel!.toJson()}");
       }
     } catch (e) {
       if (kDebugMode) print("保存个人资料失败：$e");

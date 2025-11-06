@@ -1,6 +1,9 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:toneup_app/components/avatar_upload_widget.dart';
 import 'package:toneup_app/components/feedback_button.dart';
 import 'package:toneup_app/providers/profile_provider.dart';
 import 'package:toneup_app/theme_data.dart';
@@ -110,13 +113,14 @@ class _ProfilePageState extends State<ProfilePage> {
       child: Row(
         spacing: 24,
         children: [
-          Container(
-            width: 80,
-            height: 80,
-            decoration: ShapeDecoration(
-              color: theme.colorScheme.surfaceContainer,
-              shape: OvalBorder(),
-            ),
+          AvatarUploadWidget(
+            radius: 40,
+            onAvatarChanged: (bytes) {
+              if (bytes != null) {
+                provider.updateAvatar(bytes);
+              }
+            },
+            initialAvatar: provider.profile!.avatarBytes,
           ),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
