@@ -21,10 +21,10 @@ class PracticePage extends StatefulWidget {
 }
 
 class _PracticePageState extends State<PracticePage> {
-  bool _isSubmitting = false;
   late TTSProvider ttsProvider;
   late ThemeData theme;
   late PracticeProvider practiceProvider;
+  bool isSaving = false;
 
   @override
   void initState() {
@@ -63,37 +63,42 @@ class _PracticePageState extends State<PracticePage> {
         builder: (ctx, provider, _) {
           practiceProvider = provider;
           final quizzes = provider.quizzes;
-          return Scaffold(
-            appBar: (!provider.isPracticeCompleted)
-                ? AppBar(
-                    leading: IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: context.pop,
-                    ),
-                    title: LinearProgressIndicator(
-                      minHeight: 10,
-                      borderRadius: BorderRadius.circular(10),
-                      value: provider.progress,
-                      backgroundColor: theme.colorScheme.primary.withAlpha(40),
-                    ),
-                    actionsPadding: EdgeInsets.symmetric(horizontal: 16),
-                    actions: [Icon(Icons.more_horiz)],
-                    backgroundColor: theme.colorScheme.surface,
-                    surfaceTintColor: theme.colorScheme.secondary,
-                    shadowColor: theme.colorScheme.surfaceContainerLowest,
-                    scrolledUnderElevation: 1,
-                  )
-                : null,
-            body:
-                (provider.isLoading) // 加载中状态
-                ? _buildLoadingState()
-                : (provider.errorMessage != null) // 错误状态
-                ? _buildErrorState()
-                : (provider.isPracticeCompleted) // 完成状态
-                ? _buildFinishedState()
-                : (quizzes.isEmpty) //无题状态
-                ? _buildEmptyState()
-                : _buildDataState(), //正常数据状态
+          return PopScope(
+            canPop: false,
+            child: Scaffold(
+              appBar: (!provider.isPracticeCompleted)
+                  ? AppBar(
+                      leading: IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: context.pop,
+                      ),
+                      title: LinearProgressIndicator(
+                        minHeight: 10,
+                        borderRadius: BorderRadius.circular(10),
+                        value: provider.progress,
+                        backgroundColor: theme.colorScheme.primary.withAlpha(
+                          40,
+                        ),
+                      ),
+                      actionsPadding: EdgeInsets.symmetric(horizontal: 16),
+                      actions: [Icon(Icons.more_horiz)],
+                      backgroundColor: theme.colorScheme.surface,
+                      surfaceTintColor: theme.colorScheme.secondary,
+                      shadowColor: theme.colorScheme.surfaceContainerLowest,
+                      scrolledUnderElevation: 1,
+                    )
+                  : null,
+              body:
+                  (provider.isLoading) // 加载中状态
+                  ? _buildLoadingState()
+                  : (provider.errorMessage != '') // 错误状态
+                  ? _buildErrorState()
+                  : (provider.isPracticeCompleted) // 完成状态
+                  ? _buildFinishedState()
+                  : (quizzes.isEmpty) //无题状态
+                  ? _buildEmptyState()
+                  : _buildDataState(), //正常数据状态
+            ),
           );
         },
       ),
@@ -252,7 +257,7 @@ class _PracticePageState extends State<PracticePage> {
                 color: theme.colorScheme.outline,
               ),
             ),
-            if (practiceProvider.retryFunc != null || true)
+            if (practiceProvider.retryFunc != null)
               TextButton(
                 style: TextButton.styleFrom(
                   backgroundColor: theme.colorScheme.primary,
@@ -282,63 +287,83 @@ class _PracticePageState extends State<PracticePage> {
 
   /// 练习完成状态
   Widget _buildFinishedState() {
+    final exp = practiceProvider.quizzes.fold<double>(0, (sum, a) {
+      return sum + a.result.score * a.activity.timeCost!.toDouble() * 0.1;
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!isSaving) {
+        isSaving = true;
+        practiceProvider.submitPracticeResult();
+      }
+    });
     return Scaffold(
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           spacing: 16,
           children: [
-            Icon(
-              Icons.check_circle,
-              color: theme.extension<AppThemeExtensions>()?.statePass,
-              size: 80,
-            ),
             Text(
-              'Practice Completed!',
-              style: theme.textTheme.headlineSmall!.copyWith(
+              'Good Job!',
+              style: theme.textTheme.headlineLarge!.copyWith(
                 color: theme.colorScheme.secondary,
-                // fontWeight: FontWeight.w300,
+                fontWeight: FontWeight.w300,
               ),
             ),
+            SizedBox(height: 40),
+            Icon(
+              Icons.energy_savings_leaf_rounded,
+              color: theme.extension<AppThemeExtensions>()?.exp,
+              size: 60,
+            ),
+            Text(
+              '+${exp.toStringAsFixed(0)} EXP',
+              style: theme.textTheme.headlineMedium!.copyWith(
+                color: theme.extension<AppThemeExtensions>()?.exp,
+                fontFamily: 'Righteous',
+              ),
+            ),
+            SizedBox(height: 8),
             TextButton(
-              style: ElevatedButton.styleFrom(
+              style: TextButton.styleFrom(
                 minimumSize: Size(120, 48),
-                backgroundColor: theme.colorScheme.surfaceContainerLowest,
+                backgroundColor: practiceProvider.isSaving
+                    ? theme.colorScheme.outlineVariant
+                    : theme.colorScheme.primary,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(24),
                 ),
               ),
-              onPressed: _isSubmitting
+              onPressed: practiceProvider.isSaving
                   ? null
                   : () {
                       HapticFeedback.heavyImpact();
-                      _submitHandeller(practiceProvider);
+                      context.pop();
                     },
-              child: _isSubmitting
+              child: practiceProvider.isSaving
                   ? Row(
                       mainAxisSize: MainAxisSize.min,
-                      spacing: 8,
+                      spacing: 12,
                       children: [
                         SizedBox(
                           width: 20,
                           height: 20,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: Colors.white,
+                            color: theme.colorScheme.onPrimary,
                           ),
                         ),
                         Text(
-                          'Submiting...',
+                          'svaing',
                           style: theme.textTheme.titleMedium!.copyWith(
-                            color: theme.colorScheme.outline,
+                            color: theme.colorScheme.onPrimary,
                           ),
                         ),
                       ],
                     )
                   : Text(
-                      'Submit',
+                      'Ok',
                       style: theme.textTheme.titleMedium!.copyWith(
-                        color: theme.colorScheme.primary,
+                        color: theme.colorScheme.onPrimary,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -347,35 +372,5 @@ class _PracticePageState extends State<PracticePage> {
         ),
       ),
     );
-  }
-
-  /// 提交练习结果
-  Future<void> _submitHandeller(PracticeProvider provider) async {
-    setState(() {
-      _isSubmitting = true;
-    });
-    try {
-      await provider.submitPracticeResult();
-      if (mounted) {
-        context.pop();
-      }
-    } catch (e) {
-      // 处理错误，如显示错误提示
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('提交失败: ${e.toString()}'),
-            showCloseIcon: true,
-            // duration: Durations.long4,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isSubmitting = false;
-        });
-      }
-    }
   }
 }

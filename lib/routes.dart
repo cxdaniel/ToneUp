@@ -11,4 +11,6 @@ class AppRoutes {
   static const PODCASTS = '/podcasts';
   static const EVALUATION = '/evaluation';
   static const WELCOME = '/welcome';
+  static const FORGOT = '/forgot';
+  static const SETTINGS = '/settings';
 }

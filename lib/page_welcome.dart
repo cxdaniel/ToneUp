@@ -1,5 +1,6 @@
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:jieba_flutter/conversion/common_conversion_definition.dart';
 import 'package:toneup_app/components/feedback_button.dart';
@@ -192,7 +193,7 @@ class _WelcomePageState extends State<WelcomePage> {
               screen.padding.top -
               screen.viewInsets.bottom,
         ),
-        padding: EdgeInsets.fromLTRB(24, 40, 24, 80),
+        padding: EdgeInsets.fromLTRB(24, 40, 24, 60),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -272,6 +273,9 @@ class _WelcomePageState extends State<WelcomePage> {
                             ),
                           ),
                         ),
+                        maxLength: 16,
+                        maxLengthEnforcement:
+                            MaxLengthEnforcement.truncateAfterCompositionEnds,
                       ),
                     ),
                     FeedbackButton(
@@ -337,203 +341,250 @@ class _WelcomePageState extends State<WelcomePage> {
 
   /// 目的部分
   Widget _sectionPurpose() {
-    return SingleChildScrollView(
-      child: Container(
-        constraints: BoxConstraints(
-          minHeight:
-              screen.size.height -
-              screen.padding.top -
-              screen.viewInsets.bottom,
-        ),
-        padding: EdgeInsets.fromLTRB(24, 24, 24, 80),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          spacing: 36,
-          children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                TextButton.icon(
-                  onPressed: lastStep,
-                  label: Text('nickname'),
-                  icon: Icon(Icons.arrow_back_rounded),
-                  style: TextButton.styleFrom(
-                    foregroundColor: theme.colorScheme.primary,
-                    enableFeedback: true,
-                  ),
-                ),
-                Text.rich(
-                  TextSpan(
-                    style: TextStyle(
-                      color: theme.colorScheme.onSurfaceVariant,
-                      fontWeight: FontWeight.normal,
-                      fontSize: 16,
+    return Stack(
+      children: [
+        Container(
+          padding: EdgeInsets.fromLTRB(24, 12, 24, 60),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            spacing: 16,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextButton.icon(
+                    onPressed: lastStep,
+                    label: Text('nickname'),
+                    icon: Icon(Icons.arrow_back_rounded),
+                    style: TextButton.styleFrom(
+                      foregroundColor: theme.colorScheme.primary,
+                      enableFeedback: true,
                     ),
-                    children: [
-                      TextSpan(
-                        text: 'What’s your main purpose for learning Chinese?',
-                        style: TextStyle(
-                          fontSize: 28,
-                          color: theme.colorScheme.primary,
-                        ),
+                  ),
+                  Text.rich(
+                    TextSpan(
+                      style: TextStyle(
+                        color: theme.colorScheme.onSurfaceVariant,
+                        fontWeight: FontWeight.normal,
+                        fontSize: 16,
                       ),
-                    ],
+                      children: [
+                        TextSpan(
+                          text:
+                              'What’s your main purpose for learning Chinese?',
+                          style: TextStyle(
+                            fontSize: 28,
+                            color: theme.colorScheme.primary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              Expanded(
+                child: Center(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      spacing: 16,
+                      children: [
+                        _optionItem(
+                          label: 'For Interest',
+                          description:
+                              'Massive fun content, from poetry to slang.',
+                          selected:
+                              ProfileProvider().tempProfile.purpose ==
+                              PurposeType.interest,
+                          onTap: () => ProfileProvider().tempProfile.purpose =
+                              PurposeType.interest,
+                        ),
+                        _optionItem(
+                          label: 'For Work',
+                          description: 'Business Chinese scenario library.',
+                          selected:
+                              ProfileProvider().tempProfile.purpose ==
+                              PurposeType.work,
+                          onTap: () => ProfileProvider().tempProfile.purpose =
+                              PurposeType.work,
+                        ),
+                        _optionItem(
+                          label: 'For Travel',
+                          description:
+                              'Scenario-based dialogue cards offline translation.',
+                          selected:
+                              ProfileProvider().tempProfile.purpose ==
+                              PurposeType.travel,
+                          onTap: () => ProfileProvider().tempProfile.purpose =
+                              PurposeType.travel,
+                        ),
+                        _optionItem(
+                          label: 'For HSK Exam',
+                          description:
+                              'Break down test points review mistakes, sprint to high scores efficiently.',
+                          selected:
+                              ProfileProvider().tempProfile.purpose ==
+                              PurposeType.exam,
+                          onTap: () => ProfileProvider().tempProfile.purpose =
+                              PurposeType.exam,
+                        ),
+                        _optionItem(
+                          label: 'For Study/Life',
+                          description:
+                              'Essential for international students: opening a bank account, seeing a doctor, campus socializing.',
+                          selected:
+                              ProfileProvider().tempProfile.purpose ==
+                              PurposeType.life,
+                          onTap: () => ProfileProvider().tempProfile.purpose =
+                              PurposeType.life,
+                        ),
+                        SizedBox(height: 60),
+                      ],
+                    ),
                   ),
                 ),
-              ],
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              spacing: 16,
-              children: [
-                _optionItem(
-                  label: 'For Interest',
-                  description: 'Massive fun content, from poetry to slang.',
-                  selected:
-                      ProfileProvider().tempProfile.purpose ==
-                      PurposeType.interest,
-                  onTap: () => ProfileProvider().tempProfile.purpose =
-                      PurposeType.interest,
-                ),
-                _optionItem(
-                  label: 'For Work',
-                  description: 'Business Chinese scenario library.',
-                  selected:
-                      ProfileProvider().tempProfile.purpose == PurposeType.work,
-                  onTap: () =>
-                      ProfileProvider().tempProfile.purpose = PurposeType.work,
-                ),
-                _optionItem(
-                  label: 'For Travel',
-                  description:
-                      'Scenario-based dialogue cards offline translation.',
-                  selected:
-                      ProfileProvider().tempProfile.purpose ==
-                      PurposeType.travel,
-                  onTap: () => ProfileProvider().tempProfile.purpose =
-                      PurposeType.travel,
-                ),
-                _optionItem(
-                  label: 'For HSK Exam',
-                  description:
-                      'Break down test points review mistakes, sprint to high scores efficiently.',
-                  selected:
-                      ProfileProvider().tempProfile.purpose == PurposeType.exam,
-                  onTap: () =>
-                      ProfileProvider().tempProfile.purpose = PurposeType.exam,
-                ),
-                _optionItem(
-                  label: 'For Study/Life',
-                  description:
-                      'Essential for international students: opening a bank account, seeing a doctor, campus socializing.',
-                  selected:
-                      ProfileProvider().tempProfile.purpose == PurposeType.life,
-                  onTap: () =>
-                      ProfileProvider().tempProfile.purpose = PurposeType.life,
-                ),
-              ],
-            ),
-            _mainActButton(
+              ),
+            ],
+          ),
+        ),
+        Positioned(
+          left: 0,
+          right: 0,
+          bottom: 0,
+          child: Container(
+            padding: EdgeInsets.fromLTRB(24, 24, 24, 60),
+            color: theme.colorScheme.surface.withAlpha(200),
+            child: _mainActButton(
               label: 'Continue',
               icon: Icons.arrow_right_alt_rounded,
               onTap: validations.get(STEPS.purpose) ?? false ? nextStep : null,
             ),
-          ],
+          ),
         ),
-      ),
+      ],
     );
   }
 
   /// 学习时长部分
   Widget _sectionDuration() {
-    return SingleChildScrollView(
-      child: Container(
-        constraints: BoxConstraints(
-          minHeight:
-              screen.size.height -
-              screen.padding.top -
-              screen.viewInsets.bottom,
-        ),
-        padding: EdgeInsets.fromLTRB(24, 24, 24, 80),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          spacing: 36,
-          children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                TextButton.icon(
-                  onPressed: lastStep,
-                  label: Text('main purpose'),
-                  icon: Icon(Icons.arrow_back_rounded),
-                  style: TextButton.styleFrom(
-                    foregroundColor: theme.colorScheme.primary,
-                    enableFeedback: true,
-                  ),
-                ),
-                Text.rich(
-                  TextSpan(
-                    style: TextStyle(
-                      color: theme.colorScheme.onSurfaceVariant,
-                      fontWeight: FontWeight.normal,
-                      fontSize: 16,
+    return Stack(
+      children: [
+        Container(
+          padding: EdgeInsets.fromLTRB(24, 12, 24, 60),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            spacing: 16,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextButton.icon(
+                    onPressed: lastStep,
+                    label: Text('main purpose'),
+                    icon: Icon(Icons.arrow_back_rounded),
+                    style: TextButton.styleFrom(
+                      foregroundColor: theme.colorScheme.primary,
+                      enableFeedback: true,
                     ),
-                    children: [
-                      TextSpan(
-                        text: 'How much time can you spend learning each day?',
-                        style: TextStyle(
-                          fontSize: 28,
-                          color: theme.colorScheme.primary,
-                        ),
+                  ),
+                  Text.rich(
+                    TextSpan(
+                      style: TextStyle(
+                        color: theme.colorScheme.onSurfaceVariant,
+                        fontWeight: FontWeight.normal,
+                        fontSize: 16,
                       ),
-                    ],
+                      children: [
+                        TextSpan(
+                          text:
+                              'How much time can you spend learning each day?',
+                          style: TextStyle(
+                            fontSize: 28,
+                            color: theme.colorScheme.primary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              Expanded(
+                child: Center(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      spacing: 16,
+                      children: [
+                        _optionItem(
+                          label: '10 mins/day',
+                          description:
+                              'Perfect for fragmented time! Master core word and  practical sentence in 10 minutes~',
+                          selected:
+                              ProfileProvider()
+                                  .tempProfile
+                                  .planDurationMinutes ==
+                              60,
+                          onTap: () =>
+                              ProfileProvider()
+                                      .tempProfile
+                                      .planDurationMinutes =
+                                  60,
+                        ),
+                        _optionItem(
+                          label: '20 mins/day',
+                          description:
+                              'Golden learning duration! Complete a full module of ‘vocabulary + grammar + dialogue’ and see progress clearly~',
+                          selected:
+                              ProfileProvider()
+                                  .tempProfile
+                                  .planDurationMinutes ==
+                              100,
+                          onTap: () =>
+                              ProfileProvider()
+                                      .tempProfile
+                                      .planDurationMinutes =
+                                  100,
+                        ),
+                        _optionItem(
+                          label: '30 mins/day',
+                          description:
+                              'Deep learning mode! Support ‘thematic courses + extended reading’ to improve Chinese comprehensively~',
+                          selected:
+                              ProfileProvider()
+                                  .tempProfile
+                                  .planDurationMinutes ==
+                              150,
+                          onTap: () =>
+                              ProfileProvider()
+                                      .tempProfile
+                                      .planDurationMinutes =
+                                  150,
+                        ),
+                        SizedBox(height: 60),
+                      ],
+                    ),
                   ),
                 ),
-              ],
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              spacing: 16,
-              children: [
-                _optionItem(
-                  label: '10 mins/day',
-                  description:
-                      'Perfect for fragmented time! Master core word and  practical sentence in 10 minutes~',
-                  selected:
-                      ProfileProvider().tempProfile.planDurationMinutes == 60,
-                  onTap: () =>
-                      ProfileProvider().tempProfile.planDurationMinutes = 60,
-                ),
-                _optionItem(
-                  label: '20 mins/day',
-                  description:
-                      'Golden learning duration! Complete a full module of ‘vocabulary + grammar + dialogue’ and see progress clearly~',
-                  selected:
-                      ProfileProvider().tempProfile.planDurationMinutes == 100,
-                  onTap: () =>
-                      ProfileProvider().tempProfile.planDurationMinutes = 100,
-                ),
-                _optionItem(
-                  label: '30 mins/day',
-                  description:
-                      'Deep learning mode! Support ‘thematic courses + extended reading’ to improve Chinese comprehensively~',
-                  selected:
-                      ProfileProvider().tempProfile.planDurationMinutes == 150,
-                  onTap: () =>
-                      ProfileProvider().tempProfile.planDurationMinutes = 150,
-                ),
-              ],
-            ),
-            _mainActButton(
+              ),
+            ],
+          ),
+        ),
+        Positioned(
+          left: 0,
+          right: 0,
+          bottom: 0,
+          child: Container(
+            padding: EdgeInsets.fromLTRB(24, 24, 24, 60),
+            color: theme.colorScheme.surface.withAlpha(200),
+            child: _mainActButton(
               label: 'Continue',
               icon: Icons.arrow_right_alt_rounded,
               onTap: validations.get(STEPS.duration) ?? false ? nextStep : null,
             ),
-          ],
+          ),
         ),
-      ),
+      ],
     );
   }
 
@@ -547,11 +598,10 @@ class _WelcomePageState extends State<WelcomePage> {
               screen.padding.top -
               screen.viewInsets.bottom,
         ),
-        padding: EdgeInsets.fromLTRB(24, 24, 24, 80),
+        padding: EdgeInsets.fromLTRB(24, 12, 24, 60),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          // spacing: 40,
           children: [
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -789,55 +839,57 @@ class _WelcomePageState extends State<WelcomePage> {
     required bool selected,
     required VoidCallback onTap,
   }) {
-    return FeedbackButton(
-      onTap: () {
-        onTap();
-        validateCurrentStep();
-      },
-      borderRadius: BorderRadius.circular(16),
-      child: Ink(
-        padding: const EdgeInsets.all(16),
-        decoration: ShapeDecoration(
-          color: selected
-              ? theme.colorScheme.primaryContainer
-              : theme.colorScheme.surfaceContainer,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+    return Material(
+      child: FeedbackButton(
+        onTap: () {
+          onTap();
+          validateCurrentStep();
+        },
+        borderRadius: BorderRadius.circular(16),
+        child: Ink(
+          padding: const EdgeInsets.all(16),
+          decoration: ShapeDecoration(
+            color: selected
+                ? theme.colorScheme.primaryContainer
+                : theme.colorScheme.surfaceContainer,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
           ),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.start,
-          spacing: 10,
-          children: [
-            Icon(
-              selected
-                  ? Icons.radio_button_checked_rounded
-                  : Icons.radio_button_off_rounded,
-              color: selected
-                  ? theme.colorScheme.primary
-                  : theme.colorScheme.outlineVariant,
-            ),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    label,
-                    style: theme.textTheme.titleMedium!.copyWith(
-                      color: theme.colorScheme.onSurface,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  Text(
-                    description,
-                    style: theme.textTheme.bodyMedium!.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.start,
+            spacing: 10,
+            children: [
+              Icon(
+                selected
+                    ? Icons.radio_button_checked_rounded
+                    : Icons.radio_button_off_rounded,
+                color: selected
+                    ? theme.colorScheme.primary
+                    : theme.colorScheme.outlineVariant,
               ),
-            ),
-          ],
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label,
+                      style: theme.textTheme.titleMedium!.copyWith(
+                        color: theme.colorScheme.onSurface,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      description, //bodyMedium
+                      style: theme.textTheme.bodyMedium!.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

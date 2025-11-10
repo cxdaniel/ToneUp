@@ -26,12 +26,6 @@ class _HomePageState extends State<HomePage> {
     super.initState();
     _checkProfile();
     planProvider = Provider.of<PlanProvider>(context, listen: false);
-    // if (Provider.of<PlanProvider>(context, listen: false).activePlan == null) {
-    //   WidgetsBinding.instance.addPostFrameCallback((_) {
-    //     Provider.of<PlanProvider>(context, listen: false).initialize();
-    //     // Provider.of<PlanProvider>(context, listen: false).getAllPlans();
-    //   });
-    // }
   }
 
   @override

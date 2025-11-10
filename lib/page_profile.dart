@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:toneup_app/components/avatar_upload_widget.dart';
 import 'package:toneup_app/components/feedback_button.dart';
 import 'package:toneup_app/providers/profile_provider.dart';
+import 'package:toneup_app/routes.dart';
 import 'package:toneup_app/theme_data.dart';
 
 class ProfilePage extends StatefulWidget {
@@ -30,6 +32,10 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
+  Future<void> goSettings() async {
+    context.push(AppRoutes.SETTINGS);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Consumer<ProfileProvider>(
@@ -53,16 +59,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   children: [
                     _buildUserHeader(provider),
                     _buildOverview(provider),
-                    _buildListCeil(
-                      label: 'Weekly study duration',
-                      hit:
-                          (provider.profile == null ||
-                              provider.profile!.planDurationMinutes == null)
-                          ? '--'
-                          : '${provider.profile!.planDurationMinutes} minutes',
-                      call: provider.updateMaterials,
-                    ),
-                    _buildListCeil(label: 'Profile Settings', call: null),
+                    _buildListCeil(label: 'Profile Settings', call: goSettings),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       spacing: 8,
@@ -321,6 +318,8 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
         ),
         child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          spacing: 10,
           children: [
             if (label != null)
               Text(
@@ -330,13 +329,15 @@ class _ProfilePageState extends State<ProfilePage> {
                   fontWeight: FontWeight.w700,
                 ),
               ),
-            Spacer(),
             if (hit != null)
-              Text(
-                hit,
-                style: theme.textTheme.labelLarge!.copyWith(
-                  color: theme.colorScheme.outline,
-                  fontWeight: FontWeight.w300,
+              Expanded(
+                child: Text(
+                  textAlign: TextAlign.right,
+                  hit,
+                  style: theme.textTheme.labelLarge!.copyWith(
+                    color: theme.colorScheme.outline,
+                    fontWeight: FontWeight.w300,
+                  ),
                 ),
               ),
             if (call != null)
@@ -351,6 +352,7 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
+  /// 图标文字链
   Widget _buildLink({
     required String label,
     IconData? icon,

@@ -16,7 +16,7 @@ class PracticeProvider extends ChangeNotifier {
   List<QuizBase> _quizzes = []; // 所有 Quiz 列表
   int _currentQuizIndex = 0; // 当前 Quiz 索引
   bool _isLoading = false;
-  String? _errorMessage;
+  String _errorMessage = '';
   bool _isPracticeCompleted = false; // 练习是否完成
   UserPracticeModel? _practiceData;
   // Getters
@@ -34,6 +34,8 @@ class PracticeProvider extends ChangeNotifier {
   bool _disposed = false;
   VoidCallback? retryFunc;
   String? retryLabel;
+  bool isSaving = false;
+  String loadingMessage = '';
   List<ActInsMaterialModel> materials = [];
 
   @override
@@ -52,7 +54,7 @@ class PracticeProvider extends ChangeNotifier {
 
   /// 重置练习状态
   void _resetPracticeState() {
-    _errorMessage = null;
+    _errorMessage = '';
     _currentQuizIndex = 0;
     _isPracticeCompleted = false;
     currentTouchedCount = 0;
@@ -193,8 +195,39 @@ class PracticeProvider extends ChangeNotifier {
 
   /// 提交练习数据
   Future<void> submitPracticeResult() async {
-    await DataService().saveResultScores(_quizzes, _practiceData!);
-    notifyListeners();
+    isSaving = true;
+    retryLabel = '';
+    _errorMessage = '';
+    retryFunc = null;
+    try {
+      loadingMessage = 'Saving Practice...';
+      notifyListeners();
+      final User? user = Supabase.instance.client.auth.currentUser;
+      if (user == null) throw Exception("用户未登录");
+
+      await DataService().saveResultScores(_quizzes, _practiceData!);
+      final exp = quizzes.fold<double>(0, (sum, a) {
+        return sum + a.result.score * a.activity.timeCost!.toDouble() * 0.1;
+      });
+
+      loadingMessage = 'Saving EXP...';
+      notifyListeners();
+      final totalExp = await DataService().saveExp(
+        exp,
+        userId: user.id,
+        title: 'practice:${_practiceData!.id}',
+      );
+      ProfileProvider().profile!.exp = totalExp.toInt();
+      ProfileProvider().saveProfile();
+    } catch (e) {
+      retryLabel = 'Retry';
+      _errorMessage = e.toString();
+      retryFunc = submitPracticeResult;
+      if (kDebugMode) debugPrint('提交练习数据-失败: $e');
+    } finally {
+      isSaving = false;
+      notifyListeners();
+    }
     // 更新用户档案数据
     PlanProvider().updateProgress();
     ProfileProvider().updateMaterials();

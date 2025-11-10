@@ -60,13 +60,17 @@ class MainShell extends StatelessWidget {
                   fontWeight: FontWeight.normal,
                 ),
                 selectedIconTheme: IconThemeData(size: 28),
-                items: const [
+                items: [
                   BottomNavigationBarItem(
-                    icon: Icon(Icons.flag_rounded),
+                    icon: navigationShell.currentIndex == 0
+                        ? Icon(Icons.flag_rounded)
+                        : Icon(Icons.flag_outlined),
                     label: 'Practice',
                   ),
                   BottomNavigationBarItem(
-                    icon: Icon(Icons.track_changes_outlined),
+                    icon: navigationShell.currentIndex == 1
+                        ? Icon(Icons.radar_rounded)
+                        : Icon(Icons.track_changes_outlined),
                     label: 'Goals',
                   ),
                   //TODO：暂替换为PlanPage
@@ -75,7 +79,9 @@ class MainShell extends StatelessWidget {
                   //   label: 'Podcast',
                   // ),
                   BottomNavigationBarItem(
-                    icon: Icon(Icons.person),
+                    icon: navigationShell.currentIndex == 2
+                        ? Icon(Icons.person)
+                        : Icon(Icons.person_outline_rounded),
                     label: 'Me',
                   ),
                 ],
@@ -83,8 +89,7 @@ class MainShell extends StatelessWidget {
             ),
           ),
         ],
-      ), // 嵌套路由的内容区域
-      // bottomNavigationBar:
+      ),
     );
   }
 }

@@ -1,5 +1,3 @@
-// ignore_for_file: use_build_context_synchronously, library_private_types_in_public_api
-// import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -29,35 +27,37 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<void> _signIn() async {
-    isRequesting = true;
     final email = emailController.text;
     final password = passwordController.text;
-    if (!mounted) {
-      isRequesting = false;
+
+    final emailRegExp = RegExp(
+      r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
+    );
+    if (!emailRegExp.hasMatch(email.trim())) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Enter a valid email (e.g., user@example.com)')),
+      );
       return;
     }
+    if (email.length < 6) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('The password is exceeding 6 characters.')),
+      );
+      return;
+    }
+
+    setState(() {
+      isRequesting = true;
+    });
+
     try {
       final response = await supabase.auth.signInWithPassword(
         email: email,
         password: password,
       );
       if (response.user != null && mounted) {
-        // 登录成功后检查并profile
-        final existProfile = await supabase
-            .from('profiles')
-            .select()
-            .eq('id', response.user!.id)
-            .maybeSingle();
         if (!mounted) return;
-        if (existProfile == null) {
-          // await supabase.from('profiles').insert([
-          //   {'id': response.user!.id, 'nickname': Faker().internet.userName()},
-          // ]);
-          // if (!mounted) return;
-          context.go(AppRoutes.WELCOME);
-        } else {
-          context.go(AppRoutes.HOME);
-        }
+        context.go(AppRoutes.HOME);
       }
     } catch (e) {
       debugPrint("登录失败：$e");
@@ -75,6 +75,10 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
+  Future<void> _forgotPassword() async {
+    context.push(AppRoutes.FORGOT);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -82,9 +86,8 @@ class _LoginPageState extends State<LoginPage> {
         child: Padding(
           padding: const EdgeInsets.all(24.0),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+            // mainAxisAlignment: MainAxisAlignment.start,
             crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.max,
             spacing: 24,
             children: [
               /// Welcome Title
@@ -142,10 +145,14 @@ class _LoginPageState extends State<LoginPage> {
               ),
 
               /// Forgot Password
-              Text(
-                'Forgot Password',
-                style: theme.textTheme.titleSmall?.copyWith(
-                  color: theme.colorScheme.primary,
+              TextButton(
+                onPressed: _forgotPassword,
+                style: TextButton.styleFrom(padding: EdgeInsets.all(4)),
+                child: Text(
+                  'Forgot Password',
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    color: theme.colorScheme.primary,
+                  ),
                 ),
               ),
 
@@ -162,37 +169,7 @@ class _LoginPageState extends State<LoginPage> {
                       borderRadius: BorderRadius.circular(16),
                     ),
                   ),
-                  onPressed: isRequesting
-                      ? null
-                      : () {
-                          final emailRegExp = RegExp(
-                            r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
-                          );
-                          if (!emailRegExp.hasMatch(
-                            emailController.text.trim(),
-                          )) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  'Enter a valid email (e.g., user@example.com)',
-                                ),
-                              ),
-                            );
-                          } else if (passwordController.text.length < 6) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  'The password is exceeding 6 characters.',
-                                ),
-                              ),
-                            );
-                          } else {
-                            setState(() {
-                              isRequesting = true;
-                            });
-                            _signIn();
-                          }
-                        },
+                  onPressed: isRequesting ? null : _signIn,
                   child: isRequesting
                       ? Row(
                           mainAxisSize: MainAxisSize.min,
@@ -262,6 +239,7 @@ class _LoginPageState extends State<LoginPage> {
                 child: OutlinedButton.icon(
                   icon: SvgPicture.asset(
                     'assets/images/login_icon_apple.svg',
+                    color: theme.colorScheme.onSurface,
                     width: 24,
                     height: 24,
                   ),
@@ -307,7 +285,7 @@ class _LoginPageState extends State<LoginPage> {
                       context.replace(AppRoutes.SIGN_UP);
                     },
                     style: TextButton.styleFrom(
-                      padding: EdgeInsets.all(2),
+                      padding: EdgeInsets.all(4),
                       minimumSize: Size.square(40),
                     ),
                     child: Text(

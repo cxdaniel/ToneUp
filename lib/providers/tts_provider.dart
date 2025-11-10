@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:crypto/crypto.dart';
@@ -15,14 +17,35 @@ class TTSProvider with ChangeNotifier {
   TTSState _state = TTSState.idle;
   TTSState get state => _state;
   int _currentTaskId = 0;
+  bool _disposed = false;
+  StreamSubscription<PlayerState>? _playerStateSubscription;
+
+  @override
+  void dispose() {
+    _disposed = true;
+    _audioPlayer.dispose();
+    _playerStateSubscription?.cancel();
+    super.dispose();
+  }
+
+  @override
+  void notifyListeners() {
+    if (!_disposed) {
+      super.notifyListeners();
+    }
+  }
 
   void _setState(TTSState newState) {
     _state = newState;
-    notifyListeners();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_disposed) {
+        notifyListeners();
+      }
+    });
   }
 
   TTSProvider() {
-    _audioPlayer.playerStateStream.listen((state) {
+    _playerStateSubscription = _audioPlayer.playerStateStream.listen((state) {
       if (state.processingState == ProcessingState.completed) {
         _setState(TTSState.completed);
       }
@@ -149,13 +172,8 @@ class TTSProvider with ChangeNotifier {
 
   Future<void> stop() async {
     _currentTaskId++;
+    _setState(TTSState.idle);
     await _audioPlayer.stop();
     await _volcTTS.stopLocal();
-  }
-
-  @override
-  void dispose() {
-    _audioPlayer.dispose();
-    super.dispose();
   }
 }

@@ -595,4 +595,37 @@ class DataService {
       throw Exception("获取图片资源-失败：${e.toString()}");
     }
   }
+
+  /// 更新经验值
+  Future<double> saveExp(
+    double exp, {
+    required String userId,
+    required String title,
+  }) async {
+    try {
+      final saveData = {
+        'user_id': userId,
+        'category': 'exp',
+        'event_title': title,
+        'event_detail': exp,
+        'created_at': DateTime.now().toIso8601String(),
+      };
+      await _supabase.from('user_event_records').insert(saveData);
+      final data = await _supabase
+          .from('user_event_records')
+          .select()
+          .eq('user_id', userId)
+          .eq('category', 'exp');
+      final totalExp = data.fold(
+        0.0,
+        (sum, item) => sum + item['event_detail'],
+      );
+      return totalExp;
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint("保存用户资料异常：${e.toString()}");
+      }
+      throw Exception("saveProfile 保存用户资料失败：${e.toString()}");
+    }
+  }
 }
