@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:toneup_app/components/feedback_button.dart';
-import 'package:toneup_app/models/quizzes/quiz_model.dart';
+import 'package:toneup_app/models/quizzes/quiz_base.dart';
 import 'package:toneup_app/providers/quiz_provider.dart';
 import 'package:toneup_app/theme_data.dart';
 

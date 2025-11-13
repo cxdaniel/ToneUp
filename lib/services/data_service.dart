@@ -3,12 +3,11 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/foundation.dart';
 import 'package:toneup_app/models/activity_model.dart';
 import 'package:toneup_app/models/enumerated_types.dart';
-import 'package:toneup_app/models/evaluation_model.dart';
 import 'package:toneup_app/models/indicator_result_model.dart';
 import 'package:toneup_app/models/indicators_model.dart';
 import 'package:toneup_app/models/profile_model.dart';
-import 'package:toneup_app/models/quizzes/quiz_model.dart';
-import 'package:toneup_app/models/user_activity_instances_model.dart';
+import 'package:toneup_app/models/quizzes/quiz_base.dart';
+import 'package:toneup_app/models/quizzes/quizes_modle.dart';
 import 'package:toneup_app/models/user_practice_model.dart';
 import 'package:toneup_app/models/user_score_records_model.dart';
 import 'package:toneup_app/models/user_weekly_plan_model.dart';
@@ -258,64 +257,48 @@ class DataService {
     }
   }
 
-  /// 获取practice下的所有练习实例instance
-  Future<List<UserActivityInstanceModel>> getPracticeInstances(
-    List<int> data,
-  ) async {
+  /// 按id获取quizes
+  Future<List<QuizesModle>> fetchQuizesByIds(List<int> data) async {
     try {
       final response = await _supabase
-          .from('user_activity_instances')
+          .from('quizes')
           .select()
           .inFilter('id', data);
       if (response.isEmpty) {
-        throw Exception("查询活动库实例异常：返回数组为空");
+        throw Exception("按id获取quizes-返回数组为空");
       }
-      final ret = response
-          .map((e) => (UserActivityInstanceModel.fromJson(e)))
-          .toList();
+      final ret = response.map((e) => (QuizesModle.fromJson(e))).toList();
       return ret;
     } catch (e) {
-      throw Exception('查询活动库实例失败: $e');
+      throw Exception('按id获取quizes-失败: $e');
     }
   }
 
-  /// 生成练习题返回活动实例数组
-  Future<List<UserActivityInstanceModel>> generatePracticeQuiz(
-    List<int> data,
-    String topic,
-    String culture,
-  ) async {
+  /// 生成练习题内容
+  Future<List<QuizesModle>> generateQuizesContent(List<int> data) async {
     try {
       final response = await _supabase.functions.invoke(
         "get_activity_instances",
-        body: {
-          "act_ins": json.encode(data),
-          "topic_tag": topic,
-          "culture_tag": culture,
-        },
+        body: {"ids": json.encode(data)},
       );
       if (response.status != 200) {
-        throw Exception("查询活动库实例：状态码 ${response.status}");
+        throw Exception("生成练习题返回活动实例数组-状态码 ${response.status}");
       }
       final actInstances = response.data as List<dynamic>;
       if (actInstances.isEmpty) {
-        throw Exception("查询活动库实例异常：返回数组为空");
+        throw Exception("生成练习题返回活动实例数组-异常:返回数组为空");
       }
-      final ret = actInstances
-          .map((e) => (UserActivityInstanceModel.fromJson(e)))
-          .toList();
+      final ret = actInstances.map((e) => (QuizesModle.fromJson(e))).toList();
 
       return ret;
     } catch (e) {
-      throw Exception('查询活动库实例失败: $e');
+      throw Exception('生成练习题返回活动实例数组-失败: $e');
     }
   }
 
-  /// 更新关联数据activity到活动实例instance
-  Future<List<UserActivityInstanceModel>> addActivityToInstances(
-    List<UserActivityInstanceModel> datas,
-  ) async {
-    final actIds = datas.map((a) => a.activityId).toList();
+  /// 更新关联数据activity到quizes
+  Future<void> addActivityToQuizesModel(List<QuizesModle> quizes) async {
+    final actIds = quizes.map((a) => a.activityId).toList();
     try {
       final data = await _supabase
           .schema('research_core')
@@ -325,17 +308,41 @@ class DataService {
 
       final activiteis = data.map((e) => ActivityModel.fromJson(e)).toList();
 
-      for (UserActivityInstanceModel instance in datas) {
-        instance.activity = activiteis.firstWhere(
-          (act) => act.id == instance.activityId,
+      for (QuizesModle quiz in quizes) {
+        quiz.activity = activiteis.firstWhere(
+          (act) => act.id == quiz.activityId,
         );
       }
-      return datas;
     } catch (e) {
       if (kDebugMode) {
-        debugPrint("addActivityToInstances 更新关联数据-异常：${e.toString()}");
+        debugPrint("addActivityToQuizesModel 更新关联数据-异常：${e.toString()}");
       }
-      throw Exception("addActivityToInstances 更新关联数据-失败：${e.toString()}");
+      throw Exception("addActivityToQuizesModel 更新关联数据-失败：${e.toString()}");
+    }
+  }
+
+  /// 更新关联数据indicator到quizes
+  Future<void> addIndicatorToQuizesModel(List<QuizesModle> quizes) async {
+    final indIds = quizes.map((a) => a.indicatorId).toList();
+    try {
+      final data = await _supabase
+          .schema('research_core')
+          .from('indicators')
+          .select()
+          .inFilter('id', indIds);
+
+      final indicators = data.map((e) => IndicatorsModel.fromJson(e)).toList();
+
+      for (QuizesModle quiz in quizes) {
+        quiz.indicator = indicators.firstWhere(
+          (ind) => ind.id == quiz.indicatorId,
+        );
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint("addIndicatorToQuizesModel 更新关联数据-异常：${e.toString()}");
+      }
+      throw Exception("addIndicatorToQuizesModel 更新关联数据-失败：${e.toString()}");
     }
   }
 
@@ -349,14 +356,13 @@ class DataService {
     try {
       /// 计算总分和总题数，更新 user_practicers 表（用户当前练习分数）
       final total = quizzes.fold<double>(0, (sum, a) => sum + a.result.score);
-      final pData = await _supabase.rpc(
+      final dataList = await _supabase.rpc<List<Map<String, dynamic>>>(
         'increment_practice_count',
         params: {
           'practice_id': practice.id,
           'new_score': total / quizzes.length,
         },
       );
-      final dataList = pData as List;
       if (dataList.isEmpty) throw Exception("未返回更新后的记录");
       final update = UserPracticeModel.fromJson(dataList.first);
       practice.count = update.count;
@@ -385,7 +391,7 @@ class DataService {
       for (var i = 0; i < quizzes.length; i++) {
         abilityData.add({
           'user_id': user.id,
-          'indicator_id': quizzes[i].indicatorId,
+          'indicator_id': quizzes[i].model.indicatorId,
           'score': quizzes[i].result.score,
         });
       }
@@ -475,75 +481,27 @@ class DataService {
   }
 
   /// 获取评测题目
-  Future<List<EvaluationModel>> fetchEvaluations(int level) async {
+  Future<List<QuizesModle>> fetchEvaluationQuizes(int level) async {
     try {
+      // final data = await _supabase
+      //     .schema('research_core')
+      //     .from('evaluation')
+      //     .select()
+      //     .eq('level', level)
+      //     .order('random()', foreignTable: null)
+      //     .limit(10);
       final data = await _supabase
           .schema('research_core')
-          .from('evaluation')
-          .select()
-          .eq('level', level)
-          .limit(10);
-      // .inFilter('id', actIds);
-      return data.map((item) => EvaluationModel.fromJson(item)).toList();
+          .rpc<List<Map<String, dynamic>>>(
+            'random_evaluation',
+            params: {'level_input': level, 'n': 10},
+          );
+      return data.map((item) => QuizesModle.fromJson(item)).toList();
     } catch (e) {
       if (kDebugMode) {
         debugPrint("获取评测题目-异常：${e.toString()}");
       }
       throw Exception("获取评测题目-失败：${e.toString()}");
-    }
-  }
-
-  /// 更新关联数据activity到测试数据Evaluation
-  Future<List<EvaluationModel>> addActivityToEvaluation(
-    List<EvaluationModel> datas,
-  ) async {
-    final actIds = datas.map((a) => a.activityId).toList();
-    try {
-      final data = await _supabase
-          .schema('research_core')
-          .from('activities')
-          .select()
-          .inFilter('id', actIds);
-
-      final activiteis = data.map((e) => ActivityModel.fromJson(e)).toList();
-
-      for (EvaluationModel evl in datas) {
-        evl.activity = activiteis.firstWhere((act) => act.id == evl.activityId);
-      }
-      return datas;
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint("addActivityToEvaluation 更新关联数据-异常：${e.toString()}");
-      }
-      throw Exception("addActivityToEvaluation 更新关联数据-失败：${e.toString()}");
-    }
-  }
-
-  /// 更新关联数据indicator到测试数据Evaluation
-  Future<List<EvaluationModel>> addIndicatorToEvaluation(
-    List<EvaluationModel> datas,
-  ) async {
-    final indIds = datas.map((a) => a.indicatorId).toList();
-    try {
-      final data = await _supabase
-          .schema('research_core')
-          .from('indicators')
-          .select()
-          .inFilter('id', indIds);
-
-      final indicators = data.map((e) => IndicatorsModel.fromJson(e)).toList();
-
-      for (EvaluationModel evl in datas) {
-        evl.indicator = indicators.firstWhere(
-          (ind) => ind.id == evl.indicatorId,
-        );
-      }
-      return datas;
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint("addIndicatorToEvaluation 更新关联数据-异常：${e.toString()}");
-      }
-      throw Exception("addIndicatorToEvaluation 更新关联数据-失败：${e.toString()}");
     }
   }
 

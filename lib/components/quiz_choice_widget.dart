@@ -6,8 +6,7 @@ import 'package:toneup_app/components/feedback_button.dart';
 import 'package:toneup_app/components/quiz_feedback_board.dart';
 import 'package:toneup_app/components/wave_animation.dart';
 import 'package:toneup_app/models/enumerated_types.dart';
-import 'package:toneup_app/models/quizzes/quiz_material_model.dart';
-import 'package:toneup_app/models/quizzes/quiz_model.dart';
+import 'package:toneup_app/models/quizzes/quiz_base.dart';
 import 'package:toneup_app/models/quizzes/quiz_options_model.dart';
 import 'package:toneup_app/providers/quiz_provider.dart';
 import 'package:toneup_app/providers/tts_provider.dart';
@@ -49,11 +48,9 @@ class _QuizChoiceWidgetState extends State<QuizChoiceWidget> {
 
   /// 自动播放题干
   void _autoplayMaterial() {
-    if (quiz.activity.quizTemplate == QuizTemplate.voiceToText) {
+    if (quiz.model.activity!.quizTemplate == QuizTemplate.voiceToText) {
       voicePosition = quiz.material;
-      final voice = (voicePosition is QuizMaterialModel)
-          ? quiz.material.text
-          : quiz.material;
+      final voice = quiz.material;
       tts.play(voice);
     }
   }
@@ -95,7 +92,7 @@ class _QuizChoiceWidgetState extends State<QuizChoiceWidget> {
         quizProvider = provider;
         quiz = provider.quiz as QuizChoice;
         final debugtext =
-            'instanceId: ${quizProvider.quiz.id} / ${quizProvider.quiz.activity.quizTemplate}';
+            'QuizID: ${quizProvider.quiz.model.id} / ${quizProvider.quiz.model.activity!.quizTemplate}';
         return Stack(
           children: [
             SingleChildScrollView(
@@ -152,7 +149,7 @@ class _QuizChoiceWidgetState extends State<QuizChoiceWidget> {
 
   /// 题干区工具条
   Widget _buildMaterialTools(QuizProvider provider, QuizChoice quiz) {
-    if (quiz.activity.quizTemplate == QuizTemplate.textToVoice) {
+    if (quiz.model.activity!.quizTemplate == QuizTemplate.textToVoice) {
       return SizedBox.shrink();
     }
     return Row(
@@ -168,9 +165,7 @@ class _QuizChoiceWidgetState extends State<QuizChoiceWidget> {
               ? tts.stop
               : () {
                   voicePosition = quiz.material;
-                  final voice = (voicePosition is QuizMaterialModel)
-                      ? voicePosition.text
-                      : voicePosition;
+                  final voice = voicePosition;
                   tts.play(voice);
                 },
           borderRadius: BorderRadius.circular(24),
@@ -208,7 +203,7 @@ class _QuizChoiceWidgetState extends State<QuizChoiceWidget> {
         Row(
           spacing: 4,
           children: [
-            if (quiz.activity.quizTemplate != QuizTemplate.voiceToText)
+            if (quiz.model.activity!.quizTemplate != QuizTemplate.voiceToText)
               FeedbackButton(
                 onTap: () {
                   setState(() {
@@ -252,7 +247,7 @@ class _QuizChoiceWidgetState extends State<QuizChoiceWidget> {
                   ),
                 ),
               ),
-            if (quiz.activity.quizTemplate == QuizTemplate.voiceToText)
+            if (quiz.model.activity!.quizTemplate == QuizTemplate.voiceToText)
               FeedbackButton(
                 onTap: () {
                   setState(() {
@@ -316,7 +311,7 @@ class _QuizChoiceWidgetState extends State<QuizChoiceWidget> {
 
   /// 构建题干区
   Widget _buildMaterial(QuizProvider provider, QuizChoice quiz) {
-    switch (quiz.activity.quizTemplate) {
+    switch (quiz.model.activity!.quizTemplate) {
       case QuizTemplate.voiceToText: //听音选文
         return _voiceToTextMaterial(provider, quiz);
       default:
@@ -326,9 +321,7 @@ class _QuizChoiceWidgetState extends State<QuizChoiceWidget> {
 
   /// 题干组件-文本选文本
   Widget _textToTextMaterial(QuizProvider provider, QuizChoice quiz) {
-    final material = (quiz.material is QuizMaterialModel)
-        ? quiz.material.text
-        : quiz.material;
+    final material = quiz.material;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
@@ -369,9 +362,7 @@ class _QuizChoiceWidgetState extends State<QuizChoiceWidget> {
 
   /// 题干组件-听音选文本
   Widget _voiceToTextMaterial(QuizProvider provider, QuizChoice quiz) {
-    final material = (quiz.material is QuizMaterialModel)
-        ? quiz.material.text
-        : quiz.material;
+    final material = quiz.material;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
@@ -440,7 +431,7 @@ class _QuizChoiceWidgetState extends State<QuizChoiceWidget> {
             ),
           ),
         Text(
-          quiz.question,
+          quiz.model.question!,
           style: theme.textTheme.titleMedium?.copyWith(
             color: theme.colorScheme.secondary,
             fontWeight: FontWeight.w500,
@@ -452,7 +443,7 @@ class _QuizChoiceWidgetState extends State<QuizChoiceWidget> {
 
   /// 构建选项组件
   Widget _buildQuizOptions(QuizProvider provider, QuizChoice quiz) {
-    switch (quiz.activity.quizTemplate) {
+    switch (quiz.model.activity!.quizTemplate) {
       case QuizTemplate.textToText: //看文选文
         return _textOptions(provider, quiz);
       case QuizTemplate.textToVoice: //看文选音
@@ -578,9 +569,10 @@ class _QuizChoiceWidgetState extends State<QuizChoiceWidget> {
                   ),
                   Spacer(),
                   WaveAnimation(
-                    color: option.state == OptionStatus.normal
-                        ? theme.colorScheme.primary
-                        : theme.colorScheme.onPrimary,
+                    color: _getOptColorByState(
+                      state: option.state,
+                      position: StyleTypeForOption.onContainer,
+                    ),
                     isPlaying:
                         tts.state == TTSState.playing &&
                         voicePosition == option,

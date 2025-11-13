@@ -1,10 +1,6 @@
 import 'package:flutter/foundation.dart';
-import 'package:jieba_flutter/conversion/common_conversion_definition.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:toneup_app/models/enumerated_types.dart';
-import 'package:toneup_app/models/evaluation_model.dart';
-import 'package:toneup_app/models/quizzes/quiz_choice_model.dart';
-import 'package:toneup_app/models/quizzes/quiz_model.dart';
+import 'package:toneup_app/models/quizzes/quiz_base.dart';
 import 'package:toneup_app/services/data_service.dart';
 
 class EvaluationProvider extends ChangeNotifier {
@@ -27,17 +23,14 @@ class EvaluationProvider extends ChangeNotifier {
   VoidCallback? retryFunc;
   String? retryLabel;
   bool _disposed = false;
-  Map<QuizBase, EvaluationModel> evaluationQuizMap = {};
   double get score {
     final totalScore = quizzes.fold<double>(
       0,
-      (sum, quiz) =>
-          sum +
-          quiz.result.score * evaluationQuizMap.get(quiz)!.indicator!.weight,
+      (sum, quiz) => sum + quiz.result.score * quiz.model.indicator!.weight,
     );
     final totalWeight = quizzes.fold<double>(
       0,
-      (sum, quiz) => sum + evaluationQuizMap.get(quiz)!.indicator!.weight,
+      (sum, quiz) => sum + quiz.model.indicator!.weight,
     );
     return totalScore / totalWeight;
   }
@@ -65,14 +58,14 @@ class EvaluationProvider extends ChangeNotifier {
       _isLoading = true;
       notifyListeners();
 
-      final evaluations = await DataService().fetchEvaluations(level);
-      final withActivity = await DataService().addActivityToEvaluation(
-        evaluations,
-      );
-      final withIndicator = await DataService().addIndicatorToEvaluation(
-        withActivity,
-      );
-      _quizzes = _extractQuizzesbyType(withIndicator);
+      final quizesData = await DataService().fetchEvaluationQuizes(level);
+      await DataService().addActivityToQuizesModel(quizesData);
+      await DataService().addIndicatorToQuizesModel(quizesData);
+      _quizzes = QuizBase.getQuizInstanceByType(quizesData);
+      for (var quiz in _quizzes) {
+        // 测试时可重试次数为0
+        quiz.maxRetryTime = 0;
+      }
       retryFunc = null;
     } catch (e) {
       _errorMessage = e.toString();
@@ -83,46 +76,6 @@ class EvaluationProvider extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     }
-  }
-
-  /// 从 按类别提取Quiz
-  List<QuizBase> _extractQuizzesbyType(List<EvaluationModel> evaluations) {
-    final List<QuizBase> quizList = [];
-    for (var evl in evaluations) {
-      QuizBase quiz;
-      switch (evl.activity!.quizType) {
-        case QuizType.choice:
-          final quizdata = QuizChoiceModel.fromJson(evl.quiz);
-          final correctOption = quizdata.options.firstWhere(
-            (o) => o.isCorrect == true,
-            orElse: () => quizdata.options.first,
-          );
-          quiz = QuizChoice(
-            id: evl.id,
-            activity: evl.activity!,
-            indicatorId: evl.indicatorId,
-            question: quizdata.question,
-            options: quizdata.options,
-            correctAnswer: correctOption,
-            material: quizdata.material,
-            explain: quizdata.explain,
-            maxRetryTime: 0,
-          );
-          break;
-        default:
-          quiz = QuizDefault(
-            id: evl.id,
-            activity: evl.activity!,
-            indicatorId: evl.indicatorId,
-            question: evl.quiz['question'],
-            correctAnswer: null,
-            maxRetryTime: 0,
-          );
-      }
-      evaluationQuizMap.put(quiz, evl);
-      quizList.add(quiz);
-    }
-    return quizList;
   }
 
   /// 进入下一个 Quiz

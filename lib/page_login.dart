@@ -8,7 +8,7 @@ import 'package:toneup_app/routes.dart';
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
   @override
-  _LoginPageState createState() => _LoginPageState();
+  State<LoginPage> createState() => _LoginPageState();
 }
 
 class _LoginPageState extends State<LoginPage> {
@@ -228,7 +228,7 @@ class _LoginPageState extends State<LoginPage> {
                     side: BorderSide(color: theme.colorScheme.outlineVariant),
                   ),
                   onPressed: () {
-                    // TODO: Add Continue with Google logic here
+                    // TODO: 第三方登录 Add Continue with Google logic here
                   },
                 ),
               ),
@@ -239,9 +239,12 @@ class _LoginPageState extends State<LoginPage> {
                 child: OutlinedButton.icon(
                   icon: SvgPicture.asset(
                     'assets/images/login_icon_apple.svg',
-                    color: theme.colorScheme.onSurface,
                     width: 24,
                     height: 24,
+                    colorFilter: ColorFilter.mode(
+                      theme.colorScheme.onSurface,
+                      BlendMode.srcIn,
+                    ),
                   ),
                   label: Text(
                     'Continue with Apple',
@@ -255,7 +258,7 @@ class _LoginPageState extends State<LoginPage> {
                     side: BorderSide(color: theme.colorScheme.outlineVariant),
                   ),
                   onPressed: () {
-                    // TODO: Add Continue with Apple logic here
+                    // TODO: 第三方登录 Add Continue with Apple logic here
                   },
                 ),
               ),

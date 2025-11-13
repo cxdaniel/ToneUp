@@ -1,11 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:toneup_app/models/enumerated_types.dart';
-import 'package:toneup_app/models/quizzes/quiz_choice_model.dart';
-import 'package:toneup_app/models/quizzes/quiz_model.dart';
-import 'package:toneup_app/models/quizzes/quiz_result_model.dart';
-import 'package:toneup_app/models/user_activity_instances/act_ins_material_model.dart';
-import 'package:toneup_app/models/user_activity_instances_model.dart';
+import 'package:toneup_app/models/quizzes/quiz_base.dart';
+import 'package:toneup_app/models/quizzes/quizes_modle.dart';
 import 'package:toneup_app/models/user_practice_model.dart';
 import 'package:toneup_app/models/user_weekly_plan_model.dart';
 import 'package:toneup_app/providers/plan_provider.dart';
@@ -36,7 +33,7 @@ class PracticeProvider extends ChangeNotifier {
   String? retryLabel;
   bool isSaving = false;
   String loadingMessage = '';
-  List<ActInsMaterialModel> materials = [];
+  List<String> materials = [];
 
   @override
   void dispose() {
@@ -78,34 +75,29 @@ class PracticeProvider extends ChangeNotifier {
 
       _isLoading = true;
       notifyListeners();
-
-      List<UserActivityInstanceModel> instances = await DataService()
-          .getPracticeInstances(practiceData.instances);
-
-      // 提取练习的材料在loading显示
-      final actMaterials = instances.map((ins) => ins.materials).toList();
-      materials.addAll(
-        Set<ActInsMaterialModel>.from(
-          actMaterials.where(
-            (m) =>
-                (m.type == MaterialContentType.character ||
-                m.type == MaterialContentType.word ||
-                m.type == MaterialContentType.sentence),
-          ),
-        ),
+      List<QuizesModle> quizesData = await DataService().fetchQuizesByIds(
+        practiceData.quizes,
       );
+      // 提取练习的材料在loading显示
+      materials = quizesData
+          .where(
+            (q) =>
+                (q.materialType == MaterialContentType.character ||
+                q.materialType == MaterialContentType.word ||
+                q.materialType == MaterialContentType.sentence),
+          )
+          .map((q) => q.material!)
+          .toList();
       notifyListeners();
 
-      final quizexist = instances.fold(true, (a, b) => a && b.quiz != null);
-      if (!quizexist) {
-        instances = await DataService().generatePracticeQuiz(
-          practiceData.instances,
-          topic,
-          culture,
+      final isExist = quizesData.fold(true, (a, b) => a && b.question != null);
+      if (!isExist) {
+        quizesData = await DataService().generateQuizesContent(
+          practiceData.quizes,
         );
       }
-      final insWithAct = await DataService().addActivityToInstances(instances);
-      _quizzes = _extractQuizzesbyType(insWithAct);
+      await DataService().addActivityToQuizesModel(quizesData);
+      _quizzes = QuizBase.getQuizInstanceByType(quizesData);
       retryFunc = null;
     } catch (e) {
       _errorMessage = e.toString();
@@ -116,57 +108,6 @@ class PracticeProvider extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     }
-  }
-
-  /// 从 按类别提取 Quiz
-  List<QuizBase> _extractQuizzesbyType(
-    List<UserActivityInstanceModel> instances,
-  ) {
-    final List<QuizBase> quizList = [];
-    for (var instance in instances) {
-      switch (instance.activity!.quizType) {
-        case QuizType.choice:
-          final quizdata = QuizChoiceModel.fromJson(instance.quiz!);
-          final correctOption = quizdata.options.firstWhere(
-            (o) => o.isCorrect == true,
-            orElse: () => quizdata.options.first,
-          );
-          quizList.add(
-            QuizChoice(
-                id: instance.id,
-                indicatorId: instance.indicatorId,
-                activity: instance.activity!,
-                question: quizdata.question,
-                options: quizdata.options,
-                correctAnswer: correctOption,
-                material: quizdata.material,
-                explain: quizdata.explain,
-              )
-              ..result = QuizResultModel(
-                score: 0,
-                category: instance.materials.type,
-                item: instance.materials.content,
-              ),
-          );
-          break;
-        default:
-          quizList.add(
-            QuizDefault(
-                id: instance.id,
-                indicatorId: instance.indicatorId,
-                activity: instance.activity!,
-                question: instance.quiz!['question'],
-                correctAnswer: null,
-              )
-              ..result = QuizResultModel(
-                score: 0,
-                category: instance.materials.type,
-                item: instance.materials.content,
-              ),
-          );
-      }
-    }
-    return quizList;
   }
 
   /// 进入下一个 Quiz
@@ -207,7 +148,8 @@ class PracticeProvider extends ChangeNotifier {
 
       await DataService().saveResultScores(_quizzes, _practiceData!);
       final exp = quizzes.fold<double>(0, (sum, a) {
-        return sum + a.result.score * a.activity.timeCost!.toDouble() * 0.1;
+        return sum +
+            a.result.score * a.model.activity!.timeCost!.toDouble() * 0.1;
       });
 
       loadingMessage = 'Saving EXP...';

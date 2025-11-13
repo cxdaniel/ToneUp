@@ -31,6 +31,7 @@ class ProfileProvider extends ChangeNotifier {
   // getter..
   ProfileModel? get profile => _profileModel;
   List<UserScoreRecordsModel>? get records => _records;
+  Uint8List? avatarBytes;
 
   @override
   void dispose() {
@@ -69,7 +70,7 @@ class ProfileProvider extends ChangeNotifier {
     final User? user = Supabase.instance.client.auth.currentUser;
     if (user == null) throw Exception("用户未登录");
     if (_profileModel != null) {
-      _profileModel!.avatarBytes = data;
+      avatarBytes = data;
       notifyListeners();
       String url = 'avatas/${user.id}/avatar.jpg';
       await DataService().saveImage(url, data);
@@ -127,9 +128,7 @@ class ProfileProvider extends ChangeNotifier {
       _profileModel = await DataService().fetchProfile(user.id);
 
       if (_profileModel != null && _profileModel!.avatar != null) {
-        _profileModel!.avatarBytes = await DataService().getImage(
-          _profileModel!.avatar!,
-        );
+        avatarBytes = await DataService().getImage(_profileModel!.avatar!);
       }
     } catch (e) {
       if (kDebugMode) print("获取个人资料-失败：$e");

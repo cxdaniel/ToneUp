@@ -115,7 +115,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 provider.updateAvatar(bytes);
               }
             },
-            initialAvatar: provider.profile!.avatarBytes,
+            initialAvatar: provider.avatarBytes,
           ),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,

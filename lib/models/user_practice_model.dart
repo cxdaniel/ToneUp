@@ -7,7 +7,8 @@ part 'user_practice_model.g.dart';
 // 标记此类需要自动生成序列化代码
 class UserPracticeModel {
   final int id;
-  final List<int> instances;
+  final List<int> quizes;
+  final int status;
   double score;
   int count;
 
@@ -18,7 +19,8 @@ class UserPracticeModel {
 
   UserPracticeModel({
     required this.id,
-    required this.instances,
+    required this.status,
+    required this.quizes,
     required this.score,
     required this.count,
     required this.createdAt,

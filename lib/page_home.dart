@@ -20,6 +20,7 @@ class _HomePageState extends State<HomePage> {
   UserWeeklyPlanModel? _planData;
   late ThemeData theme;
   late PlanProvider planProvider;
+  bool isCheckedUpgrade = false;
 
   @override
   void initState() {
@@ -37,7 +38,7 @@ class _HomePageState extends State<HomePage> {
   /// 检查用户资料完整性
   Future<void> _checkProfile() async {
     final profile = await ProfileProvider().fetchProfile();
-    if (profile == null && mounted) {
+    if ((profile == null || profile.level == null) && mounted) {
       context.go(AppRoutes.WELCOME);
     } else {
       _initializePlan();
@@ -76,7 +77,10 @@ class _HomePageState extends State<HomePage> {
     );
     if (context.mounted) {
       planProvider.refreshPlan();
-      planProvider.checkForUpgrade();
+      if (!isCheckedUpgrade) {
+        isCheckedUpgrade = true;
+        planProvider.checkForUpgrade();
+      }
     }
   }
 
@@ -511,7 +515,7 @@ class _HomePageState extends State<HomePage> {
     List<Widget> activityCards = [];
     for (int i = 0; i < practices.length; i++) {
       final practiceData = practices[i];
-      if (practiceData.instances.isEmpty) continue;
+      if (practiceData.quizes.isEmpty) continue;
       activityCards.add(
         FeedbackButton(
           borderRadius: BorderRadius.circular(16),
@@ -541,7 +545,7 @@ class _HomePageState extends State<HomePage> {
                         : theme.colorScheme.primaryFixedDim,
                   ),
                   Text(
-                    '${practiceData.instances.length} Quizes',
+                    '${practiceData.quizes.length} Quizes',
                     textAlign: TextAlign.center,
                     style: theme.textTheme.titleMedium?.copyWith(
                       color: (practiceData.score > 0)

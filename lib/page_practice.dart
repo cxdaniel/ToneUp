@@ -48,6 +48,11 @@ class _PracticePageState extends State<PracticePage> {
     super.dispose();
   }
 
+  void goHome() {
+    HapticFeedback.heavyImpact();
+    context.pop();
+  }
+
   @override
   Widget build(BuildContext context) {
     final extra = GoRouterState.of(context).extra as Map<String, dynamic>;
@@ -131,7 +136,6 @@ class _PracticePageState extends State<PracticePage> {
 
   /// 加载轮播组件
   Widget _buildMaterialCarousel() {
-    final tags = practiceProvider.materials.map((m) => m.content).toList();
     return CarouselSlider(
       options: CarouselOptions(
         height: 90,
@@ -144,7 +148,7 @@ class _PracticePageState extends State<PracticePage> {
         enableInfiniteScroll: true, // 无限循环
         disableCenter: true,
       ),
-      items: tags.map((tag) {
+      items: practiceProvider.materials.map((tag) {
         return Wrap(
           alignment: WrapAlignment.center,
           runAlignment: WrapAlignment.center,
@@ -287,8 +291,9 @@ class _PracticePageState extends State<PracticePage> {
 
   /// 练习完成状态
   Widget _buildFinishedState() {
-    final exp = practiceProvider.quizzes.fold<double>(0, (sum, a) {
-      return sum + a.result.score * a.activity.timeCost!.toDouble() * 0.1;
+    final exp = practiceProvider.quizzes.fold<double>(0, (sum, quiz) {
+      return sum +
+          quiz.result.score * quiz.model.activity!.timeCost!.toDouble() * 0.1;
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!isSaving) {
@@ -325,20 +330,19 @@ class _PracticePageState extends State<PracticePage> {
             SizedBox(height: 8),
             TextButton(
               style: TextButton.styleFrom(
+                padding: EdgeInsetsDirectional.symmetric(
+                  horizontal: practiceProvider.isSaving ? 12 : 24,
+                  vertical: 12,
+                ),
                 minimumSize: Size(120, 48),
                 backgroundColor: practiceProvider.isSaving
-                    ? theme.colorScheme.outlineVariant
+                    ? theme.colorScheme.surfaceContainerHighest
                     : theme.colorScheme.primary,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(24),
                 ),
               ),
-              onPressed: practiceProvider.isSaving
-                  ? null
-                  : () {
-                      HapticFeedback.heavyImpact();
-                      context.pop();
-                    },
+              onPressed: practiceProvider.isSaving ? null : goHome,
               child: practiceProvider.isSaving
                   ? Row(
                       mainAxisSize: MainAxisSize.min,
@@ -349,19 +353,19 @@ class _PracticePageState extends State<PracticePage> {
                           height: 20,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: theme.colorScheme.onPrimary,
+                            color: theme.colorScheme.outline,
                           ),
                         ),
                         Text(
-                          'svaing',
+                          practiceProvider.loadingMessage,
                           style: theme.textTheme.titleMedium!.copyWith(
-                            color: theme.colorScheme.onPrimary,
+                            color: theme.colorScheme.outline,
                           ),
                         ),
                       ],
                     )
                   : Text(
-                      'Ok',
+                      'Back to Home',
                       style: theme.textTheme.titleMedium!.copyWith(
                         color: theme.colorScheme.onPrimary,
                         fontWeight: FontWeight.bold,

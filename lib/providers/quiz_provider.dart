@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import 'package:toneup_app/models/quizzes/quiz_model.dart';
+import 'package:toneup_app/models/quizzes/quiz_base.dart';
 
 class QuizProvider with ChangeNotifier {
   late QuizBase _quiz;
@@ -40,7 +40,7 @@ class QuizProvider with ChangeNotifier {
     if (_quiz.state != QuizState.touched) return;
     final isCorrect = _quiz.validateAnswer(_answer);
     _quiz.state = isCorrect ? QuizState.pass : QuizState.fail;
-    _feedback = _quiz.explain!;
+    _feedback = _quiz.model.explain!;
     // _feedback = isCorrect ? 'Well done!' : '${_quiz.explain}';
     _quiz.updateStatus(_answer);
     notifyListeners();

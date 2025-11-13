@@ -9,7 +9,8 @@ part of 'user_practice_model.dart';
 UserPracticeModel _$UserPracticeModelFromJson(Map<String, dynamic> json) =>
     UserPracticeModel(
       id: (json['id'] as num).toInt(),
-      instances: (json['instances'] as List<dynamic>)
+      status: (json['status'] as num).toInt(),
+      quizes: (json['quizes'] as List<dynamic>)
           .map((e) => (e as num).toInt())
           .toList(),
       score: (json['score'] as num).toDouble(),
@@ -23,7 +24,8 @@ UserPracticeModel _$UserPracticeModelFromJson(Map<String, dynamic> json) =>
 Map<String, dynamic> _$UserPracticeModelToJson(UserPracticeModel instance) =>
     <String, dynamic>{
       'id': instance.id,
-      'instances': instance.instances,
+      'quizes': instance.quizes,
+      'status': instance.status,
       'score': instance.score,
       'count': instance.count,
       'created_at': instance.createdAt.toIso8601String(),
