@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:toneup_app/components/feedback_button.dart';
 import 'package:toneup_app/models/enumerated_types.dart';
 import 'package:toneup_app/models/user_practice_model.dart';
@@ -37,6 +38,19 @@ class _HomePageState extends State<HomePage> {
 
   /// 检查用户资料完整性
   Future<void> _checkProfile() async {
+    // final user = Supabase.instance.client.auth.currentUser;
+    // final metadata = user!.userMetadata;
+    // final nickname =
+    //     metadata?['full_name'] ??
+    //     metadata?['name'] ??
+    //     user.email?.split('@')[0] ??
+    //     'User';
+    // ProfileProvider().tempProfile.nickname = nickname;
+    // if (metadata?['avatar_url'] != null) {
+    //   debugPrint('🖼️ 检测到头像: ${metadata!['avatar_url']}');
+    //   // 这里可以下载并保存头像
+    //   // ProfileProvider().tempProfile.avatar = ...
+    // }
     final profile = await ProfileProvider().fetchProfile();
     if ((profile == null || profile.level == null) && mounted) {
       context.go(AppRoutes.WELCOME);

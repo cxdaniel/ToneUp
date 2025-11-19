@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:jieba_flutter/conversion/common_conversion_definition.dart';
+import 'package:toneup_app/components/avatar_upload_widget.dart';
 import 'package:toneup_app/components/feedback_button.dart';
 import 'package:toneup_app/models/enumerated_types.dart';
 import 'package:toneup_app/providers/profile_provider.dart';
@@ -65,6 +66,7 @@ class _WelcomePageState extends State<WelcomePage> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    nikenameCtrl.text = ProfileProvider().tempProfile.nickname ?? '';
     theme = Theme.of(context);
   }
 
@@ -231,10 +233,10 @@ class _WelcomePageState extends State<WelcomePage> {
                 // AvatarUploadWidget(
                 //   radius: 60,
                 //   onAvatarChanged: (bytes) {
-                //     _localAvatarBytes = bytes;
+                //     ProfileProvider().avatarBytes = bytes;
                 //     validateCurrentStep();
                 //   },
-                //   initialAvatar: _localAvatarBytes,
+                //   initialAvatar: ProfileProvider().avatarBytes,
                 // ),
                 Text.rich(
                   style: TextStyle(
@@ -249,6 +251,7 @@ class _WelcomePageState extends State<WelcomePage> {
                 ),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
+                  // crossAxisAlignment: CrossAxisAlignment.center,
                   spacing: 4,
                   children: [
                     SizedBox(width: 40),
@@ -261,9 +264,7 @@ class _WelcomePageState extends State<WelcomePage> {
                         decoration: InputDecoration(
                           filled: true,
                           fillColor: theme.colorScheme.surfaceContainer,
-                          labelText:
-                              ProfileProvider().tempProfile.nickname ??
-                              'Nickname',
+                          labelText: 'Nickname',
                           floatingLabelBehavior: FloatingLabelBehavior.never,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(16),

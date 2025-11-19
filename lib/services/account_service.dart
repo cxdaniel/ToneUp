@@ -66,6 +66,7 @@ class AccountService {
 
   /// 绑定 Apple 账号
   Future<bool> linkAppleAccount() async {
+    // TODO: 这里要解决绑定的账号已有账号的情况
     try {
       debugPrint('🍎 开始绑定 Apple 账号');
 

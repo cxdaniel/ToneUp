@@ -212,7 +212,7 @@ class _MyAppState extends State<MyApp> {
         if (session != null) {
           final user = session.user;
           debugPrint('👤 用户信息: ${user.email}');
-          // 检查是否需要创建 Profile
+          // 暂存第三方用户信息
           _setOAuthInfoToTempProfile(user);
           // 小延迟确保状态完全同步
           // await Future.delayed(const Duration(milliseconds: 300));
