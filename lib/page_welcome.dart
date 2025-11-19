@@ -261,7 +261,9 @@ class _WelcomePageState extends State<WelcomePage> {
                         decoration: InputDecoration(
                           filled: true,
                           fillColor: theme.colorScheme.surfaceContainer,
-                          labelText: 'Nickname',
+                          labelText:
+                              ProfileProvider().tempProfile.nickname ??
+                              'Nickname',
                           floatingLabelBehavior: FloatingLabelBehavior.never,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(16),

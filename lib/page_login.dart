@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:toneup_app/routes.dart';
+import 'package:toneup_app/services/oauth_service.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -15,68 +16,183 @@ class _LoginPageState extends State<LoginPage> {
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
   final supabase = Supabase.instance.client;
+  final _oauthService = OAuthService();
   late ThemeData theme;
-
   bool isRequesting = false;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     theme = Theme.of(context);
-    isRequesting = false;
   }
 
+  @override
+  void dispose() {
+    emailController.dispose();
+    passwordController.dispose();
+    // 取消正在进行的 OAuth 认证
+    _oauthService.cancelAuth();
+    super.dispose();
+  }
+
+  /// 邮箱密码登录
   Future<void> _signIn() async {
-    final email = emailController.text;
+    final email = emailController.text.trim();
     final password = passwordController.text;
 
+    // 验证邮箱格式
     final emailRegExp = RegExp(
       r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
     );
-    if (!emailRegExp.hasMatch(email.trim())) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Enter a valid email (e.g., user@example.com)')),
-      );
-      return;
-    }
-    if (email.length < 6) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('The password is exceeding 6 characters.')),
-      );
+    if (!emailRegExp.hasMatch(email)) {
+      _showError('Enter a valid email (e.g., user@example.com)');
       return;
     }
 
-    setState(() {
-      isRequesting = true;
-    });
+    // 验证密码长度
+    if (password.length < 6) {
+      _showError('The password must be at least 6 characters.');
+      return;
+    }
+
+    setState(() => isRequesting = true);
 
     try {
       final response = await supabase.auth.signInWithPassword(
         email: email,
         password: password,
       );
+
       if (response.user != null && mounted) {
-        if (!mounted) return;
+        debugPrint('✅ 邮箱登录成功: ${response.user!.email}');
         context.go(AppRoutes.HOME);
       }
     } catch (e) {
-      debugPrint("登录失败：$e");
+      debugPrint('❌ 邮箱登录失败: $e');
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Login failed: $e')));
+        _showError('Login failed: ${_getErrorMessage(e)}');
       }
     } finally {
       if (mounted) {
-        setState(() {
-          isRequesting = false;
-        });
+        setState(() => isRequesting = false);
       }
     }
   }
 
   Future<void> _forgotPassword() async {
     context.push(AppRoutes.FORGOT);
+  }
+
+  /// Apple 登录
+  Future<void> _loginWithApple() async {
+    if (isRequesting) return;
+
+    setState(() => isRequesting = true);
+
+    try {
+      debugPrint('🍎 开始 Apple 登录');
+
+      final success = await _oauthService.signInWithProvider(
+        OAuthProvider.apple,
+        timeout: const Duration(seconds: 60),
+      );
+
+      if (success) {
+        debugPrint('✅ Apple 登录成功，等待导航...');
+        // 导航由 main.dart 的 onAuthStateChange 处理
+      } else {
+        debugPrint('❌ Apple 登录失败或取消');
+        if (mounted) {
+          _showError('Apple login was cancelled or failed');
+        }
+      }
+    } on PlatformException catch (pe) {
+      debugPrint('❌ Apple 登录 PlatformException: ${pe.code} - ${pe.message}');
+
+      // 忽略 Safari View Controller 启动警告
+      if (!pe.message!.contains('Error while launching')) {
+        if (mounted) {
+          _showError('Apple login error: ${pe.message}');
+        }
+      }
+    } catch (e) {
+      debugPrint('❌ Apple 登录异常: $e');
+      if (mounted) {
+        _showError('Apple login failed: ${_getErrorMessage(e)}');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => isRequesting = false);
+      }
+    }
+  }
+
+  /// Google 登录
+  Future<void> _loginWithGoogle() async {
+    if (isRequesting) return;
+
+    setState(() => isRequesting = true);
+
+    try {
+      debugPrint('🔍 开始 Google 登录');
+
+      final success = await _oauthService.signInWithProvider(
+        OAuthProvider.google,
+        timeout: const Duration(seconds: 60),
+      );
+
+      if (success) {
+        debugPrint('✅ Google 登录成功，等待导航...');
+      } else {
+        debugPrint('❌ Google 登录失败或取消');
+        if (mounted) {
+          _showError('Google login was cancelled or failed');
+        }
+      }
+    } on PlatformException catch (pe) {
+      debugPrint('❌ Google 登录 PlatformException: ${pe.code} - ${pe.message}');
+
+      if (!pe.message!.contains('Error while launching')) {
+        if (mounted) {
+          _showError('Google login error: ${pe.message}');
+        }
+      }
+    } catch (e) {
+      debugPrint('❌ Google 登录异常: $e');
+      if (mounted) {
+        _showError('Google login failed: ${_getErrorMessage(e)}');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => isRequesting = false);
+      }
+    }
+  }
+
+  /// 显示错误提示
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: theme.colorScheme.error,
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
+
+  /// 获取友好的错误信息
+  String _getErrorMessage(dynamic error) {
+    final errorStr = error.toString().toLowerCase();
+    if (errorStr.contains('invalid login credentials')) {
+      return 'Invalid email or password';
+    } else if (errorStr.contains('email not confirmed')) {
+      return 'Please verify your email first';
+    } else if (errorStr.contains('network')) {
+      return 'Network error, please check your connection';
+    }
+
+    return error.toString();
   }
 
   @override
@@ -227,9 +343,7 @@ class _LoginPageState extends State<LoginPage> {
                     backgroundColor: theme.colorScheme.surfaceContainerLowest,
                     side: BorderSide(color: theme.colorScheme.outlineVariant),
                   ),
-                  onPressed: () {
-                    // TODO: 第三方登录 Add Continue with Google logic here
-                  },
+                  onPressed: _loginWithGoogle,
                 ),
               ),
 
@@ -257,9 +371,7 @@ class _LoginPageState extends State<LoginPage> {
                     backgroundColor: theme.colorScheme.surfaceContainerLowest,
                     side: BorderSide(color: theme.colorScheme.outlineVariant),
                   ),
-                  onPressed: () {
-                    // TODO: 第三方登录 Add Continue with Apple logic here
-                  },
+                  onPressed: _loginWithApple,
                 ),
               ),
 

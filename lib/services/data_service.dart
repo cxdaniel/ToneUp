@@ -95,7 +95,6 @@ class DataService {
           .eq('user_id', userId)
           .or('status.eq.active,status.eq.reactive')
           .order('created_at', ascending: false)
-          // .limit(1)
           .maybeSingle();
 
       final plan = (data != null) ? UserWeeklyPlanModel.fromJson(data) : null;
@@ -148,7 +147,6 @@ class DataService {
     int level,
   ) async {
     try {
-      // await updateOldActivePlansToPending(userId);
       final createResponse = await _supabase.functions.invoke(
         "get-focus-indicators",
         body: {"user_id": userId, "level": level},
@@ -181,8 +179,6 @@ class DataService {
     required UserWeeklyPlanModel plan,
   }) async {
     try {
-      // 先将旧的活跃计划改为pending
-      // await updateOldActivePlansToPending(userId);
       if (plan.status == PlanStatus.active ||
           plan.status == PlanStatus.reactive) {
         return;
@@ -214,27 +210,6 @@ class DataService {
       return;
     } catch (e) {
       debugPrint("激活计划异常：$e");
-      rethrow;
-    }
-  }
-
-  /// 标记计划为已完成（status → done）
-  /// @param userId：当前用户ID
-  /// @param planId：要标记完成的计划ID
-  Future<void> markPlanAsDone({
-    required String userId,
-    required int planId,
-  }) async {
-    try {
-      await _supabase
-          .from('user_weekly_plans')
-          .update({'status': PlanStatus.done.name})
-          // .eq('user_id', userId)
-          .eq('id', planId);
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint("标记计划完成异常：${e.toString()}");
-      }
       rethrow;
     }
   }

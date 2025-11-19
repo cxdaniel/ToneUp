@@ -160,7 +160,7 @@ class _ProfilePageState extends State<ProfilePage> {
             width: double.infinity,
             padding: const EdgeInsets.symmetric(vertical: 8),
             decoration: ShapeDecoration(
-              color: theme.extension<AppThemeExtensions>()?.exp,
+              color: theme.extension<AppThemeExtensions>()?.expContainer,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
               ),

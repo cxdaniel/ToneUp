@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:toneup_app/components/feedback_button.dart';
+import 'package:toneup_app/models/enumerated_types.dart';
 import 'package:toneup_app/models/user_practice_model.dart';
 import 'package:toneup_app/models/user_weekly_plan_model.dart';
 import 'package:toneup_app/providers/plan_provider.dart';
@@ -26,7 +28,6 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     _checkProfile();
-    planProvider = Provider.of<PlanProvider>(context, listen: false);
   }
 
   @override
@@ -97,6 +98,7 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
       body: Consumer<PlanProvider>(
         builder: (context, provider, child) {
+          planProvider = provider;
           _planData = planProvider.activePlan;
           if (planProvider.isLoading) {
             return _buildLoadingState(planProvider);
@@ -238,7 +240,6 @@ class _HomePageState extends State<HomePage> {
     final int currentLevel = _planData!.level;
     final String topicTag = _planData!.topicTitle!;
     final double progress = calculatePlanProgress(_planData);
-    final planProvider = Provider.of<PlanProvider>(context, listen: false);
     if (progress == 1) {
       planProvider.completeActivePlan();
     }
@@ -332,7 +333,9 @@ class _HomePageState extends State<HomePage> {
             if (planProvider.showUpgrade) _buildGoEvaluation(),
 
             /// 计划全部完成
-            if (progress == 1) _buildCelebration(),
+            if (progress == 1 &&
+                planProvider.activePlan!.status != PlanStatus.reactive)
+              _buildCelebration(),
 
             /// 活动卡片模块
             SizedBox(
@@ -381,102 +384,11 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ),
                 // 目标词汇
-                Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  spacing: 10,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10),
-                      decoration: ShapeDecoration(
-                        color: theme.colorScheme.secondaryContainer,
-                        shape: RoundedRectangleBorder(
-                          side: BorderSide(
-                            width: 1,
-                            strokeAlign: BorderSide.strokeAlignCenter,
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.onSecondaryContainer.withAlpha(40),
-                          ),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                      child: Text(
-                        'Targets Words',
-                        style: theme.textTheme.labelLarge?.copyWith(
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.onSecondaryContainer,
-                        ),
-                      ),
-                    ),
-                    _buildTargetWords(),
-                  ],
-                ),
+                _buildTargetWords(),
                 // 常用句子
-                Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  spacing: 10,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10),
-                      decoration: ShapeDecoration(
-                        color: theme.colorScheme.secondaryContainer,
-                        shape: RoundedRectangleBorder(
-                          side: BorderSide(
-                            width: 1,
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.onSecondaryContainer.withAlpha(40),
-                          ),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                      child: Text(
-                        'Common Sentences',
-                        style: theme.textTheme.labelLarge?.copyWith(
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.onSecondaryContainer,
-                        ),
-                      ),
-                    ),
-                    ..._buildCommonSentences(),
-                  ],
-                ),
+                _buildCommonSentences(),
                 // 核心语法
-                Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  spacing: 10,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10),
-                      decoration: ShapeDecoration(
-                        color: theme.colorScheme.secondaryContainer,
-                        shape: RoundedRectangleBorder(
-                          side: BorderSide(
-                            width: 1,
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.onSecondaryContainer.withAlpha(40),
-                          ),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                      child: Text(
-                        'key Grammar Points',
-                        style: theme.textTheme.labelLarge?.copyWith(
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.onSecondaryContainer,
-                        ),
-                      ),
-                    ),
-                    _buildKeyGrammar(),
-                  ],
-                ),
+                _buildKeyGrammar(),
               ],
             ),
           ],
@@ -594,98 +506,174 @@ class _HomePageState extends State<HomePage> {
 
   /// 构建目标词汇
   Widget _buildTargetWords() {
-    if (_planData == null) {
-      return const Text("Loading...");
-    }
     final List<dynamic> chars = _planData!.materialSnapshot.charsNew;
     final List<dynamic> words = _planData!.materialSnapshot.wordsNew;
     final List<dynamic> targetWords = [...chars, ...words].cast<String>();
-
-    return Text.rich(
-      TextSpan(
-        children: targetWords
-            .asMap()
-            .entries
-            .map((entry) {
-              final int index = entry.key;
-              final String word = entry.value;
-              final bool isLast = index == targetWords.length - 1;
-              return [
-                TextSpan(
-                  text: word,
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                    fontWeight: FontWeight.w500,
-                    decoration: TextDecoration.underline,
-                    decorationStyle: TextDecorationStyle.dotted,
-                    decorationThickness: 1,
-                    height: 2,
-                    letterSpacing: 0.50,
-                  ),
-                ),
-                if (!isLast)
-                  TextSpan(
-                    text: '、',
-                    style: theme.textTheme.titleLarge?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                      fontWeight: FontWeight.w500,
-                      height: 2,
-                      letterSpacing: 0.50,
+    if (targetWords.isEmpty) return SizedBox.shrink();
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      spacing: 10,
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          decoration: ShapeDecoration(
+            color: theme.colorScheme.secondaryContainer,
+            shape: RoundedRectangleBorder(
+              side: BorderSide(
+                width: 1,
+                strokeAlign: BorderSide.strokeAlignCenter,
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSecondaryContainer.withAlpha(40),
+              ),
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+          child: Text(
+            'Targets Words',
+            style: theme.textTheme.labelLarge?.copyWith(
+              color: Theme.of(context).colorScheme.onSecondaryContainer,
+            ),
+          ),
+        ),
+        Text.rich(
+          TextSpan(
+            children: targetWords
+                .asMap()
+                .entries
+                .map((entry) {
+                  final int index = entry.key;
+                  final String word = entry.value;
+                  final bool isLast = index == targetWords.length - 1;
+                  return [
+                    TextSpan(
+                      text: word,
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                        fontWeight: FontWeight.w500,
+                        decoration: TextDecoration.underline,
+                        decorationStyle: TextDecorationStyle.dotted,
+                        decorationThickness: 1,
+                        height: 2,
+                        letterSpacing: 0.50,
+                      ),
                     ),
-                  ),
-              ];
-            })
-            .expand((e) => e)
-            .toList(),
-      ),
+                    if (!isLast)
+                      TextSpan(
+                        text: '、',
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                          fontWeight: FontWeight.w500,
+                          height: 2,
+                          letterSpacing: 0.50,
+                        ),
+                      ),
+                  ];
+                })
+                .expand((e) => e)
+                .toList(),
+          ),
+        ),
+      ],
     );
   }
 
   /// 构建常用句子
-  List<Widget> _buildCommonSentences() {
-    if (_planData == null) {
-      return [const Text("Loading...")];
-    }
+  Widget _buildCommonSentences() {
     final List<dynamic> commonSentences = _planData!.materialSnapshot.sentences;
-
-    return commonSentences.map((sentence) {
-      return Text.rich(
-        TextSpan(
-          text: sentence,
-          style: theme.textTheme.titleLarge?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-            fontWeight: FontWeight.w500,
-            decoration: TextDecoration.underline,
-            decorationStyle: TextDecorationStyle.dotted,
-            decorationThickness: 1,
-            height: 2,
-            letterSpacing: 0.50,
+    if (commonSentences.isEmpty) return SizedBox.shrink();
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      spacing: 10,
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          decoration: ShapeDecoration(
+            color: theme.colorScheme.secondaryContainer,
+            shape: RoundedRectangleBorder(
+              side: BorderSide(
+                width: 1,
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSecondaryContainer.withAlpha(40),
+              ),
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+          child: Text(
+            'Common Sentences',
+            style: theme.textTheme.labelLarge?.copyWith(
+              color: Theme.of(context).colorScheme.onSecondaryContainer,
+            ),
           ),
         ),
-      );
-    }).toList();
+        ...commonSentences.map((sentence) {
+          return Text.rich(
+            TextSpan(
+              text: sentence,
+              style: theme.textTheme.titleLarge?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+                fontWeight: FontWeight.w500,
+                decoration: TextDecoration.underline,
+                decorationStyle: TextDecorationStyle.dotted,
+                decorationThickness: 1,
+                height: 2,
+                letterSpacing: 0.50,
+              ),
+            ),
+          );
+        }),
+      ],
+    );
   }
 
   /// 构建核心语法
   Widget _buildKeyGrammar() {
-    if (_planData == null) {
-      return const Text("Loading...");
-    }
     final List<dynamic> keyGrammar = _planData!.materialSnapshot.grammars;
-
+    if (keyGrammar.isEmpty) return SizedBox.shrink();
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
-      spacing: 12,
-      children: keyGrammar.map((grammar) {
-        return Text(
-          grammar,
-          style: theme.textTheme.titleLarge?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-            height: 1.6,
+      spacing: 10,
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          decoration: ShapeDecoration(
+            color: theme.colorScheme.secondaryContainer,
+            shape: RoundedRectangleBorder(
+              side: BorderSide(
+                width: 1,
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSecondaryContainer.withAlpha(40),
+              ),
+              borderRadius: BorderRadius.circular(10),
+            ),
           ),
-        );
-      }).toList(),
+          child: Text(
+            'key Grammar Points',
+            style: theme.textTheme.labelLarge?.copyWith(
+              color: Theme.of(context).colorScheme.onSecondaryContainer,
+            ),
+          ),
+        ),
+        Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          spacing: 12,
+          children: keyGrammar.map((grammar) {
+            return Text(
+              grammar,
+              style: theme.textTheme.titleLarge?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+                height: 1.6,
+              ),
+            );
+          }).toList(),
+        ),
+      ],
     );
   }
 

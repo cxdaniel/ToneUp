@@ -7,14 +7,13 @@ plugins {
 
 android {
     namespace = "com.example.toneup_app"
-    compileSdk = flutter.compileSdkVersion
-    ndkVersion = flutter.ndkVersion
+    compileSdk = 36
+    ndkVersion = rootProject.extra["ndkVersion1"] as String
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = VERSION_11
+        targetCompatibility = VERSION_11
     }
-
     kotlinOptions {
         jvmTarget = JavaVersion.VERSION_11.toString()
     }
@@ -37,6 +36,7 @@ android {
             signingConfig = signingConfigs.getByName("debug")
         }
     }
+    buildToolsVersion = "36.0.0"
 }
 
 flutter {

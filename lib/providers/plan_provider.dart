@@ -184,7 +184,7 @@ class PlanProvider extends ChangeNotifier {
       _isLoading = true;
       _errorMessage = null;
 
-      _loadingMessage = "Marking to Active";
+      _loadingMessage = "Marking as Active";
       notifyListeners();
       final User? user = Supabase.instance.client.auth.currentUser;
       if (user == null) throw Exception("用户未登录");
