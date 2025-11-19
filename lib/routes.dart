@@ -13,4 +13,5 @@ class AppRoutes {
   static const WELCOME = '/welcome';
   static const FORGOT = '/forgot';
   static const SETTINGS = '/settings';
+  static const ACCOUNT_SETTINGS = '/account_settings';
 }

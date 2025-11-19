@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:go_router/go_router.dart';
 import 'package:toneup_app/components/mainshell.dart';
+import 'package:toneup_app/page_account_settings.dart';
 import 'package:toneup_app/page_evaluation.dart';
 import 'package:toneup_app/page_forgot.dart';
 import 'package:toneup_app/page_home.dart';
@@ -14,6 +15,7 @@ import 'package:toneup_app/page_profile.dart';
 import 'package:toneup_app/page_signup.dart';
 import 'package:toneup_app/page_welcome.dart';
 import 'package:toneup_app/profile_settings.dart';
+import 'package:toneup_app/providers/account_settings_provider.dart';
 import 'package:toneup_app/providers/plan_provider.dart';
 import 'package:toneup_app/providers/profile_provider.dart';
 import 'package:toneup_app/providers/tts_provider.dart';
@@ -112,6 +114,13 @@ class _MyAppState extends State<MyApp> {
         GoRoute(
           path: AppRoutes.SETTINGS,
           builder: (context, state) => const ProfileSettings(),
+        ),
+        GoRoute(
+          path: AppRoutes.ACCOUNT_SETTINGS,
+          builder: (context, state) => ChangeNotifierProvider(
+            create: (_) => AccountSettingsProvider(),
+            child: const AccountSettingsPage(),
+          ),
         ),
         // 🆕 OAuth 回调处理路由
         GoRoute(

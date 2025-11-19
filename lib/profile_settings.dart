@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:toneup_app/components/feedback_button.dart';
 import 'package:toneup_app/providers/profile_provider.dart';
+import 'package:toneup_app/routes.dart';
 
 class ProfileSettings extends StatefulWidget {
   const ProfileSettings({super.key});
@@ -224,6 +226,11 @@ class _ProfileSettings extends State<ProfileSettings> {
                     label: 'Weekly study duration',
                     hit: _displayDuration(),
                     call: setWeeklyDuration,
+                  ),
+                  _buildListCeil(
+                    label: 'Account Management',
+                    hit: 'Email, Apple, Google',
+                    call: () => context.push(AppRoutes.ACCOUNT_SETTINGS),
                   ),
                 ],
               ),
