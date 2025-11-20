@@ -26,6 +26,18 @@ class OAuthService {
     LaunchMode launchMode = LaunchMode.externalApplication,
     Duration timeout = const Duration(seconds: 60),
   }) async {
+    final callbackUri = kIsWeb
+        ? '${Uri.base.origin}/auth/callback'
+        : 'io.supabase.toneup://login-callback/';
+
+    launchMode = kIsWeb
+        ? LaunchMode.platformDefault
+        : LaunchMode.externalApplication;
+
+    debugPrint(
+      '平台：${kIsWeb ? 'web' : 'mobile'}, callback:$callbackUri, launchMode:$launchMode',
+    );
+
     // 如果有正在进行的认证，先取消
     if (_authCompleter != null && !_authCompleter!.isCompleted) {
       debugPrint('⚠️ 检测到正在进行的认证，先取消');
@@ -53,7 +65,7 @@ class OAuthService {
       // 发起 OAuth 请求
       await _supabase.auth.signInWithOAuth(
         provider,
-        redirectTo: 'io.supabase.toneup://login-callback/',
+        redirectTo: callbackUri,
         authScreenLaunchMode: launchMode,
       );
 

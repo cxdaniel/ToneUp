@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:jieba_flutter/conversion/common_conversion_definition.dart';
-import 'package:toneup_app/components/avatar_upload_widget.dart';
 import 'package:toneup_app/components/feedback_button.dart';
 import 'package:toneup_app/models/enumerated_types.dart';
 import 'package:toneup_app/providers/profile_provider.dart';
