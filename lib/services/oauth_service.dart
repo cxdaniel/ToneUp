@@ -16,7 +16,7 @@ class OAuthService {
   Timer? _timeoutTimer;
   LaunchMode launchMode = LaunchMode.externalApplication;
   String callbackUri = kIsWeb
-      ? '${Uri.base.origin}/auth/callback'
+      ? '${Uri.base.origin}/auth/callback/'
       : 'io.supabase.toneup://login-callback/';
 
   /// 检查当前是否有活跃的认证流程

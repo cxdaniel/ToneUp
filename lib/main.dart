@@ -89,24 +89,20 @@ class _MyAppState extends State<MyApp> {
     _router = GoRouter(
       initialLocation: initialLocation,
       navigatorKey: rootNavigatorKey,
+      debugLogDiagnostics: true,
       // redirect: (context, state) {
-      //   final uri = state.uri;
-      //   debugPrint('🔍 Router redirect 检查: $uri');
-      //   // 检查是否是 OAuth 回调
-      //   if (uri.toString().contains('login-callback')) {
-      //     debugPrint('📱 检测到 OAuth 回调');
-      //     // 获取参数
-      //     final type = uri.queryParameters['type'];
-      //     if (type == 'linking') {
-      //       // 🎯 绑定操作:返回 null,阻止路由变化
-      //       debugPrint('🔗 绑定回调,保持当前路由不变');
-      //       // 返回 null = 保持当前页面不变
-      //       // Supabase SDK 会在后台处理回调
-      //       return null;
-      //     } else {
-      //       // 登录操作:让正常的路由处理
-      //       debugPrint('🏠 登录回调,继续正常路由');
-      //     }
+      //   final uri = state.uri.toString();
+      //   // 如果是 Deep Link，提取路径部分
+      //   if (uri.contains('io.supabase.toneup://')) {
+      //     // 提取路径和查询参数
+      //     final uriObj = Uri.parse(uri);
+      //     final path = uriObj.path;
+      //     final query = uriObj.query;
+
+      //     debugPrint('📍 检测到 Deep Link，提取路径 $path$query');
+      //     // 重定向到路径版本
+      //     // return '$path${query.isNotEmpty ? "?$query" : ""}';
+      //     return '/login-callback?type=linking';
       //   }
       //   return null;
       // },
@@ -148,87 +144,55 @@ class _MyAppState extends State<MyApp> {
           ),
         ),
         // 🆕 Web 环境的 OAuth 回调
-        GoRoute(
-          path: '/auth/callback',
-          redirect: (context, state) {
-            final type = state.uri.queryParameters['type'];
-            if (type == 'linking') {
-              // 绑定操作,不跳转
-              debugPrint('🔗 检测到绑定操作,保持当前页面');
-              return null; // 不跳转
-            } else {
-              // 登录操作,跳转到首页
-              debugPrint('🏠 检测到登录操作,跳转到首页');
-              return AppRoutes.HOME;
-            }
-          },
-          builder: (context, state) {
-            debugPrint('📍 OAuth 回调路由被访问');
-            return Scaffold(
-              body: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    CircularProgressIndicator(),
-                    SizedBox(height: 16),
-                    Text('Completing sign in...'),
-                  ],
-                ),
-              ),
-            );
-          },
-        ),
-        // Deep Link: io.supabase.toneup://login-callback
-        // 🆕 APP 环境的 OAuth 回调: /login-callback
-        GoRoute(
-          path: '/login-callback',
-          redirect: (context, state) {
-            debugPrint('📍 Deep Link 回调路由: ${state.uri}');
-            final type = state.uri.queryParameters['type'];
-            if (type == 'linking') {
-              // 🎯 绑定操作:返回 null,然后在 builder 中处理
-              debugPrint('🔗 检测到绑定操作');
-              return null;
-            } else {
-              // 登录操作:直接跳转到首页
-              debugPrint('🏠 检测到登录操作,跳转到首页');
-              return AppRoutes.HOME;
-            }
-          },
-          builder: (context, state) {
-            final type = state.uri.queryParameters['type'];
-            if (type == 'linking') {
-              // 🎯 绑定操作:立即返回上一页
-              debugPrint('🔗 绑定 builder:准备返回上一页');
-              // 使用 WidgetsBinding 在构建完成后立即返回
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (context.mounted && Navigator.canPop(context)) {
-                  Navigator.pop(context);
-                  debugPrint('✅ 已返回到 Account Settings');
-                }
-              });
-              // 返回透明的占位页面
-              return Material(
-                type: MaterialType.transparency,
-                child: Container(),
-              );
-            }
-            // 登录操作:显示加载页面
-            // (实际上不会执行到这里,因为 redirect 已经跳转了)
-            return Scaffold(
-              body: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    CircularProgressIndicator(),
-                    SizedBox(height: 16),
-                    Text('Completing sign in...'),
-                  ],
-                ),
-              ),
-            );
-          },
-        ),
+        // GoRoute(
+        //   path: '/auth/callback',
+        //   redirect: (context, state) {
+        //     debugPrint('📍 OAuth 回调路由被访问');
+        //     final type = state.uri.queryParameters['type'];
+        //     if (type == 'linking') {
+        //       // 绑定操作,不跳转
+        //       debugPrint('🔗 检测到绑定操作,保持当前页面');
+        //       return null; // 不跳转
+        //     } else {
+        //       // 登录操作,跳转到首页
+        //       debugPrint('🏠 检测到登录操作,跳转到首页');
+        //       return AppRoutes.HOME;
+        //     }
+        //   },
+        //   builder: (context, state) {
+        //     debugPrint('📍 OAuth 回调路由被访问');
+        //     return Scaffold(
+        //       body: Center(
+        //         child: Column(
+        //           mainAxisAlignment: MainAxisAlignment.center,
+        //           children: [
+        //             CircularProgressIndicator(),
+        //             SizedBox(height: 16),
+        //             Text('Completing sign in...'),
+        //           ],
+        //         ),
+        //       ),
+        //     );
+        //   },
+        // ),
+        // // Deep Link: io.supabase.toneup://login-callback
+        // // 🆕 APP 环境的 OAuth 回调: /login-callback
+        // GoRoute(
+        //   path: '/login-callback',
+        //   redirect: (context, state) {
+        //     debugPrint('📍 Deep Link 回调路由: ${state.uri}');
+        //     final type = state.uri.queryParameters['type'];
+        //     if (type == 'linking') {
+        //       // 🎯 绑定操作:返回 null,然后在 builder 中处理
+        //       debugPrint('🔗 检测到绑定操作');
+        //       return null;
+        //     } else {
+        //       // 登录操作:直接跳转到首页
+        //       debugPrint('🏠 检测到登录操作,跳转到首页');
+        //       return AppRoutes.HOME;
+        //     }
+        //   },
+        // ),
         // 有状态的嵌套路由（底部导航相关页面）
         StatefulShellRoute.indexedStack(
           builder: (context, state, navigationShell) =>
@@ -239,46 +203,7 @@ class _MyAppState extends State<MyApp> {
       // 🆕 错误处理
       errorBuilder: (context, state) {
         debugPrint('🔴 路由错误: ${state.uri}');
-        // 如果是 OAuth 回调的 Deep Link
-        if (false && state.uri.toString().contains('login-callback')) {
-          debugPrint('📱 检测到 OAuth Deep Link 回调');
-          final type = state.uri.queryParameters['type'];
-          if (type == 'linking') {
-            // 🆕 绑定操作:关闭加载页面,保持在当前页面
-            debugPrint('🔗 绑定回调,不跳转');
-            // 延迟后自动关闭这个页面
-            Future.delayed(Duration(milliseconds: 500), () {
-              // if (context.mounted && Navigator.canPop(context)) {
-              //   Navigator.pop(context);
-              // }
-            });
-            // 🆕 返回一个不可见的透明 Widget
-            // 这样用户看不到页面变化,感觉还在原来的页面
-            return Material(
-              type: MaterialType.transparency,
-              child: Container(color: Colors.transparent),
-            );
-          } else {
-            // debugPrint('🏠 App环境: 登录回调,显示加载页面');
-            return Scaffold(
-              body: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    CircularProgressIndicator(),
-                    SizedBox(height: 16),
-                    Text('Completing sign in...'),
-                    SizedBox(height: 8),
-                    Text(
-                      'Please wait',
-                      style: TextStyle(fontSize: 14, color: Colors.grey),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          }
-        }
+        debugPrint('🔴 路由参数: ${state.uri.queryParameters}');
         // 错误路由
         return Scaffold(
           body: Center(
@@ -370,6 +295,8 @@ class _MyAppState extends State<MyApp> {
           _showGlobalSnackBar('操作失败,请重试', isError: true);
         }
       },
+      onDone: () {},
+      cancelOnError: true,
     );
   }
 
