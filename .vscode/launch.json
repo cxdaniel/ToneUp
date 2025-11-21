@@ -7,7 +7,12 @@
       "type": "dart", // Flutter/Dart 固定调试器类型
       "program": "${workspaceFolder}/lib/main.dart", // Flutter 入口必为 main.dart
       "flutterMode": "debug", // 调试模式：debug（可断点）、profile（性能分析）、release（无调试信息）
-      "args": ["--dart-define", "ENV=dev"], // 传自定义环境变量（如区分开发/测试环境）
+      "args": [
+        "--dart-define", "ENV=dev",
+        "-d", "web-server", // 指定运行在 Web 服务模式（不依赖浏览器）
+        "--web-port", "58186", // 固定 Web 调试端口为 8081
+        "--web-hostname", "0.0.0.0" // 允许局域网其他设备访问
+      ],
       "console": "terminal" // 显示Flutter日志
     }
   ]

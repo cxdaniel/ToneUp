@@ -35,11 +35,14 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
+  Future<void> _forgotPassword() async {
+    context.push(AppRoutes.FORGOT);
+  }
+
   /// 邮箱密码登录
   Future<void> _signIn() async {
     final email = emailController.text.trim();
     final password = passwordController.text;
-
     // 验证邮箱格式
     final emailRegExp = RegExp(
       r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
@@ -48,25 +51,14 @@ class _LoginPageState extends State<LoginPage> {
       _showError('Enter a valid email (e.g., user@example.com)');
       return;
     }
-
     // 验证密码长度
     if (password.length < 6) {
       _showError('The password must be at least 6 characters.');
       return;
     }
-
     setState(() => isRequesting = true);
-
     try {
-      final response = await supabase.auth.signInWithPassword(
-        email: email,
-        password: password,
-      );
-
-      if (response.user != null && mounted) {
-        debugPrint('✅ 邮箱登录成功: ${response.user!.email}');
-        context.go(AppRoutes.HOME);
-      }
+      await supabase.auth.signInWithPassword(email: email, password: password);
     } catch (e) {
       debugPrint('❌ 邮箱登录失败: $e');
       if (mounted) {
@@ -79,28 +71,17 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
-  Future<void> _forgotPassword() async {
-    context.push(AppRoutes.FORGOT);
-  }
-
   /// Apple 登录
   Future<void> _loginWithApple() async {
     if (isRequesting) return;
-
     setState(() => isRequesting = true);
-
     try {
       debugPrint('🍎 开始 Apple 登录');
-
       final success = await _oauthService.signInWithProvider(
         OAuthProvider.apple,
         timeout: const Duration(seconds: 60),
       );
-
-      if (success) {
-        debugPrint('✅ Apple 登录成功，等待导航...');
-        // 导航由 main.dart 的 onAuthStateChange 处理
-      } else {
+      if (!success) {
         debugPrint('❌ Apple 登录失败或取消');
         if (mounted) {
           _showError('Apple login was cancelled or failed');
@@ -108,12 +89,9 @@ class _LoginPageState extends State<LoginPage> {
       }
     } on PlatformException catch (pe) {
       debugPrint('❌ Apple 登录 PlatformException: ${pe.code} - ${pe.message}');
-
       // 忽略 Safari View Controller 启动警告
-      if (!pe.message!.contains('Error while launching')) {
-        if (mounted) {
-          _showError('Apple login error: ${pe.message}');
-        }
+      if (!pe.message!.contains('Error while launching') && mounted) {
+        _showError('Apple login error: ${pe.message}');
       }
     } catch (e) {
       debugPrint('❌ Apple 登录异常: $e');
@@ -130,20 +108,14 @@ class _LoginPageState extends State<LoginPage> {
   /// Google 登录
   Future<void> _loginWithGoogle() async {
     if (isRequesting) return;
-
     setState(() => isRequesting = true);
-
     try {
       debugPrint('🔍 开始 Google 登录');
-
       final success = await _oauthService.signInWithProvider(
         OAuthProvider.google,
         timeout: const Duration(seconds: 60),
       );
-
-      if (success) {
-        debugPrint('✅ Google 登录成功，等待导航...');
-      } else {
+      if (!success) {
         debugPrint('❌ Google 登录失败或取消');
         if (mounted) {
           _showError('Google login was cancelled or failed');
@@ -151,11 +123,8 @@ class _LoginPageState extends State<LoginPage> {
       }
     } on PlatformException catch (pe) {
       debugPrint('❌ Google 登录 PlatformException: ${pe.code} - ${pe.message}');
-
-      if (!pe.message!.contains('Error while launching')) {
-        if (mounted) {
-          _showError('Google login error: ${pe.message}');
-        }
+      if (!pe.message!.contains('Error while launching') && mounted) {
+        _showError('Google login error: ${pe.message}');
       }
     } catch (e) {
       debugPrint('❌ Google 登录异常: $e');
@@ -191,7 +160,6 @@ class _LoginPageState extends State<LoginPage> {
     } else if (errorStr.contains('network')) {
       return 'Network error, please check your connection';
     }
-
     return error.toString();
   }
 

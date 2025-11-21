@@ -12,12 +12,17 @@ class ProfileProvider extends ChangeNotifier {
   factory ProfileProvider() => _instance;
 
   ProfileProvider._internal() {
-    Supabase.instance.client.auth.onAuthStateChange.listen((data) {
-      final event = data.event;
-      if (event == AuthChangeEvent.signedOut) {
-        cleanProfile();
-      }
-    });
+    Supabase.instance.client.auth.onAuthStateChange.listen(
+      (data) {
+        final event = data.event;
+        if (event == AuthChangeEvent.signedOut) {
+          cleanProfile();
+        }
+      },
+      onError: (error) {
+        debugPrint('❌ onAuthStateChange error: $error');
+      },
+    );
     final User? user = Supabase.instance.client.auth.currentUser;
     if (user == null) throw Exception("用户未登录");
     tempProfile = ProfileModel(id: user.id, level: 1);

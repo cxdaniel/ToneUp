@@ -27,7 +27,7 @@ class DataService {
   Future<List<UserWeeklyPlanModel>> fetchPlans(String userId) async {
     try {
       final data = await _supabase
-          .from('user_weekly_plans')
+          .from('active_user_weekly_plans')
           .select()
           .eq('user_id', userId)
           .order('created_at', ascending: true); // 按创建时间从旧到新排序
@@ -57,7 +57,7 @@ class DataService {
           .toList();
       if (toPending.isNotEmpty) {
         await _supabase
-            .from('user_weekly_plans')
+            .from('active_user_weekly_plans')
             .update({'status': PlanStatus.pending.name})
             .eq('user_id', userId)
             .inFilter('id', toPending);
@@ -71,7 +71,7 @@ class DataService {
 
       if (toDone.isNotEmpty) {
         await _supabase
-            .from('user_weekly_plans')
+            .from('active_user_weekly_plans')
             .update({'status': PlanStatus.done.name})
             .eq('user_id', userId)
             .inFilter('id', toDone);
@@ -90,7 +90,7 @@ class DataService {
   Future<UserWeeklyPlanModel?> fetchActivePlan(String userId) async {
     try {
       final data = await _supabase
-          .from('user_weekly_plans')
+          .from('active_user_weekly_plans')
           .select() // 按需调整返回字段，如只返回需要的字段：'id, start_date, end_date, status'
           .eq('user_id', userId)
           .or('status.eq.active,status.eq.reactive')
@@ -117,7 +117,7 @@ class DataService {
     //获取计划下的practice数据
     try {
       final prctData = await _supabase
-          .from('user_practices')
+          .from('active_user_practices')
           .select()
           .inFilter('id', plan.practices);
 
@@ -236,7 +236,7 @@ class DataService {
   Future<List<QuizesModle>> fetchQuizesByIds(List<int> data) async {
     try {
       final response = await _supabase
-          .from('quizes')
+          .from('active_quizes')
           .select()
           .inFilter('id', data);
       if (response.isEmpty) {
@@ -388,7 +388,7 @@ class DataService {
   Future<ProfileModel?> fetchProfile(String userId) async {
     try {
       final data = await _supabase
-          .from('profiles')
+          .from('active_profiles')
           .select()
           .eq('id', userId)
           .maybeSingle();

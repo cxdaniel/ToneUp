@@ -7,14 +7,14 @@ import 'package:toneup_app/components/feedback_button.dart';
 import 'package:toneup_app/providers/account_settings_provider.dart';
 import 'package:toneup_app/routes.dart';
 
-class AccountSettingsPage extends StatefulWidget {
-  const AccountSettingsPage({super.key});
+class AccountSettings extends StatefulWidget {
+  const AccountSettings({super.key});
 
   @override
-  State<StatefulWidget> createState() => _AccountSettingsPageState();
+  State<StatefulWidget> createState() => _AccountSettingsState();
 }
 
-class _AccountSettingsPageState extends State<AccountSettingsPage> {
+class _AccountSettingsState extends State<AccountSettings> {
   late ThemeData theme;
   late AccountSettingsProvider accountProvider;
 
