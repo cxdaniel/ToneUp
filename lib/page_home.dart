@@ -253,7 +253,7 @@ class _HomePageState extends State<HomePage> {
     final String topicTag = _planData!.topicTitle!;
     final double progress = calculatePlanProgress(_planData);
     if (progress == 1) {
-      planProvider.completeActivePlan();
+      // planProvider.completeActivePlan();
     }
     final viewPadding = MediaQuery.of(context).viewPadding;
     return SingleChildScrollView(

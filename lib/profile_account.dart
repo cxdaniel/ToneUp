@@ -48,7 +48,7 @@ class _AccountSettingsState extends State<AccountSettings> {
         builder: (context, provider, child) {
           accountProvider = provider;
 
-          if (provider.isLoading && provider.connectedAccounts.isEmpty) {
+          if (provider.isLoading) {
             return _buildLoadingState();
           }
 

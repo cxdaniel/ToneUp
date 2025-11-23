@@ -15,9 +15,12 @@ class OAuthService {
   StreamSubscription<AuthState>? _authSubscription;
   Timer? _timeoutTimer;
   LaunchMode launchMode = LaunchMode.externalApplication;
-  String callbackUri = kIsWeb
-      ? '${Uri.base.origin}/auth/callback/'
+  String loginCallbackUri = kIsWeb
+      ? '${Uri.base.origin}/auth/callback/login/'
       : 'io.supabase.toneup://login-callback/';
+  String linkingCallbackUri = kIsWeb
+      ? '${Uri.base.origin}/auth/callback/linking/'
+      : 'io.supabase.toneup://linking-callback/';
 
   /// 检查当前是否有活跃的认证流程
   bool get isAuthenticating =>
@@ -57,7 +60,7 @@ class OAuthService {
       // 发起 OAuth 请求
       await _supabase.auth.signInWithOAuth(
         provider,
-        redirectTo: callbackUri,
+        redirectTo: loginCallbackUri,
         authScreenLaunchMode: launchMode,
       );
       debugPrint('⏳ 等待认证完成...');
@@ -85,24 +88,20 @@ class OAuthService {
 
     // 创建新的监听
     _authSubscription = _supabase.auth.onAuthStateChange.listen(
-      (data) {
+      (data) async {
         final event = data.event;
         debugPrint('📡 Auth event: $event');
 
-        if (event == AuthChangeEvent.signedIn) {
+        if (event == AuthChangeEvent.signedIn ||
+            event == AuthChangeEvent.userUpdated) {
           debugPrint('✅ 检测到登录成功事件');
-          // 验证 session 是否真的存在
           final session = _supabase.auth.currentSession;
           if (session != null) {
-            debugPrint('✅ Session 已建立: ${session.user.email}');
             if (_authCompleter != null && !_authCompleter!.isCompleted) {
-              // 添加小延迟确保状态完全同步
-              Future.delayed(const Duration(milliseconds: 300), () {
-                if (_authCompleter != null && !_authCompleter!.isCompleted) {
-                  _authCompleter!.complete(true);
-                  _cleanup();
-                }
-              });
+              await _supabase.auth.refreshSession();
+              debugPrint('✅ 绑定成功，用户信息已刷新');
+              _authCompleter!.complete(true);
+              _cleanup();
             }
           } else {
             debugPrint('⚠️ 登录事件触发但 session 为 null');
@@ -116,18 +115,11 @@ class OAuthService {
         }
       },
       onError: (error) {
-        // 捕获绑定过程中的错误
         debugPrint('❌ Linking: Auth error: $error');
-
         if (_authCompleter != null && !_authCompleter!.isCompleted) {
-          // 处理不同类型的错误
           if (error is AuthException) {
             final code = error.statusCode ?? '';
             final message = error.message;
-
-            debugPrint('❌ Auth错误码: $code');
-            debugPrint('❌ Auth错误信息: $message');
-
             if (code == 'identity_already_exists' ||
                 message.toLowerCase().contains('already linked')) {
               _authCompleter!.completeError(Exception('该账号已被其他用户绑定'));
@@ -139,11 +131,9 @@ class OAuthService {
           } else {
             _authCompleter!.completeError(error);
           }
-
           cancelAuth();
         }
       },
-      onDone: () {},
     );
   }
 
@@ -250,7 +240,7 @@ class OAuthService {
 
       _isLinkingInProgress = true;
       _authCompleter = Completer<bool>();
-      // _setupAuthListener();
+      _setupAuthListener();
       // 设置超时定时器
       _timeoutTimer = Timer(const Duration(seconds: 60), () {
         debugPrint('⏱️ OAuth 认证超时 ');
@@ -265,12 +255,12 @@ class OAuthService {
       await _supabase.auth.linkIdentity(
         OAuthProvider.apple,
         authScreenLaunchMode: launchMode,
-        redirectTo: '$callbackUri?type=linking',
+        redirectTo: linkingCallbackUri, //'$loginCallbackUri?type=linking',
       );
 
       debugPrint('✅ Apple 账号绑定请求已发送,等待用户完成授权');
 
-      _authCompleter?.complete(true);
+      // _authCompleter?.complete(true);
       // linkIdentity 返回 bool 表示请求是否成功发送
       // 实际绑定结果需要等待 OAuth 回调和 auth state change 事件
       final response = await _authCompleter!.future;
@@ -303,7 +293,7 @@ class OAuthService {
       }
       _isLinkingInProgress = true;
       _authCompleter = Completer<bool>();
-      // _setupAuthListener();
+      _setupAuthListener();
       // 设置超时定时器
       _timeoutTimer = Timer(const Duration(seconds: 60), () {
         debugPrint('⏱️ OAuth 认证超时 ');
@@ -317,11 +307,11 @@ class OAuthService {
       await _supabase.auth.linkIdentity(
         OAuthProvider.google,
         authScreenLaunchMode: launchMode,
-        redirectTo: '$callbackUri?type=linking',
+        redirectTo: linkingCallbackUri, //'$loginCallbackUri?type=linking',
       );
 
       debugPrint('✅ Google 账号绑定请求已发送,等待用户完成授权');
-      _authCompleter!.complete(true);
+      // _authCompleter!.complete(true);
       // linkIdentity 返回 bool 表示请求是否成功发送
       // 实际绑定结果需要等待 OAuth 回调和 auth state change 事件
       final response = await _authCompleter!.future;
@@ -351,6 +341,9 @@ class OAuthService {
 
       // 调用 Supabase API 解绑
       await _supabase.auth.unlinkIdentity(identity);
+      // await _supabase.auth.reauthenticate();
+      await _supabase.auth.refreshSession();
+      // await _supabase.auth.getUser();
 
       debugPrint('✅ 账号解绑成功');
       return true;

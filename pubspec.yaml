@@ -59,6 +59,7 @@ dependencies:
   segmented_progress_bar: ^1.0.0  # 分段进度条
   google_sign_in: ^7.2.0    # google登录
   sign_in_with_apple: ^7.0.1  # Apple登录
+  app_links: ^6.4.1        # deeplink处理
 
 dev_dependencies:
   flutter_test:

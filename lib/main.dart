@@ -1,3 +1,5 @@
+import 'package:app_links/app_links.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:jieba_flutter/analysis/jieba_segmenter.dart';
 import 'package:provider/provider.dart';
@@ -30,11 +32,38 @@ void main() async {
     await Supabase.initialize(
       url: SupabaseConfig.url,
       anonKey: SupabaseConfig.anonKey,
+      // authOptions: FlutterAuthClientOptions(authFlowType: AuthFlowType.pkce),
     );
     await JiebaSegmenter.init();
+
+    final initialLink = await AppLinks().getInitialLink();
+    if (initialLink != null) {
+      await _handleDeepLink(initialLink);
+    }
+    // 监听应用运行中的 Deeplink
+    AppLinks().uriLinkStream.listen((uri) async {
+      await _handleDeepLink(uri);
+    });
+
     runApp(MyApp());
   } catch (e) {
     debugPrint('初始化失败:$e');
+  }
+}
+
+/// 处理拦截到的 Deeplink
+Future<void> _handleDeepLink(Uri uri) async {
+  debugPrint('📥 应用层面拦截到 Deeplink: $uri');
+  // 1️⃣ 必须屏蔽自定义 scheme，阻止传入 GoRouter
+  if (uri.scheme == 'io.supabase.toneup') {
+    debugPrint('🛑 屏蔽自定义 Deeplink，不让 GoRouter 处理');
+    if (uri.host == 'linking-callback') {
+      debugPrint('🔗 linking-callback 被拦截，手动 push FORGOT 页面');
+      // WidgetsBinding.instance.addPostFrameCallback((_) {
+      //   rootNavigatorKey.currentContext?.push(AppRoutes.FORGOT);
+      // });
+    }
+    return; // ⛔ VERY IMPORTANT — 阻断继续传入 GoRouter
   }
 }
 
@@ -45,6 +74,7 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
+  late final String _initialLocation;
   late final GoRouter _router;
   // 🆕 用于显示全局错误提示的 GlobalKey
   final GlobalKey<ScaffoldMessengerState> _scaffoldMessengerKey =
@@ -56,7 +86,7 @@ class _MyAppState extends State<MyApp> {
 
     // 判断是否已登录
     final session = Supabase.instance.client.auth.currentSession;
-    final initialLocation = session != null ? AppRoutes.HOME : AppRoutes.LOGIN;
+    _initialLocation = session != null ? AppRoutes.HOME : AppRoutes.LOGIN;
 
     // 定义嵌套路由的分支（对应底部导航项）
     final branches = [
@@ -87,26 +117,85 @@ class _MyAppState extends State<MyApp> {
     ];
 
     _router = GoRouter(
-      initialLocation: initialLocation,
+      initialLocation: _initialLocation,
       navigatorKey: rootNavigatorKey,
       debugLogDiagnostics: true,
-      // redirect: (context, state) {
-      //   final uri = state.uri.toString();
-      //   // 如果是 Deep Link，提取路径部分
-      //   if (uri.contains('io.supabase.toneup://')) {
-      //     // 提取路径和查询参数
-      //     final uriObj = Uri.parse(uri);
-      //     final path = uriObj.path;
-      //     final query = uriObj.query;
+      redirect: (context, state) async {
+        final uri = state.uri;
+        // 0️⃣ 屏蔽所有外部 Deeplink，不让进入 GoRouter 栈
+        // if (state.uri.scheme == 'io.supabase.toneup') {
+        //   debugPrint('🛑 redirect: 屏蔽外部 deeplink: ${state.uri}');
+        //   return null; // 保持当前页，不跳转
+        // }
+        if (uri.host == 'linking-callback') {
+          //   final newPath = uri.path; // 应该是 '/linking-callback' 或 '/'
+          //   final queryParams = uri.queryParameters;
+          //   String newLocation;
+          //   if (queryParams.isNotEmpty) {
+          //     final queryString = Uri(queryParameters: queryParams).query;
+          //     // 确保路径正确，如果 uri.path 是 '/', 则使用 '/linking-callback'
+          //     newLocation =
+          //         '${newPath == '/' ? '/linking-callback' : newPath}?$queryString';
+          //   } else {
+          //     newLocation = newPath == '/' ? '/linking-callback' : newPath;
+          //   }
+          //   debugPrint('✅ redirect: 重定向到新路径: $newLocation');
+          //   // return newLocation;
+          await _router.push(AppRoutes.FORGOT);
+          return null;
+        }
 
-      //     debugPrint('📍 检测到 Deep Link，提取路径 $path$query');
-      //     // 重定向到路径版本
-      //     // return '$path${query.isNotEmpty ? "?$query" : ""}';
-      //     return '/login-callback?type=linking';
-      //   }
-      //   return null;
-      // },
+        // 对于所有其他情况，不进行重定向
+        return null;
+      },
       routes: [
+        GoRoute(
+          path: '/linking-callback',
+          name: 'linking-callback',
+          // redirect: (context, state) async {
+          //   try {
+          //     await _router.push(AppRoutes.FORGOT);
+          //     return null;
+          //   } catch (e) {
+          //     debugPrint('redirect: $e');
+          //   }
+          // },
+          builder: (context, state) => const SizedBox.shrink(),
+          // builder: (context, state) {
+          //   debugPrint('📍 GoRouter 捕获到 linking-callback 路由，准备自销毁。');
+          //   // 使用 addPostFrameCallback 确保在路由渲染后再执行 pop
+          //   // WidgetsBinding.instance.addPostFrameCallback((_) {
+          //   //   if (context.mounted) {
+          //   //     // 将这个空路由从导航栈中移除
+          //   //     GoRouter.of(context).pop();
+          //   //     debugPrint('📍 linking-callback 路由已自销毁。');
+          //   //   }
+          //   // });
+          //   // 返回一个完全透明、不占空间的 Widget
+          //   return const SizedBox.shrink();
+          // },
+        ),
+        if (kIsWeb)
+          GoRoute(
+            path: '/auth/callback/linking',
+            builder: (context, state) {
+              final callbackUri = state.uri;
+              // 检查是否是绑定回调（含type=linking）
+              if (callbackUri.queryParameters.containsKey('type') &&
+                  callbackUri.queryParameters['type'] == 'linking') {
+                // 重定向到移动端相同的回调路由处理
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (context.mounted) {
+                    GoRouter.of(context).pushNamed(
+                      'linking-callback',
+                      queryParameters: callbackUri.queryParameters,
+                    );
+                  }
+                });
+              }
+              return const SizedBox.shrink();
+            },
+          ),
         // 登录/注册页
         GoRoute(
           path: AppRoutes.LOGIN,
@@ -143,57 +232,6 @@ class _MyAppState extends State<MyApp> {
             child: const AccountSettings(),
           ),
         ),
-        // 🆕 Web 环境的 OAuth 回调
-        // GoRoute(
-        //   path: '/auth/callback',
-        //   redirect: (context, state) {
-        //     debugPrint('📍 OAuth 回调路由被访问');
-        //     final type = state.uri.queryParameters['type'];
-        //     if (type == 'linking') {
-        //       // 绑定操作,不跳转
-        //       debugPrint('🔗 检测到绑定操作,保持当前页面');
-        //       return null; // 不跳转
-        //     } else {
-        //       // 登录操作,跳转到首页
-        //       debugPrint('🏠 检测到登录操作,跳转到首页');
-        //       return AppRoutes.HOME;
-        //     }
-        //   },
-        //   builder: (context, state) {
-        //     debugPrint('📍 OAuth 回调路由被访问');
-        //     return Scaffold(
-        //       body: Center(
-        //         child: Column(
-        //           mainAxisAlignment: MainAxisAlignment.center,
-        //           children: [
-        //             CircularProgressIndicator(),
-        //             SizedBox(height: 16),
-        //             Text('Completing sign in...'),
-        //           ],
-        //         ),
-        //       ),
-        //     );
-        //   },
-        // ),
-        // // Deep Link: io.supabase.toneup://login-callback
-        // // 🆕 APP 环境的 OAuth 回调: /login-callback
-        // GoRoute(
-        //   path: '/login-callback',
-        //   redirect: (context, state) {
-        //     debugPrint('📍 Deep Link 回调路由: ${state.uri}');
-        //     final type = state.uri.queryParameters['type'];
-        //     if (type == 'linking') {
-        //       // 🎯 绑定操作:返回 null,然后在 builder 中处理
-        //       debugPrint('🔗 检测到绑定操作');
-        //       return null;
-        //     } else {
-        //       // 登录操作:直接跳转到首页
-        //       debugPrint('🏠 检测到登录操作,跳转到首页');
-        //       return AppRoutes.HOME;
-        //     }
-        //   },
-        // ),
-        // 有状态的嵌套路由（底部导航相关页面）
         StatefulShellRoute.indexedStack(
           builder: (context, state, navigationShell) =>
               MainShell(navigationShell: navigationShell),
@@ -242,15 +280,17 @@ class _MyAppState extends State<MyApp> {
         if (event == AuthChangeEvent.signedOut) {
           debugPrint('🚪 用户登出');
           _router.go(AppRoutes.LOGIN);
-        } else if (event == AuthChangeEvent.signedIn) {
-          debugPrint('✅ 用户登录成功');
+        } else if (event == AuthChangeEvent.signedIn && session != null) {
+          debugPrint('✅ 检测到登录/绑定成功事件');
           // 🆕 检查是否是绑定操作
           if (OAuthService().isAuthenticating) {
             // 🆕 绑定操作:不跳转,只记录日志
             debugPrint('🔗 绑定操作中,不执行登录跳转');
-          } else if (session != null) {
+            _showGlobalSnackBar('账号绑定成功', isError: false);
+            // OAuthService().resetLinkingState(); // 重置绑定状态
+          } else {
             final user = session.user;
-            debugPrint('👤 用户信息: ${user.email}');
+            debugPrint('🔐 识别为登录成功，执行跳转,👤 用户信息: ${user.email}');
             // 暂存第三方用户信息
             _setOAuthInfoToTempProfile(user);
             // 小延迟确保状态完全同步
@@ -261,9 +301,10 @@ class _MyAppState extends State<MyApp> {
         } else if (event == AuthChangeEvent.tokenRefreshed) {
           debugPrint('🔄 Token 已刷新');
         } else if (event == AuthChangeEvent.userUpdated) {
-          debugPrint('🔄 用户信息更新');
+          await Supabase.instance.client.auth.refreshSession();
+          debugPrint('✅ 检测到用户信息更新事件');
           if (OAuthService().isAuthenticating) {
-            debugPrint('✅ 绑定操作成功');
+            debugPrint('🔗 识别为绑定成功(通过userUpdated)，不执行跳转');
             _showGlobalSnackBar('账号绑定成功', isError: false);
           }
         }
@@ -303,7 +344,6 @@ class _MyAppState extends State<MyApp> {
   /// 🆕 显示全局 SnackBar
   void _showGlobalSnackBar(String message, {required bool isError}) {
     debugPrint('📢 显示提示: $message');
-
     _scaffoldMessengerKey.currentState?.showSnackBar(
       SnackBar(
         content: Text(message),
@@ -357,9 +397,10 @@ class _MyAppState extends State<MyApp> {
         theme: appThemeData,
         darkTheme: appDarkThemeData,
         themeMode: ThemeMode.system,
-        routerDelegate: _router.routerDelegate,
-        routeInformationParser: _router.routeInformationParser,
-        routeInformationProvider: _router.routeInformationProvider,
+        // routerDelegate: _router.routerDelegate,
+        // routeInformationParser: _router.routeInformationParser,
+        // routeInformationProvider: _router.routeInformationProvider,
+        routerConfig: _router,
         debugShowCheckedModeBanner: false,
         scaffoldMessengerKey: _scaffoldMessengerKey,
       ),

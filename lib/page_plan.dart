@@ -352,7 +352,7 @@ class _PlanPageState extends State<PlanPage> {
       iconColor = Colors.amber;
     } else {
       icon = Icons.track_changes_rounded;
-      iconColor = theme.colorScheme.onSecondaryFixedVariant;
+      iconColor = theme.colorScheme.onPrimaryContainer;
     }
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
