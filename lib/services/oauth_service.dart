@@ -6,9 +6,6 @@ class OAuthService {
   static final OAuthService _instance = OAuthService._internal();
   factory OAuthService() => _instance;
   OAuthService._internal();
-  // 1. 添加绑定状态标记
-  bool _isLinkingInProgress = false;
-  bool get isLinkingInProgress => _isLinkingInProgress;
 
   final _supabase = Supabase.instance.client;
   Completer<bool>? _authCompleter;
@@ -19,7 +16,8 @@ class OAuthService {
       ? '${Uri.base.origin}/auth/callback/login/'
       : 'io.supabase.toneup://login-callback/';
   String linkingCallbackUri = kIsWeb
-      ? '${Uri.base.origin}/auth/callback/linking/'
+      // ? '${Uri.base.origin}/auth/callback/linking/'
+      ? '${Uri.base.origin}/linking-callback/'
       : 'io.supabase.toneup://linking-callback/';
 
   /// 检查当前是否有活跃的认证流程
@@ -150,12 +148,10 @@ class OAuthService {
   void _cleanup() {
     _authSubscription?.cancel();
     _authSubscription = null;
-
     _timeoutTimer?.cancel();
     _timeoutTimer = null;
 
     _authCompleter = null;
-    _isLinkingInProgress = false;
   }
 
   /// 释放所有资源
@@ -238,7 +234,6 @@ class OAuthService {
         throw Exception('已绑定 Apple 账号');
       }
 
-      _isLinkingInProgress = true;
       _authCompleter = Completer<bool>();
       _setupAuthListener();
       // 设置超时定时器
@@ -291,7 +286,6 @@ class OAuthService {
       if (connections['google'] != null) {
         throw Exception('已绑定 Google 账号');
       }
-      _isLinkingInProgress = true;
       _authCompleter = Completer<bool>();
       _setupAuthListener();
       // 设置超时定时器

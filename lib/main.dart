@@ -1,5 +1,3 @@
-import 'package:app_links/app_links.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:jieba_flutter/analysis/jieba_segmenter.dart';
 import 'package:provider/provider.dart';
@@ -32,38 +30,12 @@ void main() async {
     await Supabase.initialize(
       url: SupabaseConfig.url,
       anonKey: SupabaseConfig.anonKey,
-      // authOptions: FlutterAuthClientOptions(authFlowType: AuthFlowType.pkce),
     );
     await JiebaSegmenter.init();
-
-    final initialLink = await AppLinks().getInitialLink();
-    if (initialLink != null) {
-      await _handleDeepLink(initialLink);
-    }
-    // 监听应用运行中的 Deeplink
-    AppLinks().uriLinkStream.listen((uri) async {
-      await _handleDeepLink(uri);
-    });
 
     runApp(MyApp());
   } catch (e) {
     debugPrint('初始化失败:$e');
-  }
-}
-
-/// 处理拦截到的 Deeplink
-Future<void> _handleDeepLink(Uri uri) async {
-  debugPrint('📥 应用层面拦截到 Deeplink: $uri');
-  // 1️⃣ 必须屏蔽自定义 scheme，阻止传入 GoRouter
-  if (uri.scheme == 'io.supabase.toneup') {
-    debugPrint('🛑 屏蔽自定义 Deeplink，不让 GoRouter 处理');
-    if (uri.host == 'linking-callback') {
-      debugPrint('🔗 linking-callback 被拦截，手动 push FORGOT 页面');
-      // WidgetsBinding.instance.addPostFrameCallback((_) {
-      //   rootNavigatorKey.currentContext?.push(AppRoutes.FORGOT);
-      // });
-    }
-    return; // ⛔ VERY IMPORTANT — 阻断继续传入 GoRouter
   }
 }
 
@@ -76,7 +48,6 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   late final String _initialLocation;
   late final GoRouter _router;
-  // 🆕 用于显示全局错误提示的 GlobalKey
   final GlobalKey<ScaffoldMessengerState> _scaffoldMessengerKey =
       GlobalKey<ScaffoldMessengerState>();
 
@@ -111,6 +82,26 @@ class _MyAppState extends State<MyApp> {
           GoRoute(
             path: AppRoutes.PROFILE,
             builder: (context, state) => const ProfilePage(),
+            routes: [
+              GoRoute(
+                path: 'linking-callback',
+                name: 'linking-callback',
+                builder: (context, state) {
+                  debugPrint('📍 [Route] 进入 linking-callback 路由，准备自销毁。');
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (_router.canPop()) {
+                      GoRouter.of(context).pop();
+                      debugPrint('📍 [Route] linking-callback 路由已自销毁。');
+                    }
+                    _router.push(AppRoutes.SETTINGS);
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      _router.push(AppRoutes.ACCOUNT_SETTINGS);
+                    });
+                  });
+                  return const SizedBox.shrink();
+                },
+              ),
+            ],
           ),
         ],
       ),
@@ -119,84 +110,27 @@ class _MyAppState extends State<MyApp> {
     _router = GoRouter(
       initialLocation: _initialLocation,
       navigatorKey: rootNavigatorKey,
-      debugLogDiagnostics: true,
+      // debugLogDiagnostics: true,
       redirect: (context, state) async {
         final uri = state.uri;
-        // 0️⃣ 屏蔽所有外部 Deeplink，不让进入 GoRouter 栈
-        // if (state.uri.scheme == 'io.supabase.toneup') {
-        //   debugPrint('🛑 redirect: 屏蔽外部 deeplink: ${state.uri}');
-        //   return null; // 保持当前页，不跳转
-        // }
-        if (uri.host == 'linking-callback') {
-          //   final newPath = uri.path; // 应该是 '/linking-callback' 或 '/'
-          //   final queryParams = uri.queryParameters;
-          //   String newLocation;
-          //   if (queryParams.isNotEmpty) {
-          //     final queryString = Uri(queryParameters: queryParams).query;
-          //     // 确保路径正确，如果 uri.path 是 '/', 则使用 '/linking-callback'
-          //     newLocation =
-          //         '${newPath == '/' ? '/linking-callback' : newPath}?$queryString';
-          //   } else {
-          //     newLocation = newPath == '/' ? '/linking-callback' : newPath;
-          //   }
-          //   debugPrint('✅ redirect: 重定向到新路径: $newLocation');
-          //   // return newLocation;
-          await _router.push(AppRoutes.FORGOT);
-          return null;
+        debugPrint(
+          '🛑 redirect: 重定向 deeplink: ${uri.toString()},host:${uri.host},query:${uri.query}',
+        );
+        if (uri.toString().contains('linking-callback')) {
+          try {
+            final path = uri.path == '/' ? '/linking-callback' : uri.path;
+            final newLocation = uri.query.isNotEmpty
+                ? '$path?${uri.query}'
+                : path;
+            debugPrint('重定向到：：：：：${AppRoutes.PROFILE}$newLocation');
+            return '${AppRoutes.PROFILE}$newLocation';
+          } catch (e) {
+            debugPrint('❌ [Redirect] 解析 Deeplink 失败: $e');
+          }
         }
-
-        // 对于所有其他情况，不进行重定向
         return null;
       },
       routes: [
-        GoRoute(
-          path: '/linking-callback',
-          name: 'linking-callback',
-          // redirect: (context, state) async {
-          //   try {
-          //     await _router.push(AppRoutes.FORGOT);
-          //     return null;
-          //   } catch (e) {
-          //     debugPrint('redirect: $e');
-          //   }
-          // },
-          builder: (context, state) => const SizedBox.shrink(),
-          // builder: (context, state) {
-          //   debugPrint('📍 GoRouter 捕获到 linking-callback 路由，准备自销毁。');
-          //   // 使用 addPostFrameCallback 确保在路由渲染后再执行 pop
-          //   // WidgetsBinding.instance.addPostFrameCallback((_) {
-          //   //   if (context.mounted) {
-          //   //     // 将这个空路由从导航栈中移除
-          //   //     GoRouter.of(context).pop();
-          //   //     debugPrint('📍 linking-callback 路由已自销毁。');
-          //   //   }
-          //   // });
-          //   // 返回一个完全透明、不占空间的 Widget
-          //   return const SizedBox.shrink();
-          // },
-        ),
-        if (kIsWeb)
-          GoRoute(
-            path: '/auth/callback/linking',
-            builder: (context, state) {
-              final callbackUri = state.uri;
-              // 检查是否是绑定回调（含type=linking）
-              if (callbackUri.queryParameters.containsKey('type') &&
-                  callbackUri.queryParameters['type'] == 'linking') {
-                // 重定向到移动端相同的回调路由处理
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  if (context.mounted) {
-                    GoRouter.of(context).pushNamed(
-                      'linking-callback',
-                      queryParameters: callbackUri.queryParameters,
-                    );
-                  }
-                });
-              }
-              return const SizedBox.shrink();
-            },
-          ),
-        // 登录/注册页
         GoRoute(
           path: AppRoutes.LOGIN,
           builder: (context, state) => const LoginPage(),
@@ -284,17 +218,13 @@ class _MyAppState extends State<MyApp> {
           debugPrint('✅ 检测到登录/绑定成功事件');
           // 🆕 检查是否是绑定操作
           if (OAuthService().isAuthenticating) {
-            // 🆕 绑定操作:不跳转,只记录日志
             debugPrint('🔗 绑定操作中,不执行登录跳转');
             _showGlobalSnackBar('账号绑定成功', isError: false);
-            // OAuthService().resetLinkingState(); // 重置绑定状态
           } else {
             final user = session.user;
             debugPrint('🔐 识别为登录成功，执行跳转,👤 用户信息: ${user.email}');
-            // 暂存第三方用户信息
             _setOAuthInfoToTempProfile(user);
             // 小延迟确保状态完全同步
-            // await Future.delayed(const Duration(milliseconds: 300));
             debugPrint('🏠 导航到首页');
             _router.go(AppRoutes.HOME);
           }
@@ -317,12 +247,9 @@ class _MyAppState extends State<MyApp> {
         if (error is AuthException) {
           final code = error.statusCode ?? '';
           final message = error.message;
-
           debugPrint('❌ Auth错误码: $code');
           debugPrint('❌ Auth错误信息: $message');
-
           String friendlyMessage;
-
           if (code == 'identity_already_exists' ||
               message.toLowerCase().contains('already linked')) {
             friendlyMessage = '该账号已被其他用户绑定';
@@ -336,8 +263,6 @@ class _MyAppState extends State<MyApp> {
           _showGlobalSnackBar('操作失败,请重试', isError: true);
         }
       },
-      onDone: () {},
-      cancelOnError: true,
     );
   }
 
@@ -397,10 +322,10 @@ class _MyAppState extends State<MyApp> {
         theme: appThemeData,
         darkTheme: appDarkThemeData,
         themeMode: ThemeMode.system,
-        // routerDelegate: _router.routerDelegate,
-        // routeInformationParser: _router.routeInformationParser,
-        // routeInformationProvider: _router.routeInformationProvider,
-        routerConfig: _router,
+        routerDelegate: _router.routerDelegate,
+        routeInformationParser: _router.routeInformationParser,
+        routeInformationProvider: _router.routeInformationProvider,
+        // routerConfig: _router,
         debugShowCheckedModeBanner: false,
         scaffoldMessengerKey: _scaffoldMessengerKey,
       ),
