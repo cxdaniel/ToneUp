@@ -458,13 +458,6 @@ class DataService {
   /// 获取评测题目
   Future<List<QuizesModle>> fetchEvaluationQuizes(int level) async {
     try {
-      // final data = await _supabase
-      //     .schema('research_core')
-      //     .from('evaluation')
-      //     .select()
-      //     .eq('level', level)
-      //     .order('random()', foreignTable: null)
-      //     .limit(10);
       final data = await _supabase
           .schema('research_core')
           .rpc<List<Map<String, dynamic>>>(
@@ -480,7 +473,7 @@ class DataService {
     }
   }
 
-  /// 获取用户当前级别指标完成情况(是否可升级)
+  /// 获取用户当前级别指标完成情况
   Future<IndicatorResultModel> getUserIndicatorResult(
     String userId,
     int level,

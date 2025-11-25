@@ -41,11 +41,11 @@ class _ProfilePageState extends State<ProfilePage> {
     return Consumer<ProfileProvider>(
       builder: (context, provider, child) {
         final viewPadding = MediaQuery.of(context).viewPadding;
-        return SafeArea(
-          bottom: false,
-          top: false,
-          child: Scaffold(
-            body: SingleChildScrollView(
+        return Scaffold(
+          body: RefreshIndicator(
+            edgeOffset: MediaQuery.of(context).viewPadding.top,
+            onRefresh: () => provider.fetchProfile(),
+            child: SingleChildScrollView(
               child: Padding(
                 padding: EdgeInsets.fromLTRB(
                   24,

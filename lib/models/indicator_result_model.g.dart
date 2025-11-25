@@ -13,11 +13,13 @@ IndicatorResultModel _$IndicatorResultModelFromJson(
   isEligibleForUpgrade: json['isEligibleForUpgrade'] as bool,
   coreIndicatorCoverage: (json['coreIndicatorCoverage'] as num).toDouble(),
   coreIndicatorDetails: (json['coreIndicatorDetails'] as List<dynamic>)
-      .map((e) => e as Map<String, dynamic>)
+      .map((e) => IndicatorCoreDetailModel.fromJson(e as Map<String, dynamic>))
       .toList(),
   consecutiveQualifiedCount: (json['consecutiveQualifiedCount'] as num)
       .toDouble(),
-  recentPractice: json['recentPractice'] as Map<String, dynamic>,
+  recentPractice: RecentPracticeModel.fromJson(
+    json['recentPractice'] as Map<String, dynamic>,
+  ),
   upgradeGap: (json['upgradeGap'] as num).toDouble(),
   message: json['message'] as String,
 );
@@ -33,4 +35,45 @@ Map<String, dynamic> _$IndicatorResultModelToJson(
   'recentPractice': instance.recentPractice,
   'upgradeGap': instance.upgradeGap,
   'message': instance.message,
+};
+
+RecentPracticeModel _$RecentPracticeModelFromJson(Map<String, dynamic> json) =>
+    RecentPracticeModel(
+      practiceCount7d: (json['practiceCount7d'] as num).toInt(),
+      practiceCount30d: (json['practiceCount30d'] as num).toInt(),
+      lastPracticeTime: DateTime.parse(json['lastPracticeTime'] as String),
+    );
+
+Map<String, dynamic> _$RecentPracticeModelToJson(
+  RecentPracticeModel instance,
+) => <String, dynamic>{
+  'practiceCount7d': instance.practiceCount7d,
+  'practiceCount30d': instance.practiceCount30d,
+  'lastPracticeTime': instance.lastPracticeTime.toIso8601String(),
+};
+
+IndicatorCoreDetailModel _$IndicatorCoreDetailModelFromJson(
+  Map<String, dynamic> json,
+) => IndicatorCoreDetailModel(
+  indicatorId: (json['indicatorId'] as num).toInt(),
+  indicatorName: json['indicatorName'] as String,
+  indicatorWeight: (json['indicatorWeight'] as num).toDouble(),
+  minimum: (json['minimum'] as num).toDouble(),
+  practiceCount: (json['practiceCount'] as num).toInt(),
+  avgScore: (json['avgScore'] as num).toDouble(),
+  isQualified: json['isQualified'] as bool,
+  practiceGap: (json['practiceGap'] as num).toDouble(),
+);
+
+Map<String, dynamic> _$IndicatorCoreDetailModelToJson(
+  IndicatorCoreDetailModel instance,
+) => <String, dynamic>{
+  'indicatorId': instance.indicatorId,
+  'indicatorName': instance.indicatorName,
+  'indicatorWeight': instance.indicatorWeight,
+  'minimum': instance.minimum,
+  'practiceCount': instance.practiceCount,
+  'avgScore': instance.avgScore,
+  'isQualified': instance.isQualified,
+  'practiceGap': instance.practiceGap,
 };

@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:toneup_app/models/quizzes/quiz_base.dart';
+import 'package:toneup_app/providers/profile_provider.dart';
 import 'package:toneup_app/services/data_service.dart';
 
 class EvaluationProvider extends ChangeNotifier {
@@ -90,15 +91,28 @@ class EvaluationProvider extends ChangeNotifier {
       notifyListeners();
       return;
     }
-    // } else {
-    //   //做错：错题移至队尾
-    //   final failQuiz = currentQuiz;
-    //   failQuiz.isRenewal = true;
-    //   quizzes.removeAt(_currentQuizIndex);
-    //   quizzes.add(failQuiz);
-    // }
-    // 下一题
     currentTouchedCount++;
     notifyListeners();
+  }
+
+  ///  创建用户资料和计划
+  Future<void> createProfileAndGoal(int level) async {
+    final User? user = Supabase.instance.client.auth.currentUser;
+    if (user == null) throw Exception("用户未登录");
+    retryFunc = null;
+    _isLoading = true;
+    notifyListeners();
+    try {
+      await ProfileProvider().createProfile();
+      await DataService().createNewActivePlan(user.id, level);
+    } catch (e) {
+      _errorMessage = e.toString();
+      retryLabel = 'Retry';
+      retryFunc = () => createProfileAndGoal(level);
+      if (kDebugMode) debugPrint("创建用户资料和计划-失败：$e");
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
   }
 }

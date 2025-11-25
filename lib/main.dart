@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:go_router/go_router.dart';
 import 'package:toneup_app/components/mainshell.dart';
+import 'package:toneup_app/page_create_goal.dart';
 import 'package:toneup_app/profile_account.dart';
 import 'package:toneup_app/page_evaluation.dart';
 import 'package:toneup_app/page_forgot.dart';
@@ -16,6 +17,7 @@ import 'package:toneup_app/page_signup.dart';
 import 'package:toneup_app/page_welcome.dart';
 import 'package:toneup_app/profile_settings.dart';
 import 'package:toneup_app/providers/account_settings_provider.dart';
+import 'package:toneup_app/providers/create_goal_provider.dart';
 import 'package:toneup_app/providers/plan_provider.dart';
 import 'package:toneup_app/providers/profile_provider.dart';
 import 'package:toneup_app/providers/tts_provider.dart';
@@ -164,6 +166,13 @@ class _MyAppState extends State<MyApp> {
           builder: (context, state) => ChangeNotifierProvider(
             create: (_) => AccountSettingsProvider(),
             child: const AccountSettings(),
+          ),
+        ),
+        GoRoute(
+          path: AppRoutes.CREATE_GOAL,
+          builder: (context, state) => ChangeNotifierProvider(
+            create: (_) => CreateGoalProvider(),
+            child: const CreateGoalPage(),
           ),
         ),
         StatefulShellRoute.indexedStack(

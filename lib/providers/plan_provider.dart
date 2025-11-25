@@ -26,6 +26,16 @@ class PlanProvider extends ChangeNotifier {
   VoidCallback? get retryFunc => _retryFunc;
   String? get retryLabel => _retryLabel;
   bool showUpgrade = false;
+  bool get showCreateAction =>
+      _allPlans
+              .where(
+                (plan) =>
+                    plan.status == PlanStatus.active ||
+                    plan.status == PlanStatus.pending,
+              )
+              .isEmpty &&
+          _allPlans.isNotEmpty ||
+      true;
 
   // 单例
   static final PlanProvider _instance = PlanProvider._internal();
@@ -182,7 +192,7 @@ class PlanProvider extends ChangeNotifier {
     }
   }
 
-  /// 切换激活计划（核心方法）
+  /// 切换激活计划
   Future<void> activatePlan(UserWeeklyPlanModel plan) async {
     try {
       _retryFunc = null;

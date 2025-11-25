@@ -130,32 +130,21 @@ class _PlanPageState extends State<PlanPage> {
         body: Consumer<PlanProvider>(
           builder: (context, provider, child) {
             planProvider = provider;
-            // 加载状态
-            if (planProvider.isLoading) {
-              return _buildLoadingState(context, planProvider);
-            }
             // 加载错误状态
             if (planProvider.errorMessage != null) {
               return _buildErrorState(context, planProvider);
             }
             // 空状态
             if (planProvider.allPlans.isEmpty) {
-              return Center(
-                child: Text(
-                  "Your have no Active Goal yet.",
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    color: theme.colorScheme.onSecondaryContainer,
-                  ),
-                ),
+              return _buildLoadingState(context, planProvider);
+            } else {
+              // 延迟执行滚动
+              WidgetsBinding.instance.addPostFrameCallback(
+                (_) => _scrollToActiveItem(),
               );
+              // 正常数据状态
+              return _buildDataState();
             }
-            // 延迟执行滚动
-            WidgetsBinding.instance.addPostFrameCallback(
-              (_) => _scrollToActiveItem(),
-            );
-
-            // 正常数据状态
-            return _buildDataState();
           },
         ),
       ),
@@ -242,12 +231,14 @@ class _PlanPageState extends State<PlanPage> {
         bottom: MediaQuery.of(context).viewPadding.bottom,
       ),
       child: RefreshIndicator(
+        edgeOffset: MediaQuery.of(context).viewPadding.top,
         onRefresh: () async {
           await planProvider.getAllPlans();
         },
-        backgroundColor: theme.colorScheme.secondaryContainer,
+        // backgroundColor: theme.colorScheme.secondaryContainer,
         child: CustomScrollView(
           controller: _scrollController,
+          physics: const AlwaysScrollableScrollPhysics(),
           slivers: [
             SliverAppBar(
               toolbarHeight: 10,

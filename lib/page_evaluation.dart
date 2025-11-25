@@ -5,8 +5,6 @@ import 'package:provider/provider.dart';
 import 'package:toneup_app/components/feedback_button.dart';
 import 'package:toneup_app/components/quiz_choice_widget.dart';
 import 'package:toneup_app/providers/evaluation_provider.dart';
-import 'package:toneup_app/providers/plan_provider.dart';
-import 'package:toneup_app/providers/profile_provider.dart';
 import 'package:toneup_app/providers/quiz_provider.dart';
 import 'package:toneup_app/providers/tts_provider.dart';
 import 'package:toneup_app/routes.dart';
@@ -511,7 +509,7 @@ class _EvaluationPageState extends State<EvaluationPage> {
       onTap: _isSubmitting
           ? null
           : () {
-              HapticFeedback.heavyImpact();
+              HapticFeedback.mediumImpact();
               onTap();
             },
       child: Ink(
@@ -563,10 +561,7 @@ class _EvaluationPageState extends State<EvaluationPage> {
       _isSubmitting = true;
     });
     try {
-      await ProfileProvider().createProfile();
-      await PlanProvider().createPlan(
-        level: ProfileProvider().tempProfile.level!,
-      );
+      await evaluationProvider.createProfileAndGoal(targetLevel);
       if (mounted) {
         context.go(AppRoutes.HOME);
       }

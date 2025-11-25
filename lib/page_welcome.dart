@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:jieba_flutter/conversion/common_conversion_definition.dart';
+import 'package:toneup_app/components/components.dart';
 import 'package:toneup_app/components/feedback_button.dart';
 import 'package:toneup_app/models/enumerated_types.dart';
 import 'package:toneup_app/providers/profile_provider.dart';
@@ -164,8 +165,10 @@ class _WelcomePageState extends State<WelcomePage> {
                   color: theme.colorScheme.onPrimary,
                 ),
               ),
-              _mainActButton(
+              mainActtionButton(
+                context: ctx,
                 icon: Icons.text_snippet,
+                iconAlignment: IconAlignment.end,
                 label: 'Start Test',
                 backColor: theme.colorScheme.primaryContainer,
                 frontColor: theme.colorScheme.onPrimaryContainer,
@@ -322,9 +325,11 @@ class _WelcomePageState extends State<WelcomePage> {
                     ],
                   ),
                 ),
-                _mainActButton(
+                mainActtionButton(
+                  context: context,
                   label: 'Continue',
                   icon: Icons.arrow_right_alt_rounded,
+                  iconAlignment: IconAlignment.end,
                   onTap: validations.get(STEPS.nickname) ?? false
                       ? () {
                           ProfileProvider().tempProfile.nickname =
@@ -456,9 +461,11 @@ class _WelcomePageState extends State<WelcomePage> {
           child: Container(
             padding: EdgeInsets.fromLTRB(24, 24, 24, 60),
             color: theme.colorScheme.surface.withAlpha(200),
-            child: _mainActButton(
+            child: mainActtionButton(
+              context: context,
               label: 'Continue',
               icon: Icons.arrow_right_alt_rounded,
+              iconAlignment: IconAlignment.end,
               onTap: validations.get(STEPS.purpose) ?? false ? nextStep : null,
             ),
           ),
@@ -579,9 +586,11 @@ class _WelcomePageState extends State<WelcomePage> {
           child: Container(
             padding: EdgeInsets.fromLTRB(24, 24, 24, 60),
             color: theme.colorScheme.surface.withAlpha(200),
-            child: _mainActButton(
+            child: mainActtionButton(
+              context: context,
               label: 'Continue',
               icon: Icons.arrow_right_alt_rounded,
+              iconAlignment: IconAlignment.end,
               onTap: validations.get(STEPS.duration) ?? false ? nextStep : null,
             ),
           ),
@@ -792,10 +801,11 @@ class _WelcomePageState extends State<WelcomePage> {
   }
 
   /// 主操作按钮
-  Widget _mainActButton({
+  Widget _del_mainActButton({
     required String label,
     VoidCallback? onTap,
     IconData? icon,
+    IconAlignment? iconAlignment,
     Color? backColor,
     Color? frontColor,
   }) {
@@ -818,7 +828,12 @@ class _WelcomePageState extends State<WelcomePage> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             spacing: 10,
             children: [
-              if (icon != null) SizedBox(width: 24),
+              if (icon != null && iconAlignment == IconAlignment.end)
+                SizedBox(width: 24),
+              if (icon != null && iconAlignment == IconAlignment.start)
+                Icon(icon, color: frontColor),
+              if (icon != null && iconAlignment == null)
+                Icon(icon, color: frontColor),
               Text(
                 label,
                 style: theme.textTheme.titleMedium!.copyWith(
@@ -826,7 +841,10 @@ class _WelcomePageState extends State<WelcomePage> {
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              if (icon != null) Icon(icon, color: frontColor),
+              if (icon != null && iconAlignment == IconAlignment.end)
+                Icon(icon, color: frontColor),
+              if (icon != null && iconAlignment == IconAlignment.start)
+                SizedBox(width: 24),
             ],
           ),
         ),
@@ -957,9 +975,11 @@ class _WelcomePageState extends State<WelcomePage> {
               ],
             ),
           ),
-          _mainActButton(
+          mainActtionButton(
+            context: context,
             label: 'Start HSK $level',
             icon: Icons.arrow_right_alt_rounded,
+            iconAlignment: IconAlignment.end,
             onTap: () => gotoEvaluation(level),
           ),
         ],

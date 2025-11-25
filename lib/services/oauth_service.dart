@@ -25,11 +25,9 @@ class OAuthService {
       _authCompleter != null && !_authCompleter!.isCompleted;
 
   /// 启动 OAuth 登录流程
-  ///
   /// [provider] - OAuth 提供商 (apple, google 等)
   /// [launchMode] - 启动模式，默认使用外部浏览器
   /// [timeout] - 超时时间，默认 60 秒
-  ///
   /// 返回 true 表示登录成功，false 表示失败或取消
   Future<bool> signInWithProvider(
     OAuthProvider provider, {
