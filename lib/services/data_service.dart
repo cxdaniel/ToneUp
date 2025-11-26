@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/foundation.dart';
 import 'package:toneup_app/models/activity_model.dart';
@@ -11,6 +12,7 @@ import 'package:toneup_app/models/quizzes/quizes_modle.dart';
 import 'package:toneup_app/models/user_practice_model.dart';
 import 'package:toneup_app/models/user_score_records_model.dart';
 import 'package:toneup_app/models/user_weekly_plan_model.dart';
+import 'package:toneup_app/services/config.dart';
 
 /// 用户学习计划服务类：封装所有计划相关的业务逻辑（查询、创建、激活等）
 class DataService {
@@ -42,48 +44,6 @@ class DataService {
     }
   }
 
-  /// 将用户所有旧的 active 计划改为 pending
-  /// @param userId：当前用户ID（从Auth获取）
-  Future<void> updateOldActivePlansToPending({
-    required String userId,
-    required List<UserWeeklyPlanModel> plans,
-  }) async {
-    try {
-      final toPending = plans
-          .where((plan) => plan.status == PlanStatus.active)
-          .map((p) {
-            return p.id;
-          })
-          .toList();
-      if (toPending.isNotEmpty) {
-        await _supabase
-            .from('active_user_weekly_plans')
-            .update({'status': PlanStatus.pending.name})
-            .eq('user_id', userId)
-            .inFilter('id', toPending);
-      }
-      final toDone = plans
-          .where((plan) => plan.status == PlanStatus.reactive)
-          .map((p) {
-            return p.id;
-          })
-          .toList();
-
-      if (toDone.isNotEmpty) {
-        await _supabase
-            .from('active_user_weekly_plans')
-            .update({'status': PlanStatus.done.name})
-            .eq('user_id', userId)
-            .inFilter('id', toDone);
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint("更新旧计划异常：${e.toString()}");
-      }
-      rethrow;
-    }
-  }
-
   /// 查询用户当前的 active 计划（无则返回null）
   /// @param userId：当前用户ID
   /// @return 活跃计划数据（Map）或 null
@@ -95,6 +55,7 @@ class DataService {
           .eq('user_id', userId)
           .or('status.eq.active,status.eq.reactive')
           .order('created_at', ascending: false)
+          .limit(1)
           .maybeSingle();
 
       final plan = (data != null) ? UserWeeklyPlanModel.fromJson(data) : null;
@@ -139,78 +100,100 @@ class DataService {
     }
   }
 
-  /// 创建新的 active 计划（通过Edge Function，同时将旧active改为pending）
-  /// @param userId：当前用户ID
-  /// @return 新创建的计划数据（包含id、status等）
-  Future<UserWeeklyPlanModel> createNewActivePlan(
-    String userId,
-    int level,
-  ) async {
-    try {
-      final createResponse = await _supabase.functions.invoke(
-        "get-focus-indicators",
-        body: {"user_id": userId, "level": level},
-      );
+  /// 生成学习计划（带进度回调）
+  Stream<Map<String, dynamic>> generatePlanWithProgress({
+    required String userId,
+    required List<int> inds,
+    int dur = 60,
+    List<String>? acts,
+  }) async* {
+    final session = _supabase.auth.currentSession;
+    final url = '${SupabaseConfig.url}/functions/v1/create-plan';
+    final headers = {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ${session?.accessToken}',
+      'apikey': SupabaseConfig.anonKey,
+    };
+    final request = http.Request('POST', Uri.parse(url));
+    request.headers.addAll(headers);
+    request.body = json.encode({
+      'user_id': userId,
+      'inds': inds,
+      'dur': dur,
+      'acts': acts,
+    });
 
-      if (createResponse.status != 200) {
-        throw Exception("创建计划失败：状态码 ${createResponse.status}");
-      }
+    final response = await request.send();
 
-      final responseList = createResponse.data as List<dynamic>;
-      if (responseList.isEmpty) {
-        throw Exception("创建计划失败：返回数组为空");
+    if (response.statusCode != 200) {
+      throw Exception('请求失败: ${response.statusCode}');
+    }
+    String buffer = '';
+    // 逐行读取流式响应
+    await for (final chunk in response.stream.transform(utf8.decoder)) {
+      // 将新数据追加到缓冲区
+      buffer += chunk;
+      // 按换行符分割，保留最后一个可能不完整的部分
+      final lines = buffer.split('\n');
+      // 最后一行可能不完整，保留在缓冲区中
+      buffer = lines.last;
+      // 处理完整的行（除了最后一行）
+      for (int i = 0; i < lines.length - 1; i++) {
+        final line = lines[i].trim();
+        if (line.isEmpty) continue;
+        try {
+          final data = json.decode(line) as Map<String, dynamic>;
+          yield data;
+        } catch (e) {
+          if (kDebugMode) {
+            debugPrint('解析错误: $e, 原始数据: $line');
+          }
+        }
       }
-      // 取数组中的第一个元素作为计划数据
-      final newPlanData = responseList.first as Map<String, dynamic>;
-      return UserWeeklyPlanModel.fromJson(newPlanData);
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint("创建新计划异常：${e.toString()}");
+    }
+    // 处理缓冲区中剩余的数据
+    if (buffer.trim().isNotEmpty) {
+      try {
+        final data = json.decode(buffer.trim()) as Map<String, dynamic>;
+        yield data;
+      } catch (e) {
+        if (kDebugMode) {
+          debugPrint('解析最后一条数据错误: $e, 原始数据: $buffer');
+        }
       }
-      rethrow;
     }
   }
 
   /// 激活某个已存在的计划（将其改为 active，旧 active 改为 pending）
   /// @param userId：当前用户ID
   /// @param targetPlanId：要激活的计划ID（数据库中的 id 字段）
-  Future<void> markPlanAsActive({
+  Future<UserWeeklyPlanModel?> markPlanAsActive({
     required String userId,
     required UserWeeklyPlanModel plan,
   }) async {
     try {
-      if (plan.status == PlanStatus.active ||
-          plan.status == PlanStatus.reactive) {
-        return;
-      } else if (plan.status == PlanStatus.pending) {
-        final resP = await _supabase
-            .from('user_weekly_plans')
-            .update({'status': PlanStatus.active.name})
-            // .eq('user_id', userId)
-            .eq('id', plan.id)
-            .select()
-            .maybeSingle();
-
+      final result =
+          await _supabase.rpc(
+                'activate_plan',
+                params: {'p_user_id': userId, 'p_plan_id': plan.id},
+              )
+              as List<dynamic>;
+      if (result.isEmpty) {
         if (kDebugMode) {
-          debugPrint('激活计划成功: $resP');
+          debugPrint('⚠️ 未找到计划 ID: ${plan.id} 或更新失败');
         }
-      } else if (plan.status == PlanStatus.done) {
-        final resD = await _supabase
-            .from('user_weekly_plans')
-            .update({'status': PlanStatus.reactive.name})
-            // .eq('user_id', userId)
-            .eq('id', plan.id)
-            .select()
-            .maybeSingle();
-        if (kDebugMode) {
-          debugPrint('激活计划成功: $resD');
-        }
+        return null;
       }
-
-      return;
+      final activatedPlan = UserWeeklyPlanModel.fromJson(result.first);
+      if (kDebugMode) {
+        debugPrint('✅ 已激活计划: ${activatedPlan.id}');
+      }
+      return activatedPlan;
     } catch (e) {
-      debugPrint("激活计划异常：$e");
-      rethrow;
+      if (kDebugMode) {
+        debugPrint("❌ 更新计划异常：${e.toString()}");
+      }
+      throw Exception("更新计划状态失败：${e.toString()}");
     }
   }
 
@@ -493,6 +476,35 @@ class DataService {
       }
       throw Exception("获取用户当前级别指标完成情况-失败：${e.toString()}");
     }
+  }
+
+  /// 计算并获取重点关注指标
+  /// @param indicators：用户指标列表
+  /// @param quentity：要返回的重点指标数量，默认3个
+  /// @return 重点关注指标列表
+  Future<List<IndicatorCoreDetailModel>> getFocusedIndicators(
+    List<IndicatorCoreDetailModel> indicators, {
+    int quentity = 3,
+  }) async {
+    for (var ind in indicators) {
+      final importanceScore = ind.indicatorWeight; // 重要性得分（0-1）
+      final gapRatio = ind.minimum + ind.practiceGap == 0
+          ? 0
+          : ind.practiceGap / (ind.minimum + ind.practiceGap); // 达标差距占比
+      final completionRate = ind.minimum == 0
+          ? 0
+          : ind.practiceCount / ind.minimum; // 完成度
+      final insufficientScore = 1 - completionRate; //完成度不足得分
+      final priorityScore =
+          importanceScore * 0.4 + gapRatio * 0.35 + insufficientScore * 0.25;
+      ind.priorityScore = priorityScore;
+    }
+    indicators.sort((a, b) {
+      return b.priorityScore!.compareTo(a.priorityScore!);
+    });
+    quentity = quentity > indicators.length ? indicators.length : quentity;
+    final focusedIndicators = indicators.take(quentity).toList();
+    return focusedIndicators;
   }
 
   /// 保存用户头像

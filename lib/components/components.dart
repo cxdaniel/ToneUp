@@ -99,39 +99,50 @@ Widget mainActtionButton({
   VoidCallback? onTap,
   IconData? icon,
   IconAlignment? iconAlignment,
+  bool isLoading = false,
+  double radius = 16,
   Color? backColor,
   Color? frontColor,
-  bool? isLoading,
+  Color borderColor = Colors.transparent,
   String? loadingLabel,
+  MainAxisSize mainAxisSize = MainAxisSize.max,
+  EdgeInsetsGeometry padding = const EdgeInsets.all(12),
 }) {
   final theme = Theme.of(context);
+  final isFixed = (onTap == null || isLoading);
   backColor = (onTap == null || isLoading == true)
-      ? theme.colorScheme.secondaryFixed
+      ? theme.colorScheme.outlineVariant.withAlpha(80)
       : backColor ?? theme.colorScheme.primary;
   frontColor = (onTap == null || isLoading == true)
-      ? theme.colorScheme.onSecondaryFixedVariant
+      ? theme.colorScheme.outline
       : frontColor ?? theme.colorScheme.onPrimary;
 
   return Material(
     color: Colors.transparent,
     child: FeedbackButton(
       borderRadius: BorderRadius.circular(16),
-      onTap: isLoading == true
+      onTap: isFixed
           ? null
           : () {
               HapticFeedback.mediumImpact();
-              onTap!();
+              onTap();
             },
       child: Ink(
-        padding: const EdgeInsets.all(12),
+        padding: padding,
         decoration: ShapeDecoration(
           color: backColor,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(radius),
+            side: BorderSide(
+              width: 2,
+              strokeAlign: BorderSide.strokeAlignInside,
+              color: borderColor,
+            ),
           ),
         ),
         child: loadingLabel == null
             ? Row(
+                mainAxisSize: mainAxisSize,
                 mainAxisAlignment: (iconAlignment != null)
                     ? MainAxisAlignment.spaceBetween
                     : MainAxisAlignment.center,
@@ -143,11 +154,14 @@ Widget mainActtionButton({
                     Icon(icon, color: frontColor),
                   if (icon != null && iconAlignment == null)
                     Icon(icon, color: frontColor),
-                  Text(
-                    label,
-                    style: theme.textTheme.titleMedium!.copyWith(
-                      color: frontColor,
-                      fontWeight: FontWeight.bold,
+                  Expanded(
+                    child: Text(
+                      label,
+                      style: theme.textTheme.titleMedium!.copyWith(
+                        color: frontColor,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
                     ),
                   ),
                   if (icon != null && iconAlignment == IconAlignment.end)
@@ -157,6 +171,7 @@ Widget mainActtionButton({
                 ],
               )
             : Row(
+                mainAxisSize: mainAxisSize,
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
@@ -168,6 +183,40 @@ Widget mainActtionButton({
                   ),
                 ],
               ),
+      ),
+    ),
+  );
+}
+
+Widget tagLabel({
+  required BuildContext context,
+  required String label,
+  Color? backColor,
+  Color? frontColor,
+  EdgeInsetsGeometry? padding,
+  double? fontSize,
+}) {
+  final theme = Theme.of(context);
+  return Container(
+    padding: padding ?? const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+    decoration: ShapeDecoration(
+      color: backColor ?? theme.colorScheme.secondaryContainer,
+      shape: RoundedRectangleBorder(
+        side: BorderSide(
+          width: 1,
+          strokeAlign: BorderSide.strokeAlignCenter,
+          color:
+              (frontColor ?? Theme.of(context).colorScheme.onSecondaryContainer)
+                  .withAlpha(40),
+        ),
+        borderRadius: BorderRadius.circular(16),
+      ),
+    ),
+    child: Text(
+      label,
+      style: theme.textTheme.labelLarge?.copyWith(
+        color: frontColor ?? Theme.of(context).colorScheme.onSecondaryContainer,
+        fontSize: fontSize,
       ),
     ),
   );

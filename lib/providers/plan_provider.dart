@@ -2,7 +2,6 @@ import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:toneup_app/models/enumerated_types.dart';
 import 'package:toneup_app/models/indicator_result_model.dart';
-import 'package:toneup_app/providers/profile_provider.dart';
 import 'package:toneup_app/services/data_service.dart';
 import '../models/user_weekly_plan_model.dart';
 
@@ -28,14 +27,13 @@ class PlanProvider extends ChangeNotifier {
   bool showUpgrade = false;
   bool get showCreateAction =>
       _allPlans
-              .where(
-                (plan) =>
-                    plan.status == PlanStatus.active ||
-                    plan.status == PlanStatus.pending,
-              )
-              .isEmpty &&
-          _allPlans.isNotEmpty ||
-      true;
+          .where(
+            (plan) =>
+                plan.status == PlanStatus.active ||
+                plan.status == PlanStatus.pending,
+          )
+          .isEmpty &&
+      _allPlans.isNotEmpty;
 
   // 单例
   static final PlanProvider _instance = PlanProvider._internal();
@@ -127,6 +125,7 @@ class PlanProvider extends ChangeNotifier {
 
   /// 获取所有计划
   Future<void> getAllPlans() async {
+    debugPrint('获取所有计划');
     try {
       final User? user = Supabase.instance.client.auth.currentUser;
       if (user == null) throw Exception("用户未登录");
@@ -137,7 +136,6 @@ class PlanProvider extends ChangeNotifier {
       _loadingMessage = "Loading All Goals...";
       notifyListeners();
       _allPlans = await DataService().fetchPlans(user.id);
-      //TODO：这里可以优化去掉在获取allplan的时候指定激活计划
       _loadingMessage = "Fetch Active Goal...";
       notifyListeners();
       _activePlan = await DataService().fetchPracticeByPlan(
@@ -160,40 +158,9 @@ class PlanProvider extends ChangeNotifier {
     }
   }
 
-  /// 创建计划
-  Future<void> createPlan({int level = 1}) async {
-    try {
-      _retryFunc = null;
-      _isLoading = true;
-      _errorMessage = null;
-      final User? user = Supabase.instance.client.auth.currentUser;
-      if (user == null) throw Exception("用户未登录");
-
-      _loadingMessage = "Creating a New Goal...";
-      notifyListeners();
-      await DataService().updateOldActivePlansToPending(
-        userId: user.id,
-        plans: _allPlans,
-      );
-      await DataService().createNewActivePlan(user.id, level);
-      _loadingMessage = "Updating All Goals...";
-      notifyListeners();
-      await getAllPlans();
-      //更新profile
-      ProfileProvider().updatePlan();
-    } catch (e) {
-      _errorMessage = e.toString();
-      _retryLabel = 'Retry';
-      _retryFunc = () => createPlan(level: level);
-      if (kDebugMode) debugPrint("创建计划失败：$e");
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
-  }
-
   /// 切换激活计划
   Future<void> activatePlan(UserWeeklyPlanModel plan) async {
+    debugPrint('激活计划: ${plan.id}');
     try {
       _retryFunc = null;
       _isLoading = true;
@@ -204,10 +171,6 @@ class PlanProvider extends ChangeNotifier {
       final User? user = Supabase.instance.client.auth.currentUser;
       if (user == null) throw Exception("用户未登录");
 
-      await DataService().updateOldActivePlansToPending(
-        userId: user.id,
-        plans: _allPlans,
-      );
       await DataService().markPlanAsActive(userId: user.id, plan: plan);
 
       _loadingMessage = "Updating All Goals...";

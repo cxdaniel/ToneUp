@@ -330,22 +330,11 @@ class _HomePageState extends State<HomePage> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           spacing: 8,
                           children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                              ),
-                              decoration: ShapeDecoration(
-                                color: const Color(0xFFFF9500),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                              ),
-                              child: Text(
-                                'HSK $currentLevel',
-                                style: theme.textTheme.labelLarge?.copyWith(
-                                  color: Colors.white,
-                                ),
-                              ),
+                            tagLabel(
+                              context: context,
+                              label: 'HSK $currentLevel',
+                              backColor: const Color(0xFFFF9500),
+                              frontColor: Colors.white,
                             ),
                             Text(
                               topicTag,
@@ -554,28 +543,7 @@ class _HomePageState extends State<HomePage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       spacing: 10,
       children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10),
-          decoration: ShapeDecoration(
-            color: theme.colorScheme.secondaryContainer,
-            shape: RoundedRectangleBorder(
-              side: BorderSide(
-                width: 1,
-                strokeAlign: BorderSide.strokeAlignCenter,
-                color: Theme.of(
-                  context,
-                ).colorScheme.onSecondaryContainer.withAlpha(40),
-              ),
-              borderRadius: BorderRadius.circular(10),
-            ),
-          ),
-          child: Text(
-            'Targets Words',
-            style: theme.textTheme.labelLarge?.copyWith(
-              color: Theme.of(context).colorScheme.onSecondaryContainer,
-            ),
-          ),
-        ),
+        tagLabel(context: context, label: 'Target Words'),
         Text.rich(
           TextSpan(
             children: targetWords
@@ -627,27 +595,7 @@ class _HomePageState extends State<HomePage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       spacing: 10,
       children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10),
-          decoration: ShapeDecoration(
-            color: theme.colorScheme.secondaryContainer,
-            shape: RoundedRectangleBorder(
-              side: BorderSide(
-                width: 1,
-                color: Theme.of(
-                  context,
-                ).colorScheme.onSecondaryContainer.withAlpha(40),
-              ),
-              borderRadius: BorderRadius.circular(10),
-            ),
-          ),
-          child: Text(
-            'Common Sentences',
-            style: theme.textTheme.labelLarge?.copyWith(
-              color: Theme.of(context).colorScheme.onSecondaryContainer,
-            ),
-          ),
-        ),
+        tagLabel(context: context, label: 'Common Sentences'),
         ...commonSentences.map((sentence) {
           return Text.rich(
             TextSpan(
@@ -677,27 +625,7 @@ class _HomePageState extends State<HomePage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       spacing: 10,
       children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10),
-          decoration: ShapeDecoration(
-            color: theme.colorScheme.secondaryContainer,
-            shape: RoundedRectangleBorder(
-              side: BorderSide(
-                width: 1,
-                color: Theme.of(
-                  context,
-                ).colorScheme.onSecondaryContainer.withAlpha(40),
-              ),
-              borderRadius: BorderRadius.circular(10),
-            ),
-          ),
-          child: Text(
-            'key Grammar Points',
-            style: theme.textTheme.labelLarge?.copyWith(
-              color: Theme.of(context).colorScheme.onSecondaryContainer,
-            ),
-          ),
-        ),
+        tagLabel(context: context, label: 'Key Grammar Points'),
         Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,

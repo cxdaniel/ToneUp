@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import 'package:toneup_app/components/feedback_button.dart';
+import 'package:toneup_app/components/components.dart';
 import 'package:toneup_app/components/quiz_choice_widget.dart';
 import 'package:toneup_app/providers/evaluation_provider.dart';
 import 'package:toneup_app/providers/quiz_provider.dart';
@@ -18,7 +17,7 @@ class EvaluationPage extends StatefulWidget {
 }
 
 class _EvaluationPageState extends State<EvaluationPage> {
-  bool _isSubmitting = false;
+  // bool _isSubmitting = false;
   late TTSProvider ttsProvider;
   late ThemeData theme;
   late EvaluationProvider evaluationProvider;
@@ -293,19 +292,26 @@ class _EvaluationPageState extends State<EvaluationPage> {
               ),
             ),
             _scoreProgress(),
+            SizedBox(height: 8),
             Text(
-              'Awesome! Your level fits like a glove~ Click “Let’s Start Now” to dive into your Chinese learning journey!',
+              'Awesome! Your level fits like a glove~ \nClick “Let‘s Start Now” to dive into your Chinese learning journey!',
               style: theme.textTheme.bodyLarge!.copyWith(
                 color: theme.colorScheme.secondary,
                 fontWeight: FontWeight.w500,
               ),
+              textAlign: TextAlign.center,
             ),
           ],
         ),
-        _actButton(
-          iconRight: Icons.arrow_right_alt_rounded,
-          label: 'Let\'s Start Now',
-          waiting: 'Creating your Goal ...',
+        mainActtionButton(
+          context: context,
+          label: 'Let‘s Start Now',
+          icon: Icons.arrow_forward_rounded,
+          iconAlignment: IconAlignment.end,
+          radius: 24,
+          mainAxisSize: MainAxisSize.min,
+          isLoading: evaluationProvider.isCreating,
+          loadingLabel: evaluationProvider.loadingMessage,
           onTap: _confirmToStart,
         ),
       ],
@@ -351,9 +357,13 @@ class _EvaluationPageState extends State<EvaluationPage> {
             ),
           ],
         ),
-        _actButton(
-          iconLeft: Icons.arrow_back_rounded,
+        mainActtionButton(
+          context: context,
           label: 'Back to Choose Another Level',
+          icon: Icons.arrow_back_rounded,
+          iconAlignment: IconAlignment.start,
+          radius: 24,
+          mainAxisSize: MainAxisSize.min,
           onTap: () {
             context.pop();
           },
@@ -392,28 +402,41 @@ class _EvaluationPageState extends State<EvaluationPage> {
             ),
             _scoreProgress(),
             Text(
-              'Wow! You crushed this level—you’re totally primed for a bigger challenge~ Head back to choose a higher level and keep leveling up your Chinese skills!',
+              'Wow! You crushed this level—you’re totally primed for a bigger challenge~ \nHead back to choose a higher level and keep leveling up your Chinese skills!',
               style: theme.textTheme.bodyLarge!.copyWith(
                 color: theme.colorScheme.secondary,
                 fontWeight: FontWeight.w500,
               ),
+              textAlign: TextAlign.center,
             ),
           ],
         ),
         Column(
           spacing: 16,
           children: [
-            _actButton(
-              iconLeft: Icons.arrow_back_rounded,
+            mainActtionButton(
+              context: context,
               label: 'Back to Another Level',
+              icon: Icons.arrow_back_rounded,
+              iconAlignment: IconAlignment.start,
+              radius: 24,
+              mainAxisSize: MainAxisSize.min,
+              backColor: theme.colorScheme.secondaryContainer.withAlpha(128),
+              frontColor: theme.colorScheme.primary,
+              borderColor: theme.colorScheme.primary.withAlpha(40),
               onTap: () {
                 context.pop();
               },
             ),
-            _actButton(
-              iconRight: Icons.arrow_right_alt_rounded,
+            mainActtionButton(
+              context: context,
               label: 'Start with Level HSK $targetLevel',
-              waiting: 'Creating your Goal ...',
+              icon: Icons.arrow_forward_rounded,
+              iconAlignment: IconAlignment.end,
+              radius: 24,
+              mainAxisSize: MainAxisSize.min,
+              isLoading: evaluationProvider.isCreating,
+              loadingLabel: evaluationProvider.loadingMessage,
               onTap: _confirmToStart,
             ),
           ],
@@ -495,71 +518,8 @@ class _EvaluationPageState extends State<EvaluationPage> {
     );
   }
 
-  /// 行动按钮
-  Widget _actButton({
-    required String label,
-    required VoidCallback onTap,
-    IconData? iconRight,
-    IconData? iconLeft,
-    waiting = 'Waiting...',
-  }) {
-    // _isSubmitting = false;
-    return FeedbackButton(
-      borderRadius: BorderRadius.circular(24),
-      onTap: _isSubmitting
-          ? null
-          : () {
-              HapticFeedback.mediumImpact();
-              onTap();
-            },
-      child: Ink(
-        padding: EdgeInsets.all(12),
-        decoration: ShapeDecoration(
-          color: _isSubmitting
-              ? theme.colorScheme.secondaryContainer
-              : theme.colorScheme.primary,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadiusGeometry.circular(24),
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          spacing: 12,
-          children: [
-            iconLeft != null
-                ? Icon(iconLeft, size: 24, color: theme.colorScheme.onPrimary)
-                : SizedBox(width: 10),
-            Text(
-              _isSubmitting ? waiting : label,
-              style: theme.textTheme.titleMedium!.copyWith(
-                color: _isSubmitting
-                    ? theme.colorScheme.onSecondaryContainer
-                    : theme.colorScheme.onPrimary,
-              ),
-            ),
-            _isSubmitting
-                ? SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: theme.colorScheme.secondary,
-                    ),
-                  )
-                : iconRight != null
-                ? Icon(iconRight, size: 24, color: theme.colorScheme.onPrimary)
-                : SizedBox(width: 10),
-          ],
-        ),
-      ),
-    );
-  }
-
   /// 确定级别
   Future<void> _confirmToStart() async {
-    setState(() {
-      _isSubmitting = true;
-    });
     try {
       await evaluationProvider.createProfileAndGoal(targetLevel);
       if (mounted) {
@@ -575,12 +535,6 @@ class _EvaluationPageState extends State<EvaluationPage> {
             // duration: Durations.long4,
           ),
         );
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isSubmitting = false;
-        });
       }
     }
   }

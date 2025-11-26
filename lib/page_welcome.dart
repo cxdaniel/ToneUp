@@ -800,58 +800,6 @@ class _WelcomePageState extends State<WelcomePage> {
     );
   }
 
-  /// 主操作按钮
-  Widget _del_mainActButton({
-    required String label,
-    VoidCallback? onTap,
-    IconData? icon,
-    IconAlignment? iconAlignment,
-    Color? backColor,
-    Color? frontColor,
-  }) {
-    backColor = backColor ?? theme.colorScheme.primary;
-    frontColor = frontColor ?? theme.colorScheme.onPrimary;
-    return Material(
-      color: Colors.transparent,
-      child: FeedbackButton(
-        borderRadius: BorderRadius.circular(16),
-        onTap: onTap,
-        child: Ink(
-          padding: const EdgeInsets.all(12),
-          decoration: ShapeDecoration(
-            color: onTap == null ? theme.colorScheme.secondaryFixed : backColor,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            spacing: 10,
-            children: [
-              if (icon != null && iconAlignment == IconAlignment.end)
-                SizedBox(width: 24),
-              if (icon != null && iconAlignment == IconAlignment.start)
-                Icon(icon, color: frontColor),
-              if (icon != null && iconAlignment == null)
-                Icon(icon, color: frontColor),
-              Text(
-                label,
-                style: theme.textTheme.titleMedium!.copyWith(
-                  color: frontColor,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              if (icon != null && iconAlignment == IconAlignment.end)
-                Icon(icon, color: frontColor),
-              if (icon != null && iconAlignment == IconAlignment.start)
-                SizedBox(width: 24),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   /// 选项组件
   Widget _optionItem({
     required String label,

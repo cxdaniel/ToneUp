@@ -1,21 +1,23 @@
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:toneup_app/models/quizzes/quiz_base.dart';
+import 'package:toneup_app/models/user_weekly_plan_model.dart';
+import 'package:toneup_app/providers/plan_provider.dart';
 import 'package:toneup_app/providers/profile_provider.dart';
 import 'package:toneup_app/services/data_service.dart';
 
 class EvaluationProvider extends ChangeNotifier {
   List<QuizBase> _quizzes = []; // 所有 Quiz 列表
   int _currentQuizIndex = 0; // 当前 Quiz 索引
-  bool _isLoading = false;
-  String? _errorMessage;
+  bool isLoading = false;
+  bool isCreating = false;
+  String? errorMessage;
+  String? loadingMessage;
   bool _isPracticeCompleted = false; // 练习是否完成
   // Getters
   List<QuizBase> get quizzes => _quizzes;
   int get currentQuizIndex => _currentQuizIndex;
   int get totalQuizzes => _quizzes.length;
-  bool get isLoading => _isLoading;
-  String? get errorMessage => _errorMessage;
   bool get isPracticeCompleted => _isPracticeCompleted;
   QuizBase get currentQuiz => _quizzes[_currentQuizIndex];
   int currentTouchedCount = 0; //记录共做了几题，包含错题
@@ -56,7 +58,9 @@ class EvaluationProvider extends ChangeNotifier {
       final User? user = Supabase.instance.client.auth.currentUser;
       if (user == null) throw Exception("用户未登录");
 
-      _isLoading = true;
+      isLoading = true;
+      errorMessage = null;
+      loadingMessage = 'Loading evaluation data...';
       notifyListeners();
 
       final quizesData = await DataService().fetchEvaluationQuizes(level);
@@ -69,12 +73,13 @@ class EvaluationProvider extends ChangeNotifier {
       }
       retryFunc = null;
     } catch (e) {
-      _errorMessage = e.toString();
+      errorMessage = e.toString();
       retryLabel = 'Retry';
       retryFunc = () => initialize(level);
       if (kDebugMode) debugPrint('测评初始化失败: $e');
     } finally {
-      _isLoading = false;
+      isLoading = false;
+      loadingMessage = null;
       notifyListeners();
     }
   }
@@ -99,19 +104,57 @@ class EvaluationProvider extends ChangeNotifier {
   Future<void> createProfileAndGoal(int level) async {
     final User? user = Supabase.instance.client.auth.currentUser;
     if (user == null) throw Exception("用户未登录");
+
+    isLoading = false;
     retryFunc = null;
-    _isLoading = true;
+    errorMessage = null;
+    isCreating = true;
+    loadingMessage = 'Creating your personalized goal...';
     notifyListeners();
     try {
       await ProfileProvider().createProfile();
-      await DataService().createNewActivePlan(user.id, level);
+      final indicatorResult = await DataService().getUserIndicatorResult(
+        user.id,
+        level,
+      );
+      final focusedIndicators = await DataService().getFocusedIndicators(
+        indicatorResult.coreIndicatorDetails,
+        quentity: 3,
+      );
+
+      await for (final message in DataService().generatePlanWithProgress(
+        userId: user.id,
+        inds: focusedIndicators.map((e) => e.indicatorId).toList(),
+      )) {
+        final type = message['type'] as String;
+        if (type == 'progress') {
+          loadingMessage = message['message'] as String;
+        } else if (type == 'complete') {
+          final newPlan = UserWeeklyPlanModel.fromJson(message['result']);
+          debugPrint('计划创建完成，激活新计划');
+          await PlanProvider().activatePlan(newPlan);
+          await ProfileProvider().updatePlan();
+          isCreating = false;
+          loadingMessage = '计划生成完成！';
+          debugPrint('新计划已激活: ${newPlan.id}');
+        } else if (type == 'error') {
+          // 显示错误提示
+          isCreating = false;
+          loadingMessage = null;
+          errorMessage = '错误: ${message['error']}';
+        }
+        notifyListeners();
+      }
+      isCreating = false;
     } catch (e) {
-      _errorMessage = e.toString();
+      errorMessage = e.toString();
       retryLabel = 'Retry';
       retryFunc = () => createProfileAndGoal(level);
       if (kDebugMode) debugPrint("创建用户资料和计划-失败：$e");
+      rethrow;
     } finally {
-      _isLoading = false;
+      isCreating = false;
+      loadingMessage = null;
       notifyListeners();
     }
   }

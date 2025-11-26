@@ -1,15 +1,33 @@
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:toneup_app/models/indicator_result_model.dart';
+import 'package:toneup_app/models/user_weekly_plan_model.dart';
+import 'package:toneup_app/providers/plan_provider.dart';
+import 'package:toneup_app/providers/profile_provider.dart';
 import 'package:toneup_app/services/data_service.dart';
 
 class CreateGoalProvider with ChangeNotifier {
   bool isLoading = false;
   bool isCreated = false;
+  bool _disposed = false;
   String? errorMessage;
   String? loadingMessage;
-  IndicatorResultModel? indicatorResult;
   List<IndicatorCoreDetailModel>? focusedIndicators;
+  Map<int, Map<String, dynamic>>? creatingPlanProgress;
+  UserWeeklyPlanModel? newPlan;
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
+
+  @override
+  void notifyListeners() {
+    if (!_disposed) {
+      super.notifyListeners();
+    }
+  }
 
   Future<void> getResultfromHistory(int level) async {
     final User? user = Supabase.instance.client.auth.currentUser;
@@ -22,32 +40,14 @@ class CreateGoalProvider with ChangeNotifier {
 
     try {
       // 调用数据服务创建新目标
-      indicatorResult = await DataService().getUserIndicatorResult(
+      final indicatorResult = await DataService().getUserIndicatorResult(
         user.id,
         level,
       );
-      if (indicatorResult == null) {
-        throw Exception("未能获取指标结果");
-      }
-      indicatorResult?.coreIndicatorDetails.forEach((ind) {
-        final importanceScore = ind.indicatorWeight; // 重要性得分（0-1）
-        final gapRatio = ind.minimum + ind.practiceGap == 0
-            ? 0
-            : ind.practiceGap / (ind.minimum + ind.practiceGap); // 达标差距占比
-        final completionRate = ind.minimum == 0
-            ? 0
-            : ind.practiceCount / ind.minimum; // 完成度
-        final insufficientScore = 1 - completionRate; //完成度不足得分
-        final priorityScore =
-            importanceScore * 0.4 + gapRatio * 0.35 + insufficientScore * 0.25;
-        ind.priorityScore = priorityScore;
-      });
-      indicatorResult?.coreIndicatorDetails.sort((a, b) {
-        return b.priorityScore!.compareTo(a.priorityScore!);
-      });
-      focusedIndicators = indicatorResult!.coreIndicatorDetails
-          .take(3)
-          .toList();
+      focusedIndicators = await DataService().getFocusedIndicators(
+        indicatorResult.coreIndicatorDetails,
+        quentity: 3,
+      );
     } catch (e) {
       errorMessage = '创建目标失败: $e';
       rethrow;
@@ -65,15 +65,44 @@ class CreateGoalProvider with ChangeNotifier {
     isLoading = true;
     errorMessage = null;
     loadingMessage = 'Creating your personalized goal...';
+    isLoading = true;
+    isCreated = false;
+    creatingPlanProgress = {};
     notifyListeners();
 
     try {
-      // 调用数据服务创建新目标
-      // await DataService().createNewActivePlan(user.id, level);
-      await Future.delayed(Duration(seconds: 12)); // 模拟网络请求延迟
+      await for (final message in DataService().generatePlanWithProgress(
+        userId: user.id,
+        inds: focusedIndicators!.map((e) => e.indicatorId).toList(),
+      )) {
+        final type = message['type'] as String;
+        if (type == 'progress') {
+          creatingPlanProgress![message['step'] as int] = message;
+          loadingMessage = message['message'] as String;
+        } else if (type == 'complete') {
+          newPlan = UserWeeklyPlanModel.fromJson(message['result']);
+          if (newPlan == null) {
+            throw Exception('创建目标-异常！！！未收到新计划数据');
+          }
+          debugPrint('计划创建完成，激活新计划');
+          await PlanProvider().activatePlan(newPlan!);
+          await ProfileProvider().updatePlan();
+          isLoading = false;
+          isCreated = true;
+          loadingMessage = '计划生成完成！';
+          debugPrint('新计划已激活: ${newPlan!.id}');
+        } else if (type == 'error') {
+          // 显示错误提示
+          isLoading = false;
+          loadingMessage = null;
+          errorMessage = '错误: ${message['error']}';
+        }
+        notifyListeners();
+      }
+
       isCreated = true;
     } catch (e) {
-      errorMessage = '创建目标失败: $e';
+      errorMessage = '创建目标-失败: $e';
       rethrow;
     } finally {
       isLoading = false;
