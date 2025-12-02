@@ -41,7 +41,9 @@ RecentPracticeModel _$RecentPracticeModelFromJson(Map<String, dynamic> json) =>
     RecentPracticeModel(
       practiceCount7d: (json['practiceCount7d'] as num).toInt(),
       practiceCount30d: (json['practiceCount30d'] as num).toInt(),
-      lastPracticeTime: DateTime.parse(json['lastPracticeTime'] as String),
+      lastPracticeTime: json['lastPracticeTime'] == null
+          ? null
+          : DateTime.parse(json['lastPracticeTime'] as String),
     );
 
 Map<String, dynamic> _$RecentPracticeModelToJson(
@@ -49,7 +51,7 @@ Map<String, dynamic> _$RecentPracticeModelToJson(
 ) => <String, dynamic>{
   'practiceCount7d': instance.practiceCount7d,
   'practiceCount30d': instance.practiceCount30d,
-  'lastPracticeTime': instance.lastPracticeTime.toIso8601String(),
+  'lastPracticeTime': instance.lastPracticeTime?.toIso8601String(),
 };
 
 IndicatorCoreDetailModel _$IndicatorCoreDetailModelFromJson(
@@ -63,7 +65,7 @@ IndicatorCoreDetailModel _$IndicatorCoreDetailModelFromJson(
   avgScore: (json['avgScore'] as num).toDouble(),
   isQualified: json['isQualified'] as bool,
   practiceGap: (json['practiceGap'] as num).toDouble(),
-);
+)..priorityScore = (json['priorityScore'] as num?)?.toDouble();
 
 Map<String, dynamic> _$IndicatorCoreDetailModelToJson(
   IndicatorCoreDetailModel instance,
@@ -76,4 +78,5 @@ Map<String, dynamic> _$IndicatorCoreDetailModelToJson(
   'avgScore': instance.avgScore,
   'isQualified': instance.isQualified,
   'practiceGap': instance.practiceGap,
+  'priorityScore': instance.priorityScore,
 };

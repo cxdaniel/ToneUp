@@ -71,7 +71,7 @@ class DataService {
   /// 根据计划查询对应的练习数据，并附加到计划对象中
   /// @param plan：用户计划对象（包含 practices 字段）
   /// @return 附加了 practiceData 的计划对象
-  Future<UserWeeklyPlanModel?> fetchPracticeByPlan(
+  Future<UserWeeklyPlanModel?> setupPracticetoPlan(
     UserWeeklyPlanModel? plan,
   ) async {
     if (plan == null) return null;
@@ -161,6 +161,26 @@ class DataService {
           debugPrint('解析最后一条数据错误: $e, 原始数据: $buffer');
         }
       }
+    }
+  }
+
+  /// 标记当前计划为已完成状态
+  /// @param plan：当前活跃计划
+  Future<void> markActivePlanComplete(UserWeeklyPlanModel plan) async {
+    try {
+      await _supabase
+          .from('user_weekly_plans')
+          .update({'status': PlanStatus.reactive.name})
+          .eq('id', plan.id);
+      plan.status = PlanStatus.reactive;
+      if (kDebugMode) {
+        debugPrint("标记当前计划为已完成-成功：${plan.id}");
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint("标记当前计划为已完成-异常：${e.toString()}");
+      }
+      rethrow;
     }
   }
 
@@ -374,9 +394,9 @@ class DataService {
           .from('active_profiles')
           .select()
           .eq('id', userId)
-          .maybeSingle();
+          .single();
       debugPrint('fetchProfile::${json.encode(data)}');
-      return data != null ? ProfileModel.fromJson(data) : null;
+      return ProfileModel.fromJson(data);
     } catch (e) {
       if (kDebugMode) {
         debugPrint("查询用户资料异常：${e.toString()}");
@@ -415,21 +435,18 @@ class DataService {
 
   /// 保存用户资料
   /// @profile ProfileModel
-  Future<ProfileModel?> saveProfile(ProfileModel profile) async {
+  Future<void> saveProfile(ProfileModel profile) async {
     try {
       final saveData = profile.toJson();
-      final data = await _supabase
+      await _supabase
           .from('profiles')
           .upsert(
             saveData,
-            // 基于id字段进行冲突判断（id是唯一约束字段）
-            onConflict: 'id',
-            // 遇到重复时不忽略，而是执行更新操作
-            ignoreDuplicates: false,
+            onConflict: 'id', // 基于id字段进行冲突判断（id是唯一约束字段）
+            ignoreDuplicates: false, // 遇到重复时不忽略，而是执行更新操作
           )
           .select()
-          .maybeSingle();
-      return data != null ? ProfileModel.fromJson(data) : null;
+          .single();
     } catch (e) {
       if (kDebugMode) {
         debugPrint("保存用户资料异常：${e.toString()}");

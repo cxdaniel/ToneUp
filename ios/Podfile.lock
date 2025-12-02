@@ -57,6 +57,20 @@ PODS:
     - Flutter
     - FlutterMacOS
   - PromisesObjC (2.4.0)
+  - purchases_flutter (9.9.9):
+    - Flutter
+    - PurchasesHybridCommon (= 17.21.0)
+  - purchases_ui_flutter (9.9.9):
+    - Flutter
+    - PurchasesHybridCommonUI (= 17.21.0)
+  - PurchasesHybridCommon (17.21.0):
+    - RevenueCat (= 5.49.0)
+  - PurchasesHybridCommonUI (17.21.0):
+    - PurchasesHybridCommon (= 17.21.0)
+    - RevenueCatUI (= 5.49.0)
+  - RevenueCat (5.49.0)
+  - RevenueCatUI (5.49.0):
+    - RevenueCat (= 5.49.0)
   - shared_preferences_foundation (0.0.1):
     - Flutter
     - FlutterMacOS
@@ -77,6 +91,8 @@ DEPENDENCIES:
   - image_picker_ios (from `.symlinks/plugins/image_picker_ios/ios`)
   - just_audio (from `.symlinks/plugins/just_audio/darwin`)
   - path_provider_foundation (from `.symlinks/plugins/path_provider_foundation/darwin`)
+  - purchases_flutter (from `.symlinks/plugins/purchases_flutter/ios`)
+  - purchases_ui_flutter (from `.symlinks/plugins/purchases_ui_flutter/ios`)
   - shared_preferences_foundation (from `.symlinks/plugins/shared_preferences_foundation/darwin`)
   - sign_in_with_apple (from `.symlinks/plugins/sign_in_with_apple/ios`)
   - url_launcher_ios (from `.symlinks/plugins/url_launcher_ios/ios`)
@@ -90,6 +106,10 @@ SPEC REPOS:
     - GTMAppAuth
     - GTMSessionFetcher
     - PromisesObjC
+    - PurchasesHybridCommon
+    - PurchasesHybridCommonUI
+    - RevenueCat
+    - RevenueCatUI
     - TOCropViewController
 
 EXTERNAL SOURCES:
@@ -113,6 +133,10 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/just_audio/darwin"
   path_provider_foundation:
     :path: ".symlinks/plugins/path_provider_foundation/darwin"
+  purchases_flutter:
+    :path: ".symlinks/plugins/purchases_flutter/ios"
+  purchases_ui_flutter:
+    :path: ".symlinks/plugins/purchases_ui_flutter/ios"
   shared_preferences_foundation:
     :path: ".symlinks/plugins/shared_preferences_foundation/darwin"
   sign_in_with_apple:
@@ -138,11 +162,17 @@ SPEC CHECKSUMS:
   just_audio: a42c63806f16995daf5b219ae1d679deb76e6a79
   path_provider_foundation: 0b743cbb62d8e47eab856f09262bb8c1ddcfe6ba
   PromisesObjC: f5707f49cb48b9636751c5b2e7d227e43fba9f47
+  purchases_flutter: bf4675e458c5c016860a0616e14019d4d9e1c7fb
+  purchases_ui_flutter: 665ceff50c91c6282f7a92ba4ff54989ef92e559
+  PurchasesHybridCommon: 988d080cd69d7aa0895e52f993dae53b45a0e929
+  PurchasesHybridCommonUI: c6b99413ce2bbcbc959f44921cd2ae5a95746ecf
+  RevenueCat: fa9ad7e1c8817deddb737646946b6b3d8b25f54b
+  RevenueCatUI: 057186dc20a7c6726cf59f96cfe2f6251ef5ce61
   shared_preferences_foundation: 5086985c1d43c5ba4d5e69a4e8083a389e2909e6
   sign_in_with_apple: f3bf75217ea4c2c8b91823f225d70230119b8440
   TOCropViewController: 797deaf39c90e6e9ddd848d88817f6b9a8a09888
   url_launcher_ios: bb13df5870e8c4234ca12609d04010a21be43dfa
 
-PODFILE CHECKSUM: 3c63482e143d1b91d2d2560aee9fb04ecc74ac7e
+PODFILE CHECKSUM: 251cb053df7158f337c0712f2ab29f4e0fa474ce
 
 COCOAPODS: 1.16.2

@@ -1,0 +1,877 @@
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+import 'package:toneup_app/components/components.dart';
+import 'package:toneup_app/components/feedback_button.dart';
+import 'package:toneup_app/models/user_practice_model.dart';
+import 'package:toneup_app/models/user_weekly_plan_model.dart';
+import 'package:toneup_app/providers/plan_provider.dart';
+import 'package:toneup_app/providers/profile_provider.dart';
+import 'package:toneup_app/routes.dart';
+import 'package:toneup_app/theme_data.dart';
+
+class HomePage extends StatefulWidget {
+  const HomePage({super.key});
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  UserWeeklyPlanModel? _planData;
+  late ThemeData theme;
+  late PlanProvider planProvider;
+  bool isCheckedUpgrade = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkProfile();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    theme = Theme.of(context);
+  }
+
+  /// 检查用户资料完整性
+  Future<void> _checkProfile() async {
+    final profile = await ProfileProvider().fetchProfile();
+    if ((profile == null || profile.level == null) && mounted) {
+      context.go(AppRoutes.WELCOME);
+    } else {
+      _initializePlan();
+    }
+  }
+
+  /// 初始化计划
+  Future<void> _initializePlan() async {
+    if (planProvider.activePlan == null) {
+      planProvider.initialize();
+    }
+  }
+
+  /// 去全部计划页
+  void _gotoPagePlan() {
+    // context.push(AppRoutes.GOAL_LIST);
+    context.go(AppRoutes.GOAL_LIST);
+  }
+
+  /// 去测评页
+  void _gotoPageEvaluation() {
+    context.push(
+      AppRoutes.EVALUATION,
+      extra: {'level': planProvider.activePlan!.level},
+    );
+  }
+
+  /// 去练习页
+  Future<void> _gotoPractice({
+    required UserWeeklyPlanModel plan,
+    required UserPracticeModel practice,
+  }) async {
+    await context.push(
+      AppRoutes.PRACTICE,
+      extra: {'practiceData': practice, 'planData': plan},
+    );
+    if (context.mounted) {
+      planProvider.refreshPlan();
+      if (!isCheckedUpgrade) {
+        isCheckedUpgrade = true;
+        planProvider.checkForUpgrade();
+      }
+    }
+  }
+
+  /// 创建新计划
+  Future<void> _goCreateNewGoal() async {
+    await context.push(AppRoutes.CREATE_GOAL);
+    if (context.mounted) {
+      planProvider.initialize();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Consumer<PlanProvider>(
+        builder: (context, provider, child) {
+          planProvider = provider;
+          _planData = planProvider.activePlan;
+          if (planProvider.isLoading) {
+            LoadingOverlay.show(context);
+          } else {
+            LoadingOverlay.hide();
+          }
+          if (planProvider.errorMessage != null) {
+            return _buildErrorState(planProvider);
+          }
+          if (!planProvider.isLoading) {
+            if (planProvider.activePlan != null) {
+              return _buildDataState();
+            } else {
+              return _buildEmptyState();
+            }
+          }
+          return _buildSkeleton();
+        },
+      ),
+    );
+  }
+
+  /// ⏳ 空状态
+  Widget _buildEmptyState() {
+    final viewPadding = MediaQuery.of(context).viewPadding;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        24,
+        viewPadding.top + 60,
+        24,
+        viewPadding.bottom + 90,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.max,
+        mainAxisAlignment: MainAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            'Keep Advancing Your Goal',
+            style: theme.textTheme.headlineLarge?.copyWith(
+              color: theme.colorScheme.secondary,
+              fontWeight: FontWeight.w300,
+            ),
+          ),
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              spacing: 24,
+              children: [
+                Text(
+                  'No plans found. Please create a new goal.',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.outline,
+                  ),
+                ),
+                mainActionButton(
+                  mainAxisSize: MainAxisSize.min,
+                  context: context,
+                  label: 'Create a Goal!',
+                  onTap: () {
+                    context.push(AppRoutes.CREATE_GOAL);
+                  },
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// ⛔️ 错误状态
+  Widget _buildErrorState(PlanProvider planProvider) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.error_outline, color: theme.colorScheme.error, size: 50.0),
+          const SizedBox(height: 20),
+          Text(
+            planProvider.errorMessage ?? "Loading Failed, Please Try Again.",
+            textAlign: TextAlign.center,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.outline,
+            ),
+          ),
+          const SizedBox(height: 20),
+          if (planProvider.retryFunc != null)
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: theme.colorScheme.primary,
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(32),
+                ),
+              ),
+              onPressed: () {
+                planProvider.retryFunc!();
+              },
+              child: Text(
+                planProvider.retryLabel ?? "Retry",
+                style: theme.textTheme.titleMedium?.copyWith(
+                  color: theme.colorScheme.onPrimary,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// 无内容状态骨架屏
+  Widget _buildSkeleton() {
+    final viewPadding = MediaQuery.of(context).viewPadding;
+    Color skeletonColor = theme.colorScheme.onSurfaceVariant.withAlpha(40);
+    Color skeletonFontColor = theme.colorScheme.onSurfaceVariant.withAlpha(60);
+    // 动态计算卡片宽高（三等分）
+    final double screenWidth = MediaQuery.of(context).size.width;
+    final double paddingHorizontal = 24;
+    final double cardSpacing = 16;
+    final double cardWidth =
+        (screenWidth - 2 * paddingHorizontal - 2 * cardSpacing) / 3;
+
+    return SingleChildScrollView(
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
+          24,
+          viewPadding.top + 60,
+          24,
+          viewPadding.bottom + 90,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          spacing: 24,
+          children: [
+            /// 标题与进度卡片
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              spacing: 16,
+              children: [
+                Text(
+                  'Keep Advancing Your Goal',
+                  style: theme.textTheme.headlineLarge?.copyWith(
+                    color: skeletonFontColor,
+                  ),
+                ),
+                Container(
+                  decoration: ShapeDecoration(
+                    shape: RoundedRectangleBorder(
+                      side: BorderSide(width: 1, color: skeletonColor),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    spacing: 8,
+                    children: [
+                      SkeletonBox(width: 40, height: 20, color: skeletonColor),
+                      SkeletonBox(width: 200, height: 20, color: skeletonColor),
+                      SkeletonBox(
+                        width: double.infinity,
+                        height: 10,
+                        color: skeletonColor,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(
+              width: double.infinity,
+              child: Wrap(
+                alignment: WrapAlignment.start,
+                spacing: 16,
+                runSpacing: 16,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        'Practices',
+                        style: theme.textTheme.headlineMedium?.copyWith(
+                          color: skeletonFontColor,
+                        ),
+                      ),
+                      Spacer(),
+                    ],
+                  ),
+                  for (int i = 0; i < 6; i++)
+                    SkeletonBox(
+                      width: cardWidth,
+                      height: cardWidth,
+                      color: skeletonColor,
+                    ),
+                ],
+              ),
+            ),
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              spacing: 16,
+              children: [
+                Divider(color: skeletonColor),
+                Text(
+                  'Key Notes',
+                  style: theme.textTheme.headlineMedium?.copyWith(
+                    color: skeletonFontColor,
+                  ),
+                ),
+                // 目标词汇
+                SkeletonBox(width: 120, height: 20, color: skeletonColor),
+                SkeletonBox(width: 240, height: 20, color: skeletonColor),
+                SkeletonBox(width: 160, height: 20, color: skeletonColor),
+                SkeletonBox(width: 180, height: 20, color: skeletonColor),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// ✅ 正常数据状态
+  Widget _buildDataState() {
+    final int currentLevel = _planData!.level;
+    final String topicTag = _planData!.topicTitle!;
+    final viewPadding = MediaQuery.of(context).viewPadding;
+    return RefreshIndicator(
+      edgeOffset: viewPadding.top,
+      onRefresh: () async {
+        // await planProvider.initialize();
+      },
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(
+            24,
+            viewPadding.top + 60,
+            24,
+            viewPadding.bottom + 90,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            spacing: 24,
+            children: [
+              /// 标题与进度卡片
+              Column(
+                spacing: 16,
+                children: [
+                  SizedBox(
+                    width: double.infinity,
+                    child: Text(
+                      'Keep Advancing Your Goal',
+                      style: theme.textTheme.headlineLarge?.copyWith(
+                        color: theme.colorScheme.secondary,
+                        fontWeight: FontWeight.w300,
+                      ),
+                    ),
+                  ),
+
+                  /// 显示升级卡片
+                  if (planProvider.showUpgrade) _buildGoEvaluation(),
+
+                  /// 计划全部完成
+                  if (planProvider.showCreateAction) _buildCelebration(),
+
+                  /// 计划进度卡片
+                  FeedbackButton(
+                    borderRadius: BorderRadius.circular(16),
+                    onTap: _gotoPagePlan,
+                    child: Ink(
+                      decoration: ShapeDecoration(
+                        shape: RoundedRectangleBorder(
+                          side: BorderSide(
+                            width: 1,
+                            color: Theme.of(context).colorScheme.outlineVariant,
+                          ),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          spacing: 8,
+                          children: [
+                            tagLabel(
+                              context: context,
+                              label: 'HSK $currentLevel',
+                              backColor: const Color(0xFFFF9500),
+                              frontColor: Colors.white,
+                            ),
+                            Text(
+                              topicTag,
+                              style: theme.textTheme.titleLarge?.copyWith(
+                                color: Theme.of(context).colorScheme.secondary,
+                              ),
+                            ),
+                            LinearProgressIndicator(
+                              minHeight: 10,
+                              borderRadius: BorderRadius.circular(10),
+                              value: _planData!.progress,
+                              color: theme.colorScheme.primary,
+                              backgroundColor: theme.colorScheme.primary
+                                  .withAlpha(40),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+
+              if (!planProvider.showCreateAction && _planData!.progress == 1)
+                _buildCompleteAction(),
+
+              /// 活动卡片模块
+              SizedBox(
+                width: double.infinity,
+                child: Wrap(
+                  alignment: WrapAlignment.start,
+                  spacing: 16,
+                  runSpacing: 16,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          'Practices',
+                          style: theme.textTheme.headlineMedium?.copyWith(
+                            color: Theme.of(context).colorScheme.secondary,
+                            fontWeight: FontWeight.w300,
+                          ),
+                        ),
+                        Spacer(),
+                        Text(
+                          'score: ${(_planData!.practiceData!.fold<double>(0, (s, p) => (s + p.score)) / _planData!.practiceData!.length * 100).toStringAsFixed(1)}',
+                          style: theme.textTheme.bodyLarge?.copyWith(
+                            color: Theme.of(context).colorScheme.secondary,
+                            // fontWeight: FontWeight.w300,
+                          ),
+                        ),
+                      ],
+                    ),
+                    ..._buildActivityCards(),
+                  ],
+                ),
+              ),
+
+              /// 关键笔记模块
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                spacing: 16,
+                children: [
+                  const Divider(),
+                  Text(
+                    'Key Notes',
+                    style: theme.textTheme.headlineMedium?.copyWith(
+                      color: theme.colorScheme.secondary,
+                      fontWeight: FontWeight.w300,
+                    ),
+                  ),
+                  // 目标词汇
+                  _buildTargetWords(),
+                  // 常用句子
+                  _buildCommonSentences(),
+                  // 核心语法
+                  _buildKeyGrammar(),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // 生成活动卡片
+  List<Widget> _buildActivityCards() {
+    if (_planData == null) return [];
+    List<UserPracticeModel>? practices = _planData!.practiceData;
+    if (practices == null || practices.isEmpty) {
+      debugPrint("target_activities 为空");
+      return [];
+    }
+    // 动态计算卡片宽高（三等分）
+    final double screenWidth = MediaQuery.of(context).size.width;
+    final double paddingHorizontal = 24;
+    final double cardSpacing = 16;
+    final double cardWidth =
+        (screenWidth - 2 * paddingHorizontal - 2 * cardSpacing) / 3;
+    final double cardHeight = cardWidth * 1; // 1:1 正方形卡片
+    // 生成卡片列表
+    List<Widget> activityCards = [];
+    for (int i = 0; i < practices.length; i++) {
+      final practiceData = practices[i];
+      if (practiceData.quizes.isEmpty) continue;
+      activityCards.add(
+        FeedbackButton(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () => _gotoPractice(plan: _planData!, practice: practiceData),
+          child: Ink(
+            decoration: ShapeDecoration(
+              color: (practiceData.score > 0)
+                  ? theme.extension<AppThemeExtensions>()?.expContainer
+                  : theme.colorScheme.primaryContainer,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+            ),
+            child: SizedBox(
+              width: cardWidth,
+              height: cardHeight,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.star_rounded,
+                    size: 56,
+                    color: (practiceData.score > 0)
+                        ? theme.extension<AppThemeExtensions>()?.exp
+                        : theme.colorScheme.primaryFixedDim,
+                  ),
+                  Text(
+                    '${practiceData.quizes.length} Quizes',
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      color: (practiceData.score > 0)
+                          ? theme
+                                .extension<AppThemeExtensions>()
+                                ?.onExpContainer
+                          : theme.colorScheme.onPrimaryContainer,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    // 空状态处理
+    if (activityCards.isEmpty) {
+      return [
+        Container(
+          width: cardWidth,
+          height: cardHeight,
+          padding: const EdgeInsets.all(12),
+          decoration: ShapeDecoration(
+            color: theme.colorScheme.surfaceContainerLowest,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+          ),
+          child: Center(
+            child: Text(
+              "暂无活动",
+              textAlign: TextAlign.center,
+              style: theme.textTheme.titleMedium?.copyWith(
+                color: theme.colorScheme.onSecondaryContainer,
+              ),
+            ),
+          ),
+        ),
+      ];
+    }
+
+    return activityCards;
+  }
+
+  /// 构建目标词汇
+  Widget _buildTargetWords() {
+    final List<dynamic> chars = _planData!.materialSnapshot.charsNew;
+    final List<dynamic> words = _planData!.materialSnapshot.wordsNew;
+    final List<dynamic> targetWords = [...chars, ...words].cast<String>();
+    if (targetWords.isEmpty) return SizedBox.shrink();
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      spacing: 10,
+      children: [
+        tagLabel(context: context, label: 'Target Words'),
+        Text.rich(
+          TextSpan(
+            children: targetWords
+                .asMap()
+                .entries
+                .map((entry) {
+                  final int index = entry.key;
+                  final String word = entry.value;
+                  final bool isLast = index == targetWords.length - 1;
+                  return [
+                    TextSpan(
+                      text: word,
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                        fontWeight: FontWeight.w500,
+                        decoration: TextDecoration.underline,
+                        decorationStyle: TextDecorationStyle.dotted,
+                        decorationThickness: 1,
+                        height: 2,
+                        letterSpacing: 0.50,
+                      ),
+                    ),
+                    if (!isLast)
+                      TextSpan(
+                        text: '、',
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                          fontWeight: FontWeight.w500,
+                          height: 2,
+                          letterSpacing: 0.50,
+                        ),
+                      ),
+                  ];
+                })
+                .expand((e) => e)
+                .toList(),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// 构建常用句子
+  Widget _buildCommonSentences() {
+    final List<dynamic> commonSentences = _planData!.materialSnapshot.sentences;
+    if (commonSentences.isEmpty) return SizedBox.shrink();
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      spacing: 10,
+      children: [
+        tagLabel(context: context, label: 'Common Sentences'),
+        ...commonSentences.map((sentence) {
+          return Text.rich(
+            TextSpan(
+              text: sentence,
+              style: theme.textTheme.titleLarge?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+                fontWeight: FontWeight.w500,
+                decoration: TextDecoration.underline,
+                decorationStyle: TextDecorationStyle.dotted,
+                decorationThickness: 1,
+                height: 2,
+                letterSpacing: 0.50,
+              ),
+            ),
+          );
+        }),
+      ],
+    );
+  }
+
+  /// 构建核心语法
+  Widget _buildKeyGrammar() {
+    final List<dynamic> keyGrammar = _planData!.materialSnapshot.grammars;
+    if (keyGrammar.isEmpty) return SizedBox.shrink();
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      spacing: 10,
+      children: [
+        tagLabel(context: context, label: 'Key Grammar Points'),
+        Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          spacing: 12,
+          children: keyGrammar.map((grammar) {
+            return Text(
+              grammar,
+              style: theme.textTheme.titleLarge?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+                height: 1.6,
+              ),
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
+
+  /// 升级测评卡片
+  Widget _buildGoEvaluation() {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(16),
+      decoration: ShapeDecoration(
+        color: theme.colorScheme.primary,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      ),
+      child: Wrap(
+        spacing: 40,
+        runSpacing: 12,
+        alignment: WrapAlignment.center,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          Column(
+            spacing: 4,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                spacing: 10,
+                children: [
+                  Icon(
+                    Icons.arrow_circle_up_rounded,
+                    color: theme.colorScheme.onPrimary,
+                    size: 32,
+                  ),
+                  Text(
+                    'Congrats! You’re ready to level up',
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      color: theme.colorScheme.onPrimary,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              Text(
+                'Complete the assessment to unlock higher-level content.',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onPrimary,
+                ),
+              ),
+            ],
+          ),
+          Material(
+            color: Colors.transparent,
+            child: FeedbackButton(
+              borderRadius: BorderRadius.circular(16),
+              onTap: _gotoPageEvaluation,
+              child: Ink(
+                padding: EdgeInsets.symmetric(vertical: 12, horizontal: 60),
+                decoration: ShapeDecoration(
+                  color: theme.colorScheme.onPrimary,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(40),
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      'Take an Assessment',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.primary,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(width: 12),
+                    Icon(
+                      Icons.keyboard_double_arrow_right_rounded,
+                      color: theme.colorScheme.primary,
+                    ),
+                    SizedBox(width: 4),
+                    tagLabel(
+                      padding: EdgeInsets.only(left: 12, right: 12),
+                      context: context,
+                      backColor: theme.colorScheme.primaryContainer,
+                      frontColor: theme.colorScheme.onPrimaryContainer,
+                      label: 'HSK ${_planData!.level + 1}',
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCompleteAction() {
+    return Container(
+      padding: EdgeInsets.all(24),
+      decoration: ShapeDecoration(
+        color: theme.colorScheme.surfaceContainerLow,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      ),
+      child: Wrap(
+        runSpacing: 16,
+        // crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          SizedBox(height: 16),
+          Text(
+            "All practices in this goal completed! You still have other goals to complete.",
+            style: theme.textTheme.titleMedium?.copyWith(
+              color: theme.colorScheme.outline,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          SizedBox(height: 16),
+          mainActionButton(
+            radius: 40,
+            mainAxisSize: MainAxisSize.min,
+            context: context,
+            label: 'View all Goals',
+            onTap: _gotoPagePlan,
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 完成状态组件
+  Widget _buildCelebration() {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(24),
+      decoration: ShapeDecoration(
+        color: theme.colorScheme.surfaceContainerLow,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      ),
+      child: Wrap(
+        spacing: 32,
+        runSpacing: 24,
+        alignment: WrapAlignment.center,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          Icon(
+            Icons.celebration_rounded,
+            color: theme.extension<AppThemeExtensions>()?.exp,
+            size: 60,
+          ),
+          Text(
+            "Amazing! \nYou've finished all goals!",
+            style: theme.textTheme.titleLarge?.copyWith(
+              color: theme.colorScheme.primary,
+              fontWeight: FontWeight.normal,
+            ),
+            textAlign: TextAlign.left,
+          ),
+          Wrap(
+            spacing: 20,
+            runSpacing: 20,
+            runAlignment: WrapAlignment.center,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              SizedBox(
+                width: 180,
+                child: mainActionButton(
+                  context: context,
+                  label: 'Review all Goals',
+                  backColor: theme.colorScheme.secondaryContainer.withAlpha(
+                    128,
+                  ),
+                  frontColor: theme.colorScheme.primary,
+                  borderColor: theme.colorScheme.primary.withAlpha(40),
+                  onTap: _gotoPagePlan,
+                ),
+              ),
+              SizedBox(
+                width: 180,
+                child: mainActionButton(
+                  context: context,
+                  label: 'Create a new Goal',
+                  onTap: _goCreateNewGoal,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}

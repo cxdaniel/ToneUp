@@ -93,7 +93,7 @@ class LoadingOverlay {
 }
 
 /// 主操作按钮
-Widget mainActtionButton({
+Widget mainActionButton({
   required BuildContext context,
   required String label,
   VoidCallback? onTap,
@@ -106,7 +106,10 @@ Widget mainActtionButton({
   Color borderColor = Colors.transparent,
   String? loadingLabel,
   MainAxisSize mainAxisSize = MainAxisSize.max,
-  EdgeInsetsGeometry padding = const EdgeInsets.all(12),
+  EdgeInsetsGeometry padding = const EdgeInsets.symmetric(
+    horizontal: 16,
+    vertical: 12,
+  ),
 }) {
   final theme = Theme.of(context);
   final isFixed = (onTap == null || isLoading);
@@ -154,13 +157,15 @@ Widget mainActtionButton({
                     Icon(icon, color: frontColor),
                   if (icon != null && iconAlignment == null)
                     Icon(icon, color: frontColor),
-                  Expanded(
+                  Flexible(
                     child: Text(
                       label,
                       style: theme.textTheme.titleMedium!.copyWith(
                         color: frontColor,
                         fontWeight: FontWeight.bold,
                       ),
+                      softWrap: true,
+                      overflow: TextOverflow.visible,
                       textAlign: TextAlign.center,
                     ),
                   ),

@@ -160,7 +160,8 @@ class PracticeProvider extends ChangeNotifier {
         title: 'practice:${_practiceData!.id}',
       );
       ProfileProvider().profile!.exp = totalExp.toInt();
-      ProfileProvider().saveProfile();
+      await PlanProvider().updateProgress();
+      await ProfileProvider().updateMaterials();
     } catch (e) {
       retryLabel = 'Retry';
       _errorMessage = e.toString();
@@ -169,9 +170,7 @@ class PracticeProvider extends ChangeNotifier {
     } finally {
       isSaving = false;
       notifyListeners();
+      // 更新用户档案数据
     }
-    // 更新用户档案数据
-    PlanProvider().updateProgress();
-    ProfileProvider().updateMaterials();
   }
 }

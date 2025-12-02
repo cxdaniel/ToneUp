@@ -19,7 +19,7 @@ class UserWeeklyPlanModel {
   @JsonKey(name: "target_indicators")
   final List<int> targetIndicators;
   @JsonKey(name: "progress")
-  final double? progress;
+  double progress;
   @JsonKey(name: "status")
   PlanStatus status;
   @JsonKey(name: "created_at")

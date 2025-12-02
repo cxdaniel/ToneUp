@@ -14,6 +14,13 @@ class NavigationService {
     }
   }
 
+  static void push(String location) {
+    debugPrint('NavigationService:::${rootNavigatorKey.currentContext}');
+    if (rootNavigatorKey.currentContext != null) {
+      router.push(location);
+    }
+  }
+
   // 可以添加更多方法：push、replace等
 }
 

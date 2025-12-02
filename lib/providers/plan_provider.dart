@@ -110,7 +110,7 @@ class PlanProvider extends ChangeNotifier {
       if (plan != null) {
         _loadingMessage = "Setup Practices...";
         notifyListeners();
-        _activePlan = await DataService().fetchPracticeByPlan(plan);
+        _activePlan = await DataService().setupPracticetoPlan(plan);
       }
     } catch (e) {
       _errorMessage = e.toString();
@@ -136,17 +136,17 @@ class PlanProvider extends ChangeNotifier {
       _loadingMessage = "Loading All Goals...";
       notifyListeners();
       _allPlans = await DataService().fetchPlans(user.id);
-      _loadingMessage = "Fetch Active Goal...";
-      notifyListeners();
-      _activePlan = await DataService().fetchPracticeByPlan(
-        allPlans
-            .where(
-              (plan) =>
-                  plan.status == PlanStatus.active ||
-                  plan.status == PlanStatus.reactive,
-            )
-            .firstOrNull,
-      );
+      // _loadingMessage = "Fetch Active Goal...";
+      // notifyListeners();
+      // _activePlan = await DataService().fetchPracticeByPlan(
+      //   allPlans
+      //       .where(
+      //         (plan) =>
+      //             plan.status == PlanStatus.active ||
+      //             plan.status == PlanStatus.reactive,
+      //       )
+      //       .firstOrNull,
+      // );
     } catch (e) {
       _errorMessage = e.toString();
       _retryLabel = 'Retry';
@@ -176,6 +176,7 @@ class PlanProvider extends ChangeNotifier {
       _loadingMessage = "Updating All Goals...";
       notifyListeners();
       await getAllPlans();
+      await initialize();
     } catch (e) {
       _retryLabel = 'Retry';
       _retryFunc = () => activatePlan(plan);
@@ -185,12 +186,6 @@ class PlanProvider extends ChangeNotifier {
       _isLoading = false;
       notifyListeners(); // 通知UI状态已更新
     }
-  }
-
-  /// 完成当前计划
-  Future<void> completeActivePlan() async {
-    // 前端改状态，只有在切换计划时，才保存数据库
-    _activePlan!.status = PlanStatus.reactive;
   }
 
   /// 从所有计划中按级别和月份分组（供PlanPage使用）
@@ -219,13 +214,20 @@ class PlanProvider extends ChangeNotifier {
     return levelMap;
   }
 
-  /// 更新计划进度
+  /// 更新当前计划进度
   Future<void> updateProgress() async {
     if (_activePlan == null) return;
-    DataService().updatePlanProgress(
+    final progress = calculatePlanProgress(_activePlan);
+    if (progress == 1 && _activePlan!.status != PlanStatus.reactive) {
+      await DataService().markActivePlanComplete(_activePlan!);
+    }
+    if (progress == _activePlan!.progress) return;
+    await DataService().updatePlanProgress(
       planId: _activePlan!.id,
-      progress: calculatePlanProgress(_activePlan),
+      progress: progress,
     );
+    _activePlan!.progress = progress;
+    notifyListeners();
   }
 }
 

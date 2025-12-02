@@ -4,26 +4,30 @@ import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:go_router/go_router.dart';
 import 'package:toneup_app/components/mainshell.dart';
-import 'package:toneup_app/page_create_goal.dart';
-import 'package:toneup_app/profile_account.dart';
-import 'package:toneup_app/page_evaluation.dart';
-import 'package:toneup_app/page_forgot.dart';
-import 'package:toneup_app/page_home.dart';
-import 'package:toneup_app/page_login.dart';
-import 'package:toneup_app/page_plan.dart';
-import 'package:toneup_app/page_practice.dart';
-import 'package:toneup_app/page_profile.dart';
-import 'package:toneup_app/page_signup.dart';
-import 'package:toneup_app/page_welcome.dart';
-import 'package:toneup_app/profile_settings.dart';
+import 'package:toneup_app/pages/create_goal_page.dart';
+import 'package:toneup_app/pages/paywall.dart';
+import 'package:toneup_app/pages/profile_account.dart';
+import 'package:toneup_app/pages/evaluation_page.dart';
+import 'package:toneup_app/pages/forgot_page.dart';
+import 'package:toneup_app/pages/home_page.dart';
+import 'package:toneup_app/pages/signin_page.dart';
+import 'package:toneup_app/pages/plan_page.dart';
+import 'package:toneup_app/pages/practice_page.dart';
+import 'package:toneup_app/pages/profile_page.dart';
+import 'package:toneup_app/pages/signup_page.dart';
+import 'package:toneup_app/pages/subscription_manage.dart';
+import 'package:toneup_app/pages/welcome_page.dart';
+import 'package:toneup_app/pages/profile_settings.dart';
 import 'package:toneup_app/providers/account_settings_provider.dart';
 import 'package:toneup_app/providers/create_goal_provider.dart';
 import 'package:toneup_app/providers/plan_provider.dart';
 import 'package:toneup_app/providers/profile_provider.dart';
+import 'package:toneup_app/providers/subscription_provider.dart';
 import 'package:toneup_app/providers/tts_provider.dart';
 import 'package:toneup_app/services/config.dart';
 import 'package:toneup_app/services/navigation_service.dart';
 import 'package:toneup_app/services/oauth_service.dart';
+import 'package:toneup_app/services/revenue_cat_service.dart';
 import 'package:toneup_app/theme_data.dart';
 import 'package:toneup_app/routes.dart';
 
@@ -34,6 +38,7 @@ void main() async {
       anonKey: SupabaseConfig.anonKey,
     );
     await JiebaSegmenter.init();
+    await RevenueCatService().initialize();
 
     runApp(MyApp());
   } catch (e) {
@@ -135,7 +140,7 @@ class _MyAppState extends State<MyApp> {
       routes: [
         GoRoute(
           path: AppRoutes.LOGIN,
-          builder: (context, state) => const LoginPage(),
+          builder: (context, state) => const SigninPage(),
         ),
         GoRoute(
           path: AppRoutes.SIGN_UP,
@@ -174,6 +179,14 @@ class _MyAppState extends State<MyApp> {
             create: (_) => CreateGoalProvider(),
             child: const CreateGoalPage(),
           ),
+        ),
+        GoRoute(
+          path: AppRoutes.PAYWALL,
+          builder: (context, state) => PaywallPage(),
+        ),
+        GoRoute(
+          path: AppRoutes.SUBSCRIPTION_MANAGE,
+          builder: (context, state) => SubscriptionManagePage(),
         ),
         StatefulShellRoute.indexedStack(
           builder: (context, state, navigationShell) =>
@@ -325,6 +338,9 @@ class _MyAppState extends State<MyApp> {
         ChangeNotifierProvider(create: (_) => PlanProvider()..initialize()),
         ChangeNotifierProvider(create: (_) => TTSProvider()),
         ChangeNotifierProvider(create: (_) => ProfileProvider()),
+        ChangeNotifierProvider(
+          create: (_) => SubscriptionProvider()..initialize(),
+        ),
       ],
       child: MaterialApp.router(
         title: 'ToneUp',

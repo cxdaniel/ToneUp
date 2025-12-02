@@ -15,4 +15,6 @@ class AppRoutes {
   static const SETTINGS = '/settings';
   static const ACCOUNT_SETTINGS = '/account_settings';
   static const CREATE_GOAL = '/create_goal';
+  static const PAYWALL = '/paywall';
+  static const SUBSCRIPTION_MANAGE = '/profile/subscription';
 }

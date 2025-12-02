@@ -52,12 +52,12 @@ class RecentPracticeModel {
   final int practiceCount30d;
 
   /// 最近一次练习时间
-  final DateTime lastPracticeTime;
+  final DateTime? lastPracticeTime;
 
   RecentPracticeModel({
     required this.practiceCount7d,
     required this.practiceCount30d,
-    required this.lastPracticeTime,
+    this.lastPracticeTime,
   });
 
   factory RecentPracticeModel.fromJson(Map<String, dynamic> json) =>
