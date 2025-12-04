@@ -164,27 +164,44 @@ class RevenueCatService {
   Future<void> syncSubscriptionToSupabase(CustomerInfo customerInfo) async {
     try {
       final user = _supabase.auth.currentUser;
-      if (user == null) return;
+      if (user == null) {
+        debugPrint('⚠️ 用户未登录，无法同步订阅');
+        return;
+      }
 
       final entitlement =
           customerInfo.entitlements.all[RevenueCatConfig.entitlementId];
       final isActive = entitlement?.isActive == true;
 
-      // 准备数据
+      debugPrint('🔄 同步订阅到 Supabase');
+
+      // ✅ 完整的数据准备
       final subscriptionData = {
         'user_id': user.id,
         'revenue_cat_customer_id': customerInfo.originalAppUserId,
         'revenue_cat_entitlement_id': isActive
             ? RevenueCatConfig.entitlementId
             : null,
-        'status': _getSubscriptionStatus(customerInfo),
+        'status': _getSubscriptionStatus(entitlement),
         'tier': _getSubscriptionTier(entitlement),
+
+        // ✅ 试用期信息
+        'trial_start_at': _getTrialStartDate(entitlement),
+        'trial_end_at': _getTrialEndDate(entitlement),
+
+        // ✅ 订阅时间
         'subscription_start_at': entitlement?.latestPurchaseDate,
         'subscription_end_at': entitlement?.expirationDate,
+
+        // ✅ 取消时间
+        'cancelled_at': _getCancelledDate(entitlement),
+
         'platform': _getPlatform(entitlement),
         'product_id': entitlement?.productIdentifier,
         'updated_at': DateTime.now().toIso8601String(),
       };
+
+      // debugPrint('📝 准备写入数据: $subscriptionData');
 
       // Upsert 到数据库
       await _supabase
@@ -192,25 +209,24 @@ class RevenueCatService {
           .upsert(subscriptionData, onConflict: 'user_id');
 
       debugPrint('✅ 订阅状态已同步到 Supabase');
-    } catch (e) {
+    } catch (e, stackTrace) {
       debugPrint('❌ 同步订阅状态失败: $e');
+      debugPrint('Stack trace: $stackTrace');
+      // 不要 rethrow，让购买流程继续
     }
   }
 
-  String _getSubscriptionStatus(CustomerInfo info) {
-    final entitlement = info.entitlements.all[RevenueCatConfig.entitlementId];
-    if (entitlement == null || !entitlement.isActive) {
-      return 'free';
-    }
-
+  /// 获取订阅状态
+  String _getSubscriptionStatus(EntitlementInfo? entitlement) {
+    if (entitlement == null || !entitlement.isActive) return 'free';
     // 检查是否在试用期
-    if (entitlement.periodType == PeriodType.trial) {
-      return 'trial';
-    }
-
+    if (entitlement.periodType == PeriodType.trial) return 'trial';
+    // 检查是否已取消但仍在有效期内
+    if (!entitlement.willRenew && entitlement.isActive) return 'cancelled';
     return 'active';
   }
 
+  /// 获取订阅等级
   String? _getSubscriptionTier(EntitlementInfo? entitlement) {
     if (entitlement == null) return null;
 
@@ -224,12 +240,54 @@ class RevenueCatService {
     return null;
   }
 
+  // 获取试用开始时间
+  String? _getTrialStartDate(EntitlementInfo? entitlement) {
+    if (entitlement == null) return null;
+
+    // 如果是试用期，使用 originalPurchaseDate
+    if (entitlement.periodType == PeriodType.trial) {
+      return entitlement.originalPurchaseDate;
+    }
+
+    return null;
+  }
+
+  // 获取试用结束时间
+  String? _getTrialEndDate(EntitlementInfo? entitlement) {
+    if (entitlement == null) return null;
+
+    // 如果是试用期，使用 expirationDate
+    if (entitlement.periodType == PeriodType.trial) {
+      return entitlement.expirationDate;
+    }
+
+    return null;
+  }
+
   String? _getPlatform(EntitlementInfo? entitlement) {
     if (entitlement == null) return null;
 
     if (entitlement.store == Store.appStore) return 'ios';
     if (entitlement.store == Store.playStore) return 'android';
     if (entitlement.store == Store.stripe) return 'web';
+
+    return null;
+  }
+
+  // 获取取消时间
+  String? _getCancelledDate(EntitlementInfo? entitlement) {
+    if (entitlement == null) return null;
+
+    // 如果订阅不会续订但仍然活跃，说明已被取消
+    if (!entitlement.willRenew && entitlement.isActive) {
+      // RevenueCat 没有提供确切的取消时间，使用当前时间作为标记
+      return DateTime.now().toIso8601String();
+    }
+
+    // 如果已过期且不续订，使用过期时间
+    if (!entitlement.willRenew && !entitlement.isActive) {
+      return entitlement.expirationDate;
+    }
 
     return null;
   }

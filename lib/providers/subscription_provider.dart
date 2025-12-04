@@ -5,6 +5,7 @@ import 'package:purchases_flutter/purchases_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:toneup_app/models/subscription_model.dart';
 import 'package:toneup_app/providers/plan_provider.dart';
+import 'package:toneup_app/services/config.dart';
 import 'package:toneup_app/services/revenue_cat_service.dart';
 
 class SubscriptionProvider extends ChangeNotifier {
@@ -162,6 +163,25 @@ class SubscriptionProvider extends ChangeNotifier {
   Future<void> _syncFromRevenueCat() async {
     try {
       final customerInfo = await _revenueCat.getCustomerInfo();
+      final entitlement =
+          customerInfo.entitlements.all[RevenueCatConfig.entitlementId];
+
+      debugPrint('📊 RevenueCat 状态:');
+      debugPrint('   ----------------------------------');
+      debugPrint('   Customer ID: ${customerInfo.originalAppUserId}');
+      debugPrint(
+        '   All Entitlements: ${customerInfo.entitlements.all.keys.toList()}',
+      );
+      if (entitlement != null) {
+        debugPrint('   Pro Features Entitlement:');
+        debugPrint('     - Active: ${entitlement.isActive}');
+        debugPrint('     - Product ID: ${entitlement.productIdentifier}');
+        debugPrint('     - Will Renew: ${entitlement.willRenew}');
+        debugPrint('     - Period Type: ${entitlement.periodType}');
+        debugPrint('     - Expiration: ${entitlement.expirationDate}');
+      } else {
+        debugPrint('   ⚠️ 没有找到 ${RevenueCatConfig.entitlementId} entitlement');
+      }
 
       await _revenueCat.syncSubscriptionToSupabase(customerInfo);
 
@@ -174,6 +194,18 @@ class SubscriptionProvider extends ChangeNotifier {
             .eq('user_id', user.id)
             .single();
         _subscription = SubscriptionModel.fromJson(data);
+        debugPrint('✅ 同步后的订阅状态:');
+        debugPrint('   Status: ${_subscription!.status.name}');
+        debugPrint('   Is Pro: ${_subscription!.isPro}');
+        debugPrint('   Tier: ${_subscription!.tier?.name}');
+        debugPrint('   ----------------------------------');
+        debugPrint(
+          '   Subscription sta: ${_subscription!.subscriptionStartAt}',
+        );
+        debugPrint('   Subscription end: ${_subscription!.subscriptionEndAt}');
+        debugPrint(
+          '   Trial: ${_subscription!.trialStartAt} -> ${_subscription!.trialEndAt}',
+        );
       }
     } catch (e) {
       debugPrint('❌ 从 RevenueCat 同步失败: $e');
