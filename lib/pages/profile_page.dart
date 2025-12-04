@@ -3,8 +3,10 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:toneup_app/components/avatar_upload_widget.dart';
+import 'package:toneup_app/components/components.dart';
 import 'package:toneup_app/components/feedback_button.dart';
 import 'package:toneup_app/providers/profile_provider.dart';
+import 'package:toneup_app/providers/subscription_provider.dart';
 import 'package:toneup_app/routes.dart';
 import 'package:toneup_app/theme_data.dart';
 
@@ -16,6 +18,8 @@ class ProfilePage extends StatefulWidget {
 
 class _ProfilePageState extends State<ProfilePage> {
   late ThemeData theme;
+  late ProfileProvider profileProvider;
+  late SubscriptionProvider subscriptionProvider;
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -38,13 +42,20 @@ class _ProfilePageState extends State<ProfilePage> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<ProfileProvider>(
-      builder: (context, provider, child) {
+    return Consumer2<ProfileProvider, SubscriptionProvider>(
+      builder: (context, profile, suscription, child) {
+        profileProvider = profile;
+        subscriptionProvider = suscription;
         final viewPadding = MediaQuery.of(context).viewPadding;
         return Scaffold(
           body: RefreshIndicator(
             edgeOffset: MediaQuery.of(context).viewPadding.top,
-            onRefresh: () => provider.fetchProfile(),
+            onRefresh: () async {
+              LoadingOverlay.show(context, label: 'Refreshing profile...');
+              await profileProvider.fetchProfile();
+              await subscriptionProvider.loadSubscription();
+              LoadingOverlay.hide();
+            },
             child: SingleChildScrollView(
               child: Padding(
                 padding: EdgeInsets.fromLTRB(
@@ -57,8 +68,8 @@ class _ProfilePageState extends State<ProfilePage> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   spacing: 24,
                   children: [
-                    _buildUserHeader(provider),
-                    _buildOverview(provider),
+                    _buildUserHeader(),
+                    _buildOverview(),
                     _buildListCeil(label: 'Profile Settings', call: goSettings),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -101,10 +112,130 @@ class _ProfilePageState extends State<ProfilePage> {
     await Supabase.instance.client.auth.signOut();
   }
 
+  Widget _buildSubscriptionStatusCard() {
+    return Consumer<SubscriptionProvider>(
+      builder: (context, subscription, child) {
+        return subscription.isPro ? _buildManageButtons() : _buildUpgradeCard();
+      },
+    );
+  }
+
+  /// 管理订阅按钮
+  Widget _buildManageButtons() {
+    return FeedbackButton(
+      onTap: () => context.push(AppRoutes.SUBSCRIPTION_MANAGE),
+      child: Container(
+        padding: EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF667eea), Color(0xFF764ba2)],
+          ),
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withAlpha(20),
+              blurRadius: 10,
+              offset: Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            SizedBox(width: 8),
+            Icon(Icons.star, color: Colors.white, size: 40),
+            SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Manage Subscription',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    'View plan details and billing',
+                    style: TextStyle(
+                      color: Colors.white.withAlpha(200),
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.navigate_next_rounded, color: Colors.white),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 升级卡片
+  Widget _buildUpgradeCard() {
+    return FeedbackButton(
+      onTap: () => context.push(AppRoutes.PAYWALL),
+      child: Container(
+        padding: EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF667eea), Color(0xFF764ba2)],
+          ),
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withAlpha(20),
+              blurRadius: 10,
+              offset: Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            SizedBox(width: 8),
+            Icon(Icons.star, color: Colors.white, size: 40),
+            SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Upgrade to Pro',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    'Unlimited goals & AI features',
+                    style: TextStyle(
+                      color: Colors.white.withAlpha(200),
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.navigate_next_rounded, color: Colors.white),
+          ],
+        ),
+      ),
+    );
+  }
+
   /// 用户头像块
-  Widget _buildUserHeader(ProfileProvider provider) {
+  Widget _buildUserHeader() {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 24),
+      padding: const EdgeInsets.symmetric(vertical: 16),
       child: Row(
         spacing: 24,
         children: [
@@ -112,40 +243,54 @@ class _ProfilePageState extends State<ProfilePage> {
             radius: 40,
             onAvatarChanged: (bytes) {
               if (bytes != null) {
-                provider.updateAvatar(bytes);
+                profileProvider.updateAvatar(bytes);
               }
             },
-            initialAvatar: provider.avatarBytes,
+            initialAvatar: profileProvider.avatarBytes,
           ),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                (provider.profile == null || provider.profile!.nickname == null)
+                (profileProvider.profile == null ||
+                        profileProvider.profile!.nickname == null)
                     ? 'Nickname'
-                    : provider.profile!.nickname!,
+                    : profileProvider.profile!.nickname!,
                 style: theme.textTheme.titleLarge!.copyWith(
                   color: theme.colorScheme.secondary,
                   fontWeight: FontWeight.bold,
                 ),
               ),
               Text(
-                (provider.profile == null)
+                (profileProvider.profile == null)
                     ? ''
-                    : 'joined in ${provider.profile!.createdAt!.year}-${provider.profile!.createdAt!.month}',
+                    : 'joined in ${profileProvider.profile!.createdAt!.year}-${profileProvider.profile!.createdAt!.month}',
                 style: theme.textTheme.labelMedium!.copyWith(
                   color: theme.colorScheme.secondary,
                 ),
               ),
+              SizedBox(height: 8),
+              tagLabel(
+                context: context,
+                backColor: subscriptionProvider.isPro
+                    ? theme.colorScheme.primaryContainer
+                    : theme.colorScheme.secondaryContainer,
+                frontColor: subscriptionProvider.isPro
+                    ? theme.colorScheme.onPrimaryContainer
+                    : theme.colorScheme.onSecondaryContainer,
+                label: subscriptionProvider.isPro ? 'PRO PLAN' : 'FREE PLAN',
+              ),
             ],
           ),
+          Spacer(),
+          _buildEXP(),
         ],
       ),
     );
   }
 
   /// 数据统计块
-  Widget _buildOverview(ProfileProvider provider) {
+  Widget _buildOverview() {
     return Ink(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
@@ -156,67 +301,36 @@ class _ProfilePageState extends State<ProfilePage> {
       child: Column(
         spacing: 16,
         children: [
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            decoration: ShapeDecoration(
-              color: theme.extension<AppThemeExtensions>()?.expContainer,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-            ),
-            // 经验值
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              spacing: 4,
-              children: [
-                Icon(
-                  Icons.energy_savings_leaf_rounded,
-                  color: theme.extension<AppThemeExtensions>()?.onExpContainer,
-                ),
-                Text(
-                  (provider.profile == null || provider.profile!.exp == null)
-                      ? '-- EXP'
-                      : '${provider.profile!.exp!} EXP',
-                  style: theme.textTheme.titleMedium!.copyWith(
-                    color: theme
-                        .extension<AppThemeExtensions>()
-                        ?.onExpContainer,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ],
-            ),
-          ),
+          _buildSubscriptionStatusCard(),
           Row(
             children: [
               _buildInfoCard(
                 icon: Icons.signal_cellular_alt_rounded,
                 title:
-                    (provider.profile == null ||
-                        provider.profile!.level == null)
+                    (profileProvider.profile == null ||
+                        profileProvider.profile!.level == null)
                     ? '--'
-                    : 'HSK ${provider.profile!.level}',
+                    : 'HSK ${profileProvider.profile!.level}',
                 sub: 'Level',
                 call: null,
               ),
               _buildInfoCard(
                 icon: Icons.track_changes_outlined,
                 title:
-                    (provider.profile == null ||
-                        provider.profile!.plans == null)
+                    (profileProvider.profile == null ||
+                        profileProvider.profile!.plans == null)
                     ? '--'
-                    : '${provider.profile!.plans}',
+                    : '${profileProvider.profile!.plans}',
                 sub: 'Goals',
                 call: null,
               ),
               _buildInfoCard(
                 icon: Icons.local_activity_outlined,
                 title:
-                    (provider.profile == null ||
-                        provider.profile!.practices == null)
+                    (profileProvider.profile == null ||
+                        profileProvider.profile!.practices == null)
                     ? '--'
-                    : '${provider.profile!.practices}',
+                    : '${profileProvider.profile!.practices}',
                 sub: 'Practices',
                 call: null,
               ),
@@ -229,30 +343,30 @@ class _ProfilePageState extends State<ProfilePage> {
               _buildInfoCard(
                 icon: Icons.translate_rounded,
                 title:
-                    (provider.profile == null ||
-                        provider.profile!.characters == null)
+                    (profileProvider.profile == null ||
+                        profileProvider.profile!.characters == null)
                     ? '--'
-                    : '${provider.profile!.characters}',
+                    : '${profileProvider.profile!.characters}',
                 sub: 'Characters',
                 call: null,
               ),
               _buildInfoCard(
                 icon: Icons.category_outlined, //content_copy_rounded
                 title:
-                    (provider.profile == null ||
-                        provider.profile!.words == null)
+                    (profileProvider.profile == null ||
+                        profileProvider.profile!.words == null)
                     ? '--'
-                    : '${provider.profile!.words}',
+                    : '${profileProvider.profile!.words}',
                 sub: 'Words',
                 call: null,
               ),
               _buildInfoCard(
                 icon: Icons.library_books_outlined,
                 title:
-                    (provider.profile == null ||
-                        provider.profile!.sentences == null)
+                    (profileProvider.profile == null ||
+                        profileProvider.profile!.sentences == null)
                     ? '--'
-                    : '${provider.profile!.sentences}',
+                    : '${profileProvider.profile!.sentences}',
                 sub: 'Sentences',
                 call: null,
               ),
@@ -260,6 +374,29 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildEXP() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      spacing: 4,
+      children: [
+        Text(
+          (profileProvider.profile == null ||
+                  profileProvider.profile!.exp == null)
+              ? '--'
+              : '${profileProvider.profile!.exp!} EXP',
+          style: theme.textTheme.titleMedium!.copyWith(
+            color: theme.extension<AppThemeExtensions>()?.exp,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        Icon(
+          Icons.energy_savings_leaf_rounded,
+          color: theme.extension<AppThemeExtensions>()?.exp,
+        ),
+      ],
     );
   }
 
@@ -366,60 +503,6 @@ class _ProfilePageState extends State<ProfilePage> {
         style: theme.textTheme.titleSmall?.copyWith(
           color: theme.colorScheme.secondary,
           fontWeight: FontWeight.bold,
-        ),
-      ),
-    );
-  }
-
-  /// 升级卡片
-  Widget _buildUpgradeCard(BuildContext context) {
-    return GestureDetector(
-      onTap: () => context.push(AppRoutes.PAYWALL),
-      child: Container(
-        margin: EdgeInsets.all(16),
-        padding: EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFF667eea), Color(0xFF764ba2)],
-          ),
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withAlpha(20),
-              blurRadius: 10,
-              offset: Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Icon(Icons.star, color: Colors.white, size: 40),
-            SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Upgrade to Pro',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  SizedBox(height: 4),
-                  Text(
-                    'Unlimited goals & AI features',
-                    style: TextStyle(
-                      color: Colors.white.withAlpha(200),
-                      fontSize: 14,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Icon(Icons.arrow_forward_ios, color: Colors.white, size: 20),
-          ],
         ),
       ),
     );

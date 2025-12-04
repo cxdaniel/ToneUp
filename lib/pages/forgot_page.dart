@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:toneup_app/main.dart';
 
 class ForgotPage extends StatefulWidget {
   const ForgotPage({super.key});
@@ -26,14 +27,16 @@ class _ForgotPageState extends State<ForgotPage> {
       r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
     );
     if (!emailRegExp.hasMatch(email.trim())) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Enter a valid email (e.g., user@example.com)')),
+      showGlobalSnackBar(
+        'Enter a valid email (e.g., user@example.com)',
+        isError: true,
       );
       return;
     }
     if (email.length < 6) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('The password is exceeding 6 characters.')),
+      showGlobalSnackBar(
+        'The password is exceeding 6 characters.',
+        isError: true,
       );
       return;
     }

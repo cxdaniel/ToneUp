@@ -4,9 +4,6 @@ import 'package:flutter_tts/flutter_tts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class VolcTTS {
-  final String baseUrl = 'https://openspeech.bytedance.com';
-  final String token = 'ru8X1-pqdea-RUtJTKaeMO5Wsu0ZXoyv';
-
   /// 通过edge function方式调用
   /// 返回合成的音频数据（Uint8List）或可播放的URL（String），失败返回null
   Future<Uint8List?> synthesizeEF({

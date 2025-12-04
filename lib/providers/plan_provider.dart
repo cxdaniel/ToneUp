@@ -39,12 +39,10 @@ class PlanProvider extends ChangeNotifier {
   static final PlanProvider _instance = PlanProvider._internal();
   factory PlanProvider() => _instance;
   PlanProvider._internal() {
-    debugPrint('PlanProvider 构造函数执行');
     Supabase.instance.client.auth.onAuthStateChange.listen(
       (data) {
         final event = data.event;
         if (event == AuthChangeEvent.signedOut) {
-          // 登出事件触发时执行清理操作
           cleanAllPlans();
         }
       },

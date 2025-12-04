@@ -4,6 +4,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:toneup_app/components/feedback_button.dart';
+import 'package:toneup_app/main.dart';
 import 'package:toneup_app/providers/account_settings_provider.dart';
 import 'package:toneup_app/routes.dart';
 
@@ -508,7 +509,7 @@ class _AccountSettingsState extends State<AccountSettings> {
               onPressed: () async {
                 // TODO: 实现添加邮箱逻辑
                 Navigator.pop(context);
-                _showSnackBar('Email added successfully');
+                showGlobalSnackBar('Email added successfully', isError: false);
               },
               child: Text('Add'),
             ),
@@ -562,12 +563,12 @@ class _AccountSettingsState extends State<AccountSettings> {
                 Navigator.pop(context);
                 final success = await accountProvider.updateEmail(newEmail);
                 if (success) {
-                  _showSnackBar(
+                  showGlobalSnackBar(
                     'Verification email sent to $newEmail',
                     isError: false,
                   );
                 } else {
-                  _showSnackBar(
+                  showGlobalSnackBar(
                     accountProvider.errorMessage ?? 'Failed to update email',
                     isError: true,
                   );
@@ -628,7 +629,7 @@ class _AccountSettingsState extends State<AccountSettings> {
                 final confirmPassword = confirmPasswordController.text;
 
                 if (newPassword != confirmPassword) {
-                  _showSnackBar('Passwords do not match', isError: true);
+                  showGlobalSnackBar('Passwords do not match', isError: true);
                   return;
                 }
 
@@ -637,9 +638,12 @@ class _AccountSettingsState extends State<AccountSettings> {
                   newPassword,
                 );
                 if (success) {
-                  _showSnackBar('Password changed successfully');
+                  showGlobalSnackBar(
+                    'Password changed successfully',
+                    isError: false,
+                  );
                 } else {
-                  _showSnackBar(
+                  showGlobalSnackBar(
                     accountProvider.errorMessage ?? 'Failed to change password',
                     isError: true,
                   );
@@ -657,9 +661,9 @@ class _AccountSettingsState extends State<AccountSettings> {
   Future<void> _linkAppleAccount() async {
     final success = await accountProvider.linkApple();
     if (success) {
-      _showSnackBar('Apple account linked successfully');
+      showGlobalSnackBar('Apple account linked successfully', isError: false);
     } else {
-      _showSnackBar(
+      showGlobalSnackBar(
         accountProvider.errorMessage ?? 'Failed to link Apple account',
         isError: true,
       );
@@ -670,9 +674,9 @@ class _AccountSettingsState extends State<AccountSettings> {
   Future<void> _linkGoogleAccount() async {
     final success = await accountProvider.linkGoogle();
     if (success) {
-      _showSnackBar('Google account linked successfully');
+      showGlobalSnackBar('Google account linked successfully', isError: false);
     } else {
-      _showSnackBar(
+      showGlobalSnackBar(
         accountProvider.errorMessage ?? 'Failed to link Google account',
         isError: true,
       );
@@ -706,9 +710,12 @@ class _AccountSettingsState extends State<AccountSettings> {
                   accountType,
                 );
                 if (success) {
-                  _showSnackBar('$accountType account unlinked');
+                  showGlobalSnackBar(
+                    '$accountType account unlinked',
+                    isError: false,
+                  );
                 } else {
-                  _showSnackBar(
+                  showGlobalSnackBar(
                     accountProvider.errorMessage ??
                         'Failed to unlink $accountType account',
                     isError: true,
@@ -754,7 +761,7 @@ class _AccountSettingsState extends State<AccountSettings> {
                     context.go(AppRoutes.LOGIN);
                   }
                 } else {
-                  _showSnackBar(
+                  showGlobalSnackBar(
                     accountProvider.errorMessage ?? 'Failed to delete account',
                     isError: true,
                   );
@@ -766,20 +773,5 @@ class _AccountSettingsState extends State<AccountSettings> {
         );
       },
     );
-  }
-
-  /// 显示提示信息
-  void _showSnackBar(String message, {bool isError = false}) {
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(message),
-          backgroundColor: isError
-              ? theme.colorScheme.error
-              : theme.colorScheme.primary,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    }
   }
 }

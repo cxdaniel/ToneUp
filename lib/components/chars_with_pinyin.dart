@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:pinyin/pinyin.dart';
-import 'package:toneup_app/services/chinese_words_service.dart';
+import 'package:toneup_app/services/utils.dart';
 
 class CharsWithPinyin extends StatefulWidget {
   final String chinese;
@@ -21,7 +21,7 @@ class CharsWithPinyin extends StatefulWidget {
 class _CharsWithPinyinState extends State<CharsWithPinyin> {
   @override
   Widget build(BuildContext context) {
-    final pinyin = isChinese(widget.chinese)
+    final pinyin = AppUtils.isChinese(widget.chinese)
         ? PinyinHelper.getPinyin(
             widget.chinese,
             format: PinyinFormat.WITH_TONE_MARK,

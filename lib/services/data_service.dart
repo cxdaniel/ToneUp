@@ -395,7 +395,6 @@ class DataService {
           .select()
           .eq('id', userId)
           .single();
-      debugPrint('fetchProfile::${json.encode(data)}');
       return ProfileModel.fromJson(data);
     } catch (e) {
       if (kDebugMode) {

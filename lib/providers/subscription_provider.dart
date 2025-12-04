@@ -162,6 +162,7 @@ class SubscriptionProvider extends ChangeNotifier {
   Future<void> _syncFromRevenueCat() async {
     try {
       final customerInfo = await _revenueCat.getCustomerInfo();
+
       await _revenueCat.syncSubscriptionToSupabase(customerInfo);
 
       // 重新从数据库加载

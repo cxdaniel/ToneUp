@@ -27,7 +27,6 @@ import 'package:toneup_app/providers/tts_provider.dart';
 import 'package:toneup_app/services/config.dart';
 import 'package:toneup_app/services/navigation_service.dart';
 import 'package:toneup_app/services/oauth_service.dart';
-import 'package:toneup_app/services/revenue_cat_service.dart';
 import 'package:toneup_app/theme_data.dart';
 import 'package:toneup_app/routes.dart';
 
@@ -38,7 +37,7 @@ void main() async {
       anonKey: SupabaseConfig.anonKey,
     );
     await JiebaSegmenter.init();
-    await RevenueCatService().initialize();
+    // await RevenueCatService().initialize();
 
     runApp(MyApp());
   } catch (e) {
@@ -241,7 +240,7 @@ class _MyAppState extends State<MyApp> {
           // 🆕 检查是否是绑定操作
           if (OAuthService().isAuthenticating) {
             debugPrint('🔗 绑定操作中,不执行登录跳转');
-            _showGlobalSnackBar('账号绑定成功', isError: false);
+            showGlobalSnackBar('账号绑定成功', isError: false);
           } else {
             final user = session.user;
             debugPrint('🔐 识别为登录成功，执行跳转,👤 用户信息: ${user.email}');
@@ -257,7 +256,7 @@ class _MyAppState extends State<MyApp> {
           debugPrint('✅ 检测到用户信息更新事件');
           if (OAuthService().isAuthenticating) {
             debugPrint('🔗 识别为绑定成功(通过userUpdated)，不执行跳转');
-            _showGlobalSnackBar('账号绑定成功', isError: false);
+            showGlobalSnackBar('账号绑定成功', isError: false);
           }
         }
       },
@@ -280,31 +279,11 @@ class _MyAppState extends State<MyApp> {
           } else {
             friendlyMessage = '操作失败: $message';
           }
-          _showGlobalSnackBar(friendlyMessage, isError: true);
+          showGlobalSnackBar(friendlyMessage, isError: true);
         } else {
-          _showGlobalSnackBar('操作失败,请重试', isError: true);
+          showGlobalSnackBar('操作失败,请重试', isError: true);
         }
       },
-    );
-  }
-
-  /// 🆕 显示全局 SnackBar
-  void _showGlobalSnackBar(String message, {required bool isError}) {
-    debugPrint('📢 显示提示: $message');
-    _scaffoldMessengerKey.currentState?.showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: isError ? Colors.red : Colors.green,
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 3),
-        action: SnackBarAction(
-          label: '关闭',
-          textColor: Colors.white,
-          onPressed: () {
-            _scaffoldMessengerKey.currentState?.hideCurrentSnackBar();
-          },
-        ),
-      ),
     );
   }
 
@@ -352,8 +331,36 @@ class _MyAppState extends State<MyApp> {
         routeInformationProvider: _router.routeInformationProvider,
         // routerConfig: _router,
         debugShowCheckedModeBanner: false,
-        scaffoldMessengerKey: _scaffoldMessengerKey,
+        scaffoldMessengerKey: scaffoldMessengerKey,
       ),
     );
   }
 }
+
+/// 🆕 显示全局 SnackBar
+void showGlobalSnackBar(String message, {bool isError = false}) {
+  debugPrint('📢 显示提示: $message');
+  final context = scaffoldMessengerKey.currentContext;
+  final theme = Theme.of(context!);
+  scaffoldMessengerKey.currentState?.showSnackBar(
+    SnackBar(
+      content: Text(message),
+      backgroundColor: isError
+          ? theme.colorScheme.error
+          : theme.colorScheme.primary,
+      // behavior: SnackBarBehavior.floating,
+      duration: const Duration(seconds: 3),
+      action: SnackBarAction(
+        label: 'Close',
+        textColor: Colors.white,
+        onPressed: () {
+          scaffoldMessengerKey.currentState?.hideCurrentSnackBar();
+        },
+      ),
+    ),
+  );
+}
+
+/// 全局 ScaffoldMessengerKey
+GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey =
+    GlobalKey<ScaffoldMessengerState>();

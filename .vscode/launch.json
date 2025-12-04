@@ -7,10 +7,10 @@
       "type": "dart", // Flutter/Dart 固定调试器类型
       "program": "${workspaceFolder}/lib/main.dart", // Flutter 入口必为 main.dart
       "flutterMode": "debug", // 调试模式：debug（可断点）、profile（性能分析）、release（无调试信息）
-      "args": [
-        "--dart-define", "ENV=dev",
-      ],
-      "console": "terminal" // 显示Flutter日志
+      // "args": [
+      //   "--dart-define", "ENV=dev",
+      // ],
+      // "console": "terminal" // 显示Flutter日志
     }
   ]
 }

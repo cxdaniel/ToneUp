@@ -3,19 +3,15 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:toneup_app/services/config.dart';
 
 class RevenueCatService {
   static final RevenueCatService _instance = RevenueCatService._internal();
   factory RevenueCatService() => _instance;
-  RevenueCatService._internal();
-
+  RevenueCatService._internal() {
+    initialize();
+  }
   final _supabase = Supabase.instance.client;
-
-  // RevenueCat API Keys (从环境变量或配置文件读取)
-  static const String _apiKeyIOS = 'appl_PfoovuEVLvjtBrZlHZMBaHdnpqW';
-  static const String _apiKeyAndroid = 'YOUR_ANDROID_API_KEY';
-  static const String _entitlementId = 'pro_features'; // 在 RevenueCat 控制台配置
-
   bool _isInitialized = false;
 
   /// 初始化 RevenueCat
@@ -25,11 +21,9 @@ class RevenueCatService {
     String apiKey;
 
     if (defaultTargetPlatform == TargetPlatform.iOS) {
-      apiKey = 'test_shpnmmJxpcaomwUSHhOLGIfqrAy';
-      // apiKey = _apiKeyIOS;
+      apiKey = RevenueCatConfig.apiKeyIOS;
     } else if (defaultTargetPlatform == TargetPlatform.android) {
-      // apiKey = 'test_shpnmmJxpcaomwUSHhOLGIfqrAy';
-      apiKey = _apiKeyAndroid;
+      apiKey = RevenueCatConfig.apiKeyAndroid;
     } else {
       throw UnsupportedError('Platform not supported');
     }
@@ -152,7 +146,8 @@ class RevenueCatService {
   Future<bool> isPro() async {
     try {
       final customerInfo = await Purchases.getCustomerInfo();
-      final entitlement = customerInfo.entitlements.all[_entitlementId];
+      final entitlement =
+          customerInfo.entitlements.all[RevenueCatConfig.entitlementId];
       return entitlement?.isActive == true;
     } catch (e) {
       debugPrint('❌ 检查订阅状态失败: $e');
@@ -171,14 +166,17 @@ class RevenueCatService {
       final user = _supabase.auth.currentUser;
       if (user == null) return;
 
-      final entitlement = customerInfo.entitlements.all[_entitlementId];
+      final entitlement =
+          customerInfo.entitlements.all[RevenueCatConfig.entitlementId];
       final isActive = entitlement?.isActive == true;
 
       // 准备数据
       final subscriptionData = {
         'user_id': user.id,
         'revenue_cat_customer_id': customerInfo.originalAppUserId,
-        'revenue_cat_entitlement_id': isActive ? _entitlementId : null,
+        'revenue_cat_entitlement_id': isActive
+            ? RevenueCatConfig.entitlementId
+            : null,
         'status': _getSubscriptionStatus(customerInfo),
         'tier': _getSubscriptionTier(entitlement),
         'subscription_start_at': entitlement?.latestPurchaseDate,
@@ -200,7 +198,7 @@ class RevenueCatService {
   }
 
   String _getSubscriptionStatus(CustomerInfo info) {
-    final entitlement = info.entitlements.all[_entitlementId];
+    final entitlement = info.entitlements.all[RevenueCatConfig.entitlementId];
     if (entitlement == null || !entitlement.isActive) {
       return 'free';
     }

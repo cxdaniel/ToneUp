@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:toneup_app/components/components.dart';
 import 'package:toneup_app/components/quiz_choice_widget.dart';
+import 'package:toneup_app/main.dart';
 import 'package:toneup_app/providers/evaluation_provider.dart';
 import 'package:toneup_app/providers/quiz_provider.dart';
 import 'package:toneup_app/providers/tts_provider.dart';
@@ -528,13 +529,7 @@ class _EvaluationPageState extends State<EvaluationPage> {
     } catch (e) {
       // 处理错误，如显示错误提示
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('提交失败: ${e.toString()}'),
-            showCloseIcon: true,
-            // duration: Durations.long4,
-          ),
-        );
+        showGlobalSnackBar('Some problem: ${e.toString()}', isError: true);
       }
     }
   }

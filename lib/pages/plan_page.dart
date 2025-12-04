@@ -129,11 +129,11 @@ class _PlanPageState extends State<PlanPage> {
           planProvider = provider;
           // 加载错误状态
           if (planProvider.errorMessage != null) {
-            return _buildErrorState(context, planProvider);
+            return _buildErrorState();
           }
           // 空状态
           if (planProvider.isLoading) {
-            return _buildLoadingState(context, planProvider);
+            return _buildLoadingState();
           } else {
             if (planProvider.allPlans.isEmpty) {
               return _buildEmptyState();
@@ -152,7 +152,7 @@ class _PlanPageState extends State<PlanPage> {
   }
 
   /// ⏳ 加载中状态
-  Widget _buildLoadingState(BuildContext context, PlanProvider planProvider) {
+  Widget _buildLoadingState() {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -174,7 +174,7 @@ class _PlanPageState extends State<PlanPage> {
   }
 
   /// ⛔️ 错误状态
-  Widget _buildErrorState(BuildContext context, PlanProvider planProvider) {
+  Widget _buildErrorState() {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,

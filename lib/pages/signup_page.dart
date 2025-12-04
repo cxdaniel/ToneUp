@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:go_router/go_router.dart';
+import 'package:toneup_app/main.dart';
 import 'package:toneup_app/routes.dart';
 
 class SignUpPage extends StatefulWidget {
@@ -69,9 +70,7 @@ class _SignUpPageState extends State<SignUpPage> {
     final password = passwordController.text;
 
     if (password != confirmPasswordController.text) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Passwords do not match')));
+      showGlobalSnackBar('Passwords do not match', isError: true);
       return;
     }
 
@@ -87,9 +86,7 @@ class _SignUpPageState extends State<SignUpPage> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Sign up failed: $e')));
+        showGlobalSnackBar('Sign up failed: $e', isError: true);
       }
     } finally {
       if (mounted) {

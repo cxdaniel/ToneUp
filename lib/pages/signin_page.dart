@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:toneup_app/main.dart';
 import 'package:toneup_app/routes.dart';
 import 'package:toneup_app/services/oauth_service.dart';
 
@@ -140,14 +141,7 @@ class _SigninPageState extends State<SigninPage> {
 
   /// 显示错误提示
   void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: theme.colorScheme.error,
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 3),
-      ),
-    );
+    showGlobalSnackBar(message, isError: true);
   }
 
   /// 获取友好的错误信息

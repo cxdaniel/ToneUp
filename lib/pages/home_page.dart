@@ -100,7 +100,7 @@ class _HomePageState extends State<HomePage> {
           planProvider = provider;
           _planData = planProvider.activePlan;
           if (planProvider.isLoading) {
-            LoadingOverlay.show(context);
+            LoadingOverlay.show(context, label: 'Loading your active goal...');
           } else {
             LoadingOverlay.hide();
           }

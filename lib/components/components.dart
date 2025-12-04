@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:toneup_app/components/feedback_button.dart';
+import 'package:toneup_app/main.dart';
 
 class SkeletonBox extends StatelessWidget {
   final double width;
@@ -36,7 +37,7 @@ class LoadingOverlay {
   static bool _isShowing = false;
 
   /// 显示加载浮层
-  static void show(BuildContext context) {
+  static void show(BuildContext context, {String label = 'loading...'}) {
     if (_isShowing) return;
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -65,7 +66,7 @@ class LoadingOverlay {
                     ),
                     SizedBox(height: 16),
                     Text(
-                      'loading...',
+                      label,
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: theme.colorScheme.onSurface,
                       ),

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:toneup_app/components/feedback_button.dart';
+import 'package:toneup_app/main.dart';
 import 'package:toneup_app/providers/profile_provider.dart';
 import 'package:toneup_app/routes.dart';
 
@@ -181,14 +182,7 @@ class _ProfileSettings extends State<ProfileSettings> {
   /// 处理昵称确认逻辑
   void _confirmNickname(BuildContext dialogContext, String newNickname) {
     if (newNickname.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Nickname cannot be empty'),
-          backgroundColor: theme.colorScheme.error, // 错误提示用红色
-          duration: const Duration(seconds: 2),
-          behavior: SnackBarBehavior.floating, // 悬浮样式，不遮挡输入框
-        ),
-      );
+      showGlobalSnackBar('Nickname cannot be empty', isError: true);
       return;
     }
 
