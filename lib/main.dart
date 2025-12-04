@@ -54,8 +54,6 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   late final String _initialLocation;
   late final GoRouter _router;
-  final GlobalKey<ScaffoldMessengerState> _scaffoldMessengerKey =
-      GlobalKey<ScaffoldMessengerState>();
 
   @override
   void initState() {
@@ -344,15 +342,24 @@ void showGlobalSnackBar(String message, {bool isError = false}) {
   final theme = Theme.of(context!);
   scaffoldMessengerKey.currentState?.showSnackBar(
     SnackBar(
-      content: Text(message),
+      content: Text(
+        message,
+        style: theme.textTheme.bodyMedium?.copyWith(
+          color: isError
+              ? theme.colorScheme.onErrorContainer
+              : theme.colorScheme.onPrimaryContainer,
+        ),
+      ),
       backgroundColor: isError
-          ? theme.colorScheme.error
-          : theme.colorScheme.primary,
+          ? theme.colorScheme.errorContainer
+          : theme.colorScheme.primaryContainer,
       // behavior: SnackBarBehavior.floating,
       duration: const Duration(seconds: 3),
       action: SnackBarAction(
         label: 'Close',
-        textColor: Colors.white,
+        textColor: isError
+            ? theme.colorScheme.onErrorContainer
+            : theme.colorScheme.onPrimaryContainer,
         onPressed: () {
           scaffoldMessengerKey.currentState?.hideCurrentSnackBar();
         },

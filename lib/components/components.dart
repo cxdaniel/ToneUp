@@ -1,9 +1,7 @@
 import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:toneup_app/components/feedback_button.dart';
-import 'package:toneup_app/main.dart';
 
 class SkeletonBox extends StatelessWidget {
   final double width;
