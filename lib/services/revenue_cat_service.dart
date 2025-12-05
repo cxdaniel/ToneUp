@@ -89,7 +89,21 @@ class RevenueCatService {
   /// 获取可用的订阅产品
   Future<Offerings?> getOfferings() async {
     try {
+      if (kDebugMode) {
+        // 打印当前配置
+        debugPrint('📦 RevenueCat API Key: ${RevenueCatConfig.apiKeyIOS}');
+        debugPrint('📦 Entitlement ID: ${RevenueCatConfig.entitlementId}');
+      }
       final offerings = await Purchases.getOfferings();
+
+      if (kDebugMode) {
+        debugPrint('✅ Offerings loaded: ${offerings.all.keys}');
+        debugPrint('✅ Current offering: ${offerings.current?.identifier}');
+        debugPrint(
+          '✅ Available packages: ${offerings.current?.availablePackages.map((e) => e.identifier)}',
+        );
+      }
+
       if (offerings.current == null) {
         debugPrint('⚠️ 没有可用的订阅产品');
         return null;
