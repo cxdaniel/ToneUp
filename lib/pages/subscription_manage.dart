@@ -97,7 +97,8 @@ class SubscriptionManagePage extends StatelessWidget {
               ),
               SizedBox(width: 12),
               Text(
-                subscription.isPro ? 'ToneUp Pro' : 'Free Plan',
+                _getTitle(sub),
+                // subscription.isPro ? 'ToneUp Pro' : 'Free Plan',
                 style: theme.textTheme.headlineSmall?.copyWith(
                   fontWeight: FontWeight.bold,
                   color: subscription.isPro
@@ -138,6 +139,17 @@ class SubscriptionManagePage extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  /// 获取类别标题
+  String _getTitle(SubscriptionModel sub) {
+    if (sub.isTrialing) {
+      return 'ToneUp Pro (Trial)';
+    } else if (sub.isPro) {
+      return 'ToneUp Pro';
+    } else {
+      return 'Free Plan';
+    }
   }
 
   Widget _buildBenefitsList(ThemeData theme) {
@@ -219,9 +231,11 @@ class SubscriptionManagePage extends StatelessWidget {
     );
   }
 
+  /// 获取状态文本
   String _getStatusText(SubscriptionModel sub) {
     if (sub.isTrialing) {
-      return 'Free Trial Active';
+      final daysLeft = sub.trialDaysLeft ?? 0;
+      return 'Free Trial Active - $daysLeft days remaining';
     } else if (sub.status == SubscriptionStatus.cancelled) {
       return 'Cancelled (Active until expiry)';
     } else {
@@ -229,15 +243,20 @@ class SubscriptionManagePage extends StatelessWidget {
     }
   }
 
+  /// 获取到期信息
   String _getExpiryText(SubscriptionModel sub) {
-    final daysLeft = sub.subscriptionEndAt!.difference(DateTime.now()).inDays;
-    if (sub.isTrialing) {
-      return 'Trial ends in $daysLeft days';
-    } else if (sub.status == SubscriptionStatus.cancelled) {
-      return 'Access ends in $daysLeft days';
-    } else {
-      return 'Renews on ${_formatDate(sub.subscriptionEndAt!)}';
+    if (sub.isTrialing && sub.trialEndAt != null) {
+      final daysLeft = sub.trialDaysLeft ?? 0;
+      return 'Trial ends ${_formatDate(sub.trialEndAt!)} (in $daysLeft days)';
+    } else if (sub.subscriptionEndAt != null) {
+      final daysLeft = sub.subscriptionEndAt!.difference(DateTime.now()).inDays;
+      if (sub.status == SubscriptionStatus.cancelled) {
+        return 'Access ends in $daysLeft days';
+      } else {
+        return 'Renews on ${_formatDate(sub.subscriptionEndAt!)}';
+      }
     }
+    return '';
   }
 
   String _formatDate(DateTime date) {

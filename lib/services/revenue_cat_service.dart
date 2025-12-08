@@ -16,6 +16,12 @@ class RevenueCatService {
 
   /// 初始化 RevenueCat
   Future<void> initialize() async {
+    if (kIsWeb) {
+      debugPrint('⚠️ Web 端跳过 RevenueCat 初始化');
+      _isInitialized = true;
+      return;
+    }
+
     if (_isInitialized) return;
 
     String apiKey;
@@ -44,19 +50,6 @@ class RevenueCatService {
         await Purchases.setLogLevel(LogLevel.debug);
       }
 
-      // ✅ 测试：获取客户信息（不涉及产品）
-      try {
-        final customerInfo = await Purchases.getCustomerInfo();
-        debugPrint(
-          '✅ Customer Info retrieved: ${customerInfo.originalAppUserId}',
-        );
-      } catch (e) {
-        debugPrint('❌ Failed to get customer info: $e');
-      }
-
-      _isInitialized = true;
-      debugPrint('✅ RevenueCat initialized successfully');
-
       _isInitialized = true;
       debugPrint('✅ RevenueCat 初始化成功');
     } catch (e) {
@@ -67,6 +60,9 @@ class RevenueCatService {
 
   /// 登录后设置用户ID
   Future<void> login(String userId) async {
+    //  Web端跳过
+    if (kIsWeb) return;
+
     try {
       await Purchases.logIn(userId);
       debugPrint('✅ RevenueCat 用户登录: $userId');
@@ -78,6 +74,9 @@ class RevenueCatService {
 
   /// 登出
   Future<void> logout() async {
+    //  Web端跳过
+    if (kIsWeb) return;
+
     try {
       await Purchases.logOut();
       debugPrint('✅ RevenueCat 用户登出');
@@ -88,22 +87,13 @@ class RevenueCatService {
 
   /// 获取可用的订阅产品
   Future<Offerings?> getOfferings() async {
+    if (kIsWeb) {
+      debugPrint('⚠️ Web 端不支持获取订阅产品');
+      return null;
+    }
+
     try {
-      if (kDebugMode) {
-        // 打印当前配置
-        debugPrint('📦 RevenueCat API Key: ${RevenueCatConfig.apiKeyIOS}');
-        debugPrint('📦 Entitlement ID: ${RevenueCatConfig.entitlementId}');
-      }
       final offerings = await Purchases.getOfferings();
-
-      if (kDebugMode) {
-        debugPrint('✅ Offerings loaded: ${offerings.all.keys}');
-        debugPrint('✅ Current offering: ${offerings.current?.identifier}');
-        debugPrint(
-          '✅ Available packages: ${offerings.current?.availablePackages.map((e) => e.identifier)}',
-        );
-      }
-
       if (offerings.current == null) {
         debugPrint('⚠️ 没有可用的订阅产品');
         return null;
@@ -117,14 +107,15 @@ class RevenueCatService {
 
   /// 购买产品
   Future<CustomerInfo?> purchasePackage(Package package) async {
+    if (kIsWeb) {
+      throw UnsupportedError('Web 端不支持应用内购买');
+    }
+
     try {
       final purchaseResult = await Purchases.purchase(
         PurchaseParams.package(package),
       );
-      debugPrint('✅ 购买成功: ${package.identifier}');
-
       final customerInfo = purchaseResult.customerInfo;
-
       // 同步到 Supabase
       await syncSubscriptionToSupabase(customerInfo);
       return customerInfo;
@@ -141,14 +132,13 @@ class RevenueCatService {
   }
 
   /// 恢复购买
-  Future<CustomerInfo> restorePurchases() async {
+  Future<CustomerInfo?> restorePurchases() async {
+    if (kIsWeb) return null;
+
     try {
       final customerInfo = await Purchases.restorePurchases();
-      debugPrint('✅ 恢复购买成功');
-
       // 同步到 Supabase
       await syncSubscriptionToSupabase(customerInfo);
-
       return customerInfo;
     } catch (e) {
       debugPrint('❌ 恢复购买失败: $e');
@@ -170,12 +160,16 @@ class RevenueCatService {
   }
 
   /// 获取当前订阅信息
-  Future<CustomerInfo> getCustomerInfo() async {
+  Future<CustomerInfo?> getCustomerInfo() async {
+    if (kIsWeb) return null;
+
     return await Purchases.getCustomerInfo();
   }
 
   /// 同步订阅状态到 Supabase
   Future<void> syncSubscriptionToSupabase(CustomerInfo customerInfo) async {
+    if (kIsWeb) return;
+
     try {
       final user = _supabase.auth.currentUser;
       if (user == null) {
@@ -186,8 +180,6 @@ class RevenueCatService {
       final entitlement =
           customerInfo.entitlements.all[RevenueCatConfig.entitlementId];
       final isActive = entitlement?.isActive == true;
-
-      debugPrint('🔄 同步订阅到 Supabase');
 
       // ✅ 完整的数据准备
       final subscriptionData = {
@@ -214,8 +206,6 @@ class RevenueCatService {
         'product_id': entitlement?.productIdentifier,
         'updated_at': DateTime.now().toIso8601String(),
       };
-
-      // debugPrint('📝 准备写入数据: $subscriptionData');
 
       // Upsert 到数据库
       await _supabase

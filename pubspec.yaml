@@ -56,13 +56,14 @@ dependencies:
   pinyin: ^3.3.0            # 拼音库
   image_picker: ^1.2.0      # 图片选择器
   image_cropper: ^11.0.0    # 图片裁剪
-  google_sign_in: ^7.2.0    # google登录
   app_links: ^6.4.1         # deeplink处理
+  google_sign_in: ^7.2.0    # google登录
   sign_in_with_apple: ^7.0.1      # Apple登录
   segmented_progress_bar: ^1.0.0  # 分段进度条
   purchases_flutter: ^9.9.9       # 订阅管理
   purchases_ui_flutter: ^9.9.9    # 订阅UI组件
   url_launcher: ^6.3.2            # 打开外部链接
+  qr_flutter: ^4.1.0              # 生成二维码
 
 dev_dependencies:
   flutter_test:

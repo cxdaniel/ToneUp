@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -54,6 +55,7 @@ class _ProfilePageState extends State<ProfilePage> {
               LoadingOverlay.show(context, label: 'Refreshing profile...');
               await profileProvider.fetchProfile();
               await subscriptionProvider.loadSubscription();
+              await subscriptionProvider.testRevenueCatConfig();
               LoadingOverlay.hide();
             },
             child: SingleChildScrollView(
@@ -115,8 +117,46 @@ class _ProfilePageState extends State<ProfilePage> {
   Widget _buildSubscriptionStatusCard() {
     return Consumer<SubscriptionProvider>(
       builder: (context, subscription, child) {
+        // Web 端且非 Pro:不显示升级按钮
+        if (kIsWeb && !subscription.isPro) {
+          return _buildWebFreeCard();
+        }
         return subscription.isPro ? _buildManageButtons() : _buildUpgradeCard();
       },
+    );
+  }
+
+  /// Web 端免费用户卡片
+  Widget _buildWebFreeCard() {
+    return FeedbackButton(
+      onTap: () {
+        context.push(AppRoutes.DOWNLOAD);
+      },
+      child: Container(
+        padding: EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Icon(
+              Icons.info_outline,
+              size: 32,
+              color: theme.colorScheme.primary,
+            ),
+            SizedBox(height: 4),
+            Text(
+              'Please use mobile app to upgrade',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.outline,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -270,16 +310,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
               ),
               SizedBox(height: 8),
-              tagLabel(
-                context: context,
-                backColor: subscriptionProvider.isPro
-                    ? theme.colorScheme.primaryContainer
-                    : theme.colorScheme.secondaryContainer,
-                frontColor: subscriptionProvider.isPro
-                    ? theme.colorScheme.onPrimaryContainer
-                    : theme.colorScheme.onSecondaryContainer,
-                label: subscriptionProvider.isPro ? 'PRO PLAN' : 'FREE PLAN',
-              ),
+              _buildSubscriptionBadge(),
             ],
           ),
           Spacer(),
@@ -287,6 +318,38 @@ class _ProfilePageState extends State<ProfilePage> {
         ],
       ),
     );
+  }
+
+  /// 订阅状态徽章
+  Widget _buildSubscriptionBadge() {
+    final subscription = subscriptionProvider.subscription;
+
+    if (subscription == null || subscription.isFree) {
+      // 免费用户
+      return tagLabel(
+        context: context,
+        backColor: theme.colorScheme.secondaryContainer,
+        frontColor: theme.colorScheme.onSecondaryContainer,
+        label: 'FREE PLAN',
+      );
+    } else if (subscription.isTrialing) {
+      // 试用期用户
+      final daysLeft = subscription.trialDaysLeft ?? 0;
+      return tagLabel(
+        context: context,
+        backColor: theme.colorScheme.errorContainer,
+        frontColor: theme.colorScheme.onErrorContainer,
+        label: 'TRIAL: $daysLeft DAYS LEFT',
+      );
+    } else {
+      // Pro 用户
+      return tagLabel(
+        context: context,
+        backColor: theme.colorScheme.primaryContainer,
+        frontColor: theme.colorScheme.onPrimaryContainer,
+        label: 'PRO PLAN',
+      );
+    }
   }
 
   /// 数据统计块

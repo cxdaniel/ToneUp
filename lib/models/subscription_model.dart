@@ -39,6 +39,17 @@ class SubscriptionModel {
   bool get isTrialing => status == SubscriptionStatus.trial;
   bool get isPro => isActive;
 
+  /// 试用剩余天数
+  int? get trialDaysLeft {
+    if (status == SubscriptionStatus.trial && trialEndAt != null) {
+      final now = DateTime.now();
+      if (trialEndAt!.isAfter(now)) {
+        return trialEndAt!.difference(now).inDays;
+      }
+    }
+    return null;
+  }
+
   SubscriptionModel({
     required this.id,
     required this.userId,

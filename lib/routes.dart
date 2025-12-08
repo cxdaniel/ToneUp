@@ -17,4 +17,5 @@ class AppRoutes {
   static const CREATE_GOAL = '/create_goal';
   static const PAYWALL = '/paywall';
   static const SUBSCRIPTION_MANAGE = '/profile/subscription';
+  static const DOWNLOAD = '/download';
 }

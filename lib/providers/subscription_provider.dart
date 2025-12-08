@@ -109,6 +109,86 @@ class SubscriptionProvider extends ChangeNotifier {
     }).length;
   }
 
+  /// 测试 RevenueCat 配置
+  Future<void> testRevenueCatConfig() async {
+    try {
+      if (kDebugMode) {
+        debugPrint('🔍 测试 RevenueCat 配置...');
+        debugPrint('📦 API Key: ${RevenueCatConfig.apiKeyIOS}');
+      }
+
+      // 1. 获取 Offerings
+      final offerings = await Purchases.getOfferings();
+
+      if (kDebugMode) {
+        debugPrint('✅ Offerings 加载成功');
+        debugPrint('📋 所有 Offerings: ${offerings.all.keys.toList()}');
+        debugPrint(
+          '📋 当前 Offering: ${offerings.current?.identifier ?? "null"}',
+        );
+      }
+
+      // 2. 检查产品
+      if (offerings.current != null) {
+        final packages = offerings.current!.availablePackages;
+
+        if (kDebugMode) {
+          debugPrint('📦 可用产品数量: ${packages.length}');
+
+          for (var package in packages) {
+            final product = package.storeProduct;
+            debugPrint('');
+            debugPrint('📦 Package: ${package.identifier}');
+            debugPrint('   Product ID: ${product.identifier}');
+            debugPrint('   显示名称: ${product.title}');
+            debugPrint('   价格: ${product.priceString}');
+            debugPrint('   周期: ${product.subscriptionPeriod}');
+
+            // ✅ 检查免费试用
+            if (product.introductoryPrice != null) {
+              final intro = product.introductoryPrice!;
+              debugPrint('   ✅ 免费试用:');
+              debugPrint('      价格: ${intro.priceString}');
+              debugPrint('      时长: ${intro.period}');
+              debugPrint('      周期数: ${intro.cycles}');
+            } else {
+              debugPrint('   ⚠️ 没有免费试用');
+            }
+          }
+        }
+
+        // 3. 验证配置完整性
+        if (packages.length != 2) {
+          debugPrint('⚠️ 警告: 应该有 2 个产品，实际有 ${packages.length} 个');
+        }
+
+        final hasMonthly = packages.any(
+          (p) => p.storeProduct.identifier == 'toneup_monthly_sub',
+        );
+        final hasAnnual = packages.any(
+          (p) => p.storeProduct.identifier == 'toneup_annually_sub',
+        );
+
+        if (!hasMonthly) {
+          debugPrint('❌ 缺少月订阅产品');
+        }
+        if (!hasAnnual) {
+          debugPrint('❌ 缺少年订阅产品');
+        }
+
+        if (hasMonthly && hasAnnual && packages.length == 2) {
+          debugPrint('');
+          debugPrint('🎉 RevenueCat 配置完全正确！');
+        }
+      } else {
+        debugPrint('❌ 当前 Offering 为空');
+        debugPrint('💡 请检查 RevenueCat Dashboard 的 Offerings 配置');
+      }
+    } catch (e) {
+      debugPrint('❌ 测试失败: $e');
+    }
+  }
+
   /// 从 Supabase 加载订阅信息
   Future<void> loadSubscription() async {
     final user = _supabase.auth.currentUser;
@@ -161,30 +241,13 @@ class SubscriptionProvider extends ChangeNotifier {
 
   /// 从 RevenueCat 同步状态
   Future<void> _syncFromRevenueCat() async {
+    if (kIsWeb) return;
+
     try {
       final customerInfo = await _revenueCat.getCustomerInfo();
-      final entitlement =
-          customerInfo.entitlements.all[RevenueCatConfig.entitlementId];
-
-      debugPrint('📊 RevenueCat 状态:');
-      debugPrint('   ----------------------------------');
-      debugPrint('   Customer ID: ${customerInfo.originalAppUserId}');
-      debugPrint(
-        '   All Entitlements: ${customerInfo.entitlements.all.keys.toList()}',
-      );
-      if (entitlement != null) {
-        debugPrint('   Pro Features Entitlement:');
-        debugPrint('     - Active: ${entitlement.isActive}');
-        debugPrint('     - Product ID: ${entitlement.productIdentifier}');
-        debugPrint('     - Will Renew: ${entitlement.willRenew}');
-        debugPrint('     - Period Type: ${entitlement.periodType}');
-        debugPrint('     - Expiration: ${entitlement.expirationDate}');
-      } else {
-        debugPrint('   ⚠️ 没有找到 ${RevenueCatConfig.entitlementId} entitlement');
-      }
-
+      // 同步到 Supabase
+      if (customerInfo == null) return;
       await _revenueCat.syncSubscriptionToSupabase(customerInfo);
-
       // 重新从数据库加载
       final user = _supabase.auth.currentUser;
       if (user != null) {

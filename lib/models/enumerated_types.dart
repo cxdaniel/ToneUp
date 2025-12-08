@@ -1,5 +1,7 @@
 import 'package:json_annotation/json_annotation.dart';
 
+enum PlatformType { iOS, android, web, unknown }
+
 /// 用户计划状态枚举
 enum PlanStatus {
   active,

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:jieba_flutter/analysis/jieba_segmenter.dart';
 import 'package:provider/provider.dart';
@@ -5,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:go_router/go_router.dart';
 import 'package:toneup_app/components/mainshell.dart';
 import 'package:toneup_app/pages/create_goal_page.dart';
+import 'package:toneup_app/pages/download_page.dart';
 import 'package:toneup_app/pages/paywall.dart';
 import 'package:toneup_app/pages/profile_account.dart';
 import 'package:toneup_app/pages/evaluation_page.dart';
@@ -179,11 +181,22 @@ class _MyAppState extends State<MyApp> {
         ),
         GoRoute(
           path: AppRoutes.PAYWALL,
+          redirect: (context, state) {
+            // Web 端重定向到订阅管理页
+            if (kIsWeb) {
+              return AppRoutes.DOWNLOAD;
+            }
+            return null;
+          },
           builder: (context, state) => PaywallPage(),
         ),
         GoRoute(
           path: AppRoutes.SUBSCRIPTION_MANAGE,
           builder: (context, state) => SubscriptionManagePage(),
+        ),
+        GoRoute(
+          path: AppRoutes.DOWNLOAD,
+          builder: (context, state) => const DownloadPage(),
         ),
         StatefulShellRoute.indexedStack(
           builder: (context, state, navigationShell) =>
