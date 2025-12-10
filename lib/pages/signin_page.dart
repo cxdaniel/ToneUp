@@ -91,7 +91,9 @@ class _SigninPageState extends State<SigninPage> {
     } on PlatformException catch (pe) {
       debugPrint('❌ Apple 登录 PlatformException: ${pe.code} - ${pe.message}');
       // 忽略 Safari View Controller 启动警告
-      if (!pe.message!.contains('Error while launching') && mounted) {
+      if (pe.message != null &&
+          !pe.message!.contains('Error while launching') &&
+          mounted) {
         _showError('Apple login error: ${pe.message}');
       }
     } catch (e) {
@@ -124,7 +126,9 @@ class _SigninPageState extends State<SigninPage> {
       }
     } on PlatformException catch (pe) {
       debugPrint('❌ Google 登录 PlatformException: ${pe.code} - ${pe.message}');
-      if (!pe.message!.contains('Error while launching') && mounted) {
+      if (pe.message != null &&
+          !pe.message!.contains('Error while launching') &&
+          mounted) {
         _showError('Google login error: ${pe.message}');
       }
     } catch (e) {

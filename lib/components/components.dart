@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:toneup_app/components/feedback_button.dart';
 
+export 'package:toneup_app/components/otp_verification_dialog.dart';
+
 class SkeletonBox extends StatelessWidget {
   final double width;
   final double height;
@@ -192,6 +194,7 @@ Widget mainActionButton({
   );
 }
 
+/// 标签样式文本
 Widget tagLabel({
   required BuildContext context,
   required String label,
@@ -221,6 +224,79 @@ Widget tagLabel({
       style: theme.textTheme.labelLarge?.copyWith(
         color: frontColor ?? Theme.of(context).colorScheme.onSecondaryContainer,
         fontSize: fontSize,
+      ),
+    ),
+  );
+}
+
+/// 列表项
+Widget listCeil(
+  BuildContext context, {
+  String? label,
+  String? hit,
+  VoidCallback? call,
+}) {
+  final theme = Theme.of(context);
+  return FeedbackButton(
+    borderRadius: BorderRadius.circular(16),
+    onTap: call,
+    child: Ink(
+      padding: const EdgeInsets.all(16),
+      decoration: ShapeDecoration(
+        color: theme.colorScheme.surfaceContainer,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        spacing: 10,
+        children: [
+          if (label != null)
+            Text(
+              label,
+              style: theme.textTheme.titleMedium!.copyWith(
+                color: theme.colorScheme.secondary,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          if (hit != null)
+            Expanded(
+              child: Text(
+                textAlign: TextAlign.right,
+                hit,
+                style: theme.textTheme.labelLarge!.copyWith(
+                  color: theme.colorScheme.outline,
+                  fontWeight: FontWeight.w300,
+                ),
+              ),
+            ),
+          if (call != null)
+            Icon(
+              Icons.navigate_next_rounded,
+              size: 24,
+              color: theme.colorScheme.secondary,
+            ),
+        ],
+      ),
+    ),
+  );
+}
+
+/// 图标文字链
+Widget iconLink(
+  BuildContext context, {
+  required String label,
+  IconData? icon,
+  VoidCallback? call,
+}) {
+  final theme = Theme.of(context);
+  return TextButton.icon(
+    icon: Icon(icon, size: 20, color: theme.colorScheme.outline),
+    onPressed: call,
+    label: Text(
+      label,
+      style: theme.textTheme.titleSmall?.copyWith(
+        color: theme.colorScheme.secondary,
+        fontWeight: FontWeight.bold,
       ),
     ),
   );

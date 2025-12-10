@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:toneup_app/components/components.dart';
 import 'package:toneup_app/components/feedback_button.dart';
 import 'package:toneup_app/main.dart';
 import 'package:toneup_app/providers/account_settings_provider.dart';
@@ -50,22 +51,27 @@ class _AccountSettingsState extends State<AccountSettings> {
           accountProvider = provider;
 
           if (provider.isLoading) {
-            return _buildLoadingState();
+            LoadingOverlay.show(
+              context,
+              label: 'Waiting for authentication...',
+            );
+          } else {
+            LoadingOverlay.hide();
           }
 
           return SingleChildScrollView(
             child: Padding(
               padding: const EdgeInsets.all(24.0),
               child: Column(
-                spacing: 32,
+                spacing: 16,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildSectionTitle('Connected Accounts'),
                   _buildConnectedAccountsSection(),
-
+                  SizedBox(height: 0),
                   _buildSectionTitle('Security'),
                   _buildSecuritySection(),
-
+                  SizedBox(height: 0),
                   _buildSectionTitle('Danger Zone'),
                   _buildDangerZoneSection(),
                 ],
@@ -73,28 +79,6 @@ class _AccountSettingsState extends State<AccountSettings> {
             ),
           );
         },
-      ),
-    );
-  }
-
-  /// 加载状态
-  Widget _buildLoadingState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          CircularProgressIndicator(
-            strokeCap: StrokeCap.round,
-            backgroundColor: theme.colorScheme.secondaryContainer,
-          ),
-          const SizedBox(height: 20),
-          Text(
-            'Loading account info...',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.outline,
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -333,12 +317,6 @@ class _AccountSettingsState extends State<AccountSettings> {
             label: 'Change Password',
             onTap: _showChangePasswordDialog,
           ),
-        _buildListTile(
-          icon: Icons.security_outlined,
-          label: 'Two-Factor Authentication',
-          subtitle: 'Coming soon',
-          onTap: null,
-        ),
       ],
     );
   }
@@ -464,16 +442,17 @@ class _AccountSettingsState extends State<AccountSettings> {
     );
   }
 
-  /// 添加邮箱对话框
-  void _showAddEmailDialog() {
+  /// 添加邮箱对话框(使用 OTP 验证)
+  Future<void> _showAddEmailDialog() async {
+    // 步骤 1: 获取用户输入的新邮箱地址
     final emailController = TextEditingController();
     final passwordController = TextEditingController();
 
-    showDialog(
+    final result = await showDialog<Map<String, String>>(
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: Text('Add Email & Password'),
+          title: const Text('Add Email & Password'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -491,43 +470,104 @@ class _AccountSettingsState extends State<AccountSettings> {
               TextField(
                 controller: passwordController,
                 decoration: InputDecoration(
-                  labelText: 'Password',
+                  labelText: 'Password (min 6 characters)',
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
                 obscureText: true,
               ),
+              const SizedBox(height: 12),
+              Text(
+                'After verification, you will receive a confirmation link in your new email. Click it to complete the setup.',
+                style: theme.textTheme.bodySmall!.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
             ],
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: Text('Cancel'),
+              child: const Text('Cancel'),
             ),
             FilledButton(
-              onPressed: () async {
-                // TODO: 实现添加邮箱逻辑
-                Navigator.pop(context);
-                showGlobalSnackBar('Email added successfully', isError: false);
+              onPressed: () {
+                final email = emailController.text.trim();
+                final password = passwordController.text;
+                if (email.isEmpty || password.length < 6) {
+                  showOverlayMessage(
+                    context,
+                    'Please fill all fields',
+                    isError: true,
+                  );
+                  return;
+                }
+                Navigator.pop(context, {'email': email, 'password': password});
               },
-              child: Text('Add'),
+              child: const Text('Next'),
             ),
           ],
         );
       },
     );
+
+    if (result == null || !mounted) return;
+    final newEmail = result['email']!;
+    final password = result['password']!;
+
+    // 步骤 2: 发送当前账号的重认证 OTP
+    final currentOtpSent = await accountProvider.sendReauthenticationOtp();
+    if (!currentOtpSent || !mounted) {
+      showGlobalSnackBar(
+        accountProvider.errorMessage ?? 'Failed to send verification code',
+        isError: true,
+      );
+      return;
+    }
+
+    // 步骤 3: 验证当前账号的 OTP 并完成添加
+    String? resultMessage;
+    final verified = await OtpVerificationDialog.show(
+      context: context,
+      title: 'Verify Current Account',
+      description:
+          'Enter the 6-digit code sent to your current account. '
+          'You can switch to your email app and come back here.',
+      onVerify: (otpCode) async {
+        final (success, message) = await accountProvider.addEmail(
+          newEmail,
+          password,
+          otpCode,
+        );
+        resultMessage = message;
+        return (success, message);
+      },
+      onResend: () => accountProvider.sendReauthenticationOtp(),
+    );
+
+    if (!mounted) return;
+    if (verified == true) {
+      showGlobalSnackBar(
+        resultMessage ??
+            'Email add request sent. Please check your new email inbox for confirmation link.',
+        isError: false,
+      );
+    } else if (verified == false) {
+      showGlobalSnackBar(resultMessage ?? 'Failed to add email', isError: true);
+    }
   }
 
-  /// 更改邮箱对话框
-  void _showChangeEmailDialog() {
+  /// 更改邮箱对话框(使用三步OTP验证)
+  Future<void> _showChangeEmailDialog() async {
+    // 步骤 1: 获取用户输入的新邮箱地址
     final emailController = TextEditingController();
 
-    showDialog(
+    final newEmail = await showDialog<String>(
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: Text('Change Email'),
+          title: const Text('Change Email'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -543,7 +583,7 @@ class _AccountSettingsState extends State<AccountSettings> {
               ),
               const SizedBox(height: 12),
               Text(
-                'A verification email will be sent to your new address.',
+                'After verification, you will receive a confirmation link in your new email. Click it to complete the change.',
                 style: theme.textTheme.bodySmall!.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
@@ -553,57 +593,95 @@ class _AccountSettingsState extends State<AccountSettings> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: Text('Cancel'),
+              child: const Text('Cancel'),
             ),
             FilledButton(
-              onPressed: () async {
-                final newEmail = emailController.text.trim();
-                if (newEmail.isEmpty) return;
-
-                Navigator.pop(context);
-                final success = await accountProvider.updateEmail(newEmail);
-                if (success) {
-                  showGlobalSnackBar(
-                    'Verification email sent to $newEmail',
-                    isError: false,
-                  );
-                } else {
-                  showGlobalSnackBar(
-                    accountProvider.errorMessage ?? 'Failed to update email',
-                    isError: true,
-                  );
-                }
+              onPressed: () {
+                final email = emailController.text.trim();
+                if (email.isEmpty) return;
+                Navigator.pop(context, email);
               },
-              child: Text('Send Verification'),
+              child: const Text('Next'),
             ),
           ],
         );
       },
     );
+
+    if (newEmail == null || !mounted) return;
+
+    // 步骤 2: 发送当前邮箱的重认证 OTP
+    final currentOtpSent = await accountProvider.sendReauthenticationOtp();
+    if (!currentOtpSent || !mounted) {
+      showGlobalSnackBar(
+        accountProvider.errorMessage ?? 'Failed to send verification code',
+        isError: true,
+      );
+      return;
+    }
+
+    // 步骤 3: 验证当前邮箱的 OTP 并完成更新
+    String? resultMessage;
+    final verified = await OtpVerificationDialog.show(
+      context: context,
+      title: 'Verify Current Email',
+      description:
+          'Enter the 6-digit code sent to your current email. '
+          'You can switch to your email app and come back here.',
+      onVerify: (otpCode) async {
+        final (success, message) = await accountProvider.updateEmail(
+          newEmail,
+          otpCode,
+        );
+        resultMessage = message;
+        return (success, message);
+      },
+      onResend: () => accountProvider.sendReauthenticationOtp(),
+    );
+
+    if (!mounted) return;
+    if (verified == true) {
+      showGlobalSnackBar(
+        resultMessage ??
+            'Email update request sent. Please check your new email inbox for confirmation link.',
+        isError: false,
+      );
+    } else if (verified == false) {
+      showGlobalSnackBar(
+        resultMessage ?? 'Failed to update email',
+        isError: true,
+      );
+    }
   }
 
-  /// 更改密码对话框
-  void _showChangePasswordDialog() {
+  /// 更改密码对话框(使用 OTP 验证)
+  Future<void> _showChangePasswordDialog() async {
     final newPasswordController = TextEditingController();
     final confirmPasswordController = TextEditingController();
 
-    showDialog(
+    final passwords = await showDialog<Map<String, String>>(
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: Text('Change Password'),
+          title: Text(
+            'Change Password',
+            style: theme.textTheme.titleMedium!.copyWith(
+              color: theme.colorScheme.secondary,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
                 controller: newPasswordController,
                 decoration: InputDecoration(
-                  labelText: 'New Password',
+                  labelText: 'New Password (min 6 characters)',
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                obscureText: true,
+                obscureText: true, // 隐藏输入
               ),
               const SizedBox(height: 16),
               TextField(
@@ -616,45 +694,79 @@ class _AccountSettingsState extends State<AccountSettings> {
                 ),
                 obscureText: true,
               ),
+              const SizedBox(height: 12),
+              Text(
+                'A verification code will be sent to your email.',
+                style: theme.textTheme.bodySmall!.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
             ],
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: Text('Cancel'),
+              child: const Text('Cancel'),
             ),
             FilledButton(
-              onPressed: () async {
+              onPressed: () {
                 final newPassword = newPasswordController.text;
                 final confirmPassword = confirmPasswordController.text;
 
                 if (newPassword != confirmPassword) {
-                  showGlobalSnackBar('Passwords do not match', isError: true);
+                  showOverlayMessage(
+                    context,
+                    'Passwords do not match',
+                    isError: true,
+                  );
+                  return;
+                }
+                if (newPassword.length < 6) {
+                  showOverlayMessage(
+                    context,
+                    'Password must be at least 6 characters',
+                    isError: true,
+                  );
                   return;
                 }
 
-                Navigator.pop(context);
-                final success = await accountProvider.changePassword(
-                  newPassword,
-                );
-                if (success) {
-                  showGlobalSnackBar(
-                    'Password changed successfully',
-                    isError: false,
-                  );
-                } else {
-                  showGlobalSnackBar(
-                    accountProvider.errorMessage ?? 'Failed to change password',
-                    isError: true,
-                  );
-                }
+                Navigator.pop(context, {'password': newPassword});
               },
-              child: Text('Change'),
+              child: const Text('Send Code'),
             ),
           ],
         );
       },
     );
+
+    if (passwords == null || !mounted) return;
+
+    // 发送 OTP
+    final otpSent = await accountProvider.sendReauthenticationOtp();
+    if (!otpSent || !mounted) {
+      showGlobalSnackBar(
+        accountProvider.errorMessage ?? 'Failed to send verification code',
+        isError: true,
+      );
+      return;
+    }
+
+    // 显示 OTP 验证对话框
+    final verified = await OtpVerificationDialog.show(
+      context: context,
+      title: 'Verify Password Change',
+      description:
+          'Enter the 6-digit code sent to your email. '
+          'You can switch to your email app and return here.',
+      onVerify: (otpCode) =>
+          accountProvider.changePassword(passwords['password']!, otpCode),
+      onResend: () => accountProvider.sendReauthenticationOtp(),
+    );
+
+    if (!mounted) return;
+    if (verified == true) {
+      showGlobalSnackBar('Password changed successfully', isError: false);
+    }
   }
 
   /// 绑定 Apple 账号
@@ -662,12 +774,10 @@ class _AccountSettingsState extends State<AccountSettings> {
     final success = await accountProvider.linkApple();
     if (success) {
       showGlobalSnackBar('Apple account linked successfully', isError: false);
-    } else {
-      showGlobalSnackBar(
-        accountProvider.errorMessage ?? 'Failed to link Apple account',
-        isError: true,
-      );
+    } else if (accountProvider.errorMessage != null) {
+      showGlobalSnackBar(accountProvider.errorMessage!, isError: true);
     }
+    // 用户取消不显示任何提示
   }
 
   /// 绑定 Google 账号
@@ -675,12 +785,10 @@ class _AccountSettingsState extends State<AccountSettings> {
     final success = await accountProvider.linkGoogle();
     if (success) {
       showGlobalSnackBar('Google account linked successfully', isError: false);
-    } else {
-      showGlobalSnackBar(
-        accountProvider.errorMessage ?? 'Failed to link Google account',
-        isError: true,
-      );
+    } else if (accountProvider.errorMessage != null) {
+      showGlobalSnackBar(accountProvider.errorMessage!, isError: true);
     }
+    // 用户取消不显示任何提示
   }
 
   /// 显示解绑确认
@@ -730,9 +838,9 @@ class _AccountSettingsState extends State<AccountSettings> {
     );
   }
 
-  /// 显示删除账号确认
-  void _showDeleteAccountConfirmation() {
-    showDialog(
+  /// 显示删除账号确认(使用 OTP 验证)
+  Future<void> _showDeleteAccountConfirmation() async {
+    final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) {
         return AlertDialog(
@@ -740,38 +848,66 @@ class _AccountSettingsState extends State<AccountSettings> {
             'Delete Account',
             style: TextStyle(color: theme.colorScheme.error),
           ),
-          content: Text(
-            'This action cannot be undone. All your data will be permanently deleted.',
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'This action cannot be undone. All your data will be permanently deleted.',
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'A verification code will be sent to confirm this action.',
+                style: theme.textTheme.bodySmall!.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text('Cancel'),
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel'),
             ),
             FilledButton(
               style: FilledButton.styleFrom(
                 backgroundColor: theme.colorScheme.error,
               ),
-              onPressed: () async {
-                Navigator.pop(context);
-                final success = await accountProvider.deleteAccount();
-                if (success) {
-                  // 返回登录页
-                  if (context.mounted) {
-                    context.go(AppRoutes.LOGIN);
-                  }
-                } else {
-                  showGlobalSnackBar(
-                    accountProvider.errorMessage ?? 'Failed to delete account',
-                    isError: true,
-                  );
-                }
-              },
-              child: Text('Delete Permanently'),
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Send Code'),
             ),
           ],
         );
       },
     );
+
+    if (confirmed != true || !mounted) return;
+
+    // 发送 OTP
+    final otpSent = await accountProvider.sendReauthenticationOtp();
+    if (!otpSent || !mounted) {
+      showGlobalSnackBar(
+        accountProvider.errorMessage ?? 'Failed to send verification code',
+        isError: true,
+      );
+      return;
+    }
+
+    // 显示 OTP 验证对话框
+    final verified = await OtpVerificationDialog.show(
+      context: context,
+      title: 'Verify Account Deletion',
+      description:
+          'Enter the 6-digit code sent to your email to confirm deletion. '
+          'You can check your email and return here.',
+      onVerify: (otpCode) => accountProvider.deleteAccount(otpCode),
+      onResend: () => accountProvider.sendReauthenticationOtp(),
+    );
+
+    if (!mounted) return;
+    if (verified == true) {
+      // 返回登录页
+      context.go(AppRoutes.LOGIN);
+    }
   }
 }

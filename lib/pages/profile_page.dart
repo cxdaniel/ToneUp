@@ -1,11 +1,13 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:toneup_app/components/avatar_upload_widget.dart';
 import 'package:toneup_app/components/components.dart';
 import 'package:toneup_app/components/feedback_button.dart';
+import 'package:toneup_app/main.dart';
 import 'package:toneup_app/providers/profile_provider.dart';
 import 'package:toneup_app/providers/subscription_provider.dart';
 import 'package:toneup_app/routes.dart';
@@ -21,6 +23,15 @@ class _ProfilePageState extends State<ProfilePage> {
   late ThemeData theme;
   late ProfileProvider profileProvider;
   late SubscriptionProvider subscriptionProvider;
+
+  final List<Map<String, dynamic>> durationOptions = [
+    {'label': '10 mins/day', 'value': 60},
+    {'label': '20 mins/day', 'value': 100},
+    {'label': '30 mins/day', 'value': 150},
+  ];
+  final nicknameController = TextEditingController();
+  final FocusNode focusNode = FocusNode();
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -72,27 +83,47 @@ class _ProfilePageState extends State<ProfilePage> {
                   children: [
                     _buildUserHeader(),
                     _buildOverview(),
-                    _buildListCeil(label: 'Profile Settings', call: goSettings),
+                    // listCeil(
+                    //   context,
+                    //   label: 'Profile Settings',
+                    //   call: goSettings,
+                    // ),
+                    listCeil(
+                      context,
+                      label: 'Weekly study duration',
+                      hit: _displayDuration(),
+                      call: setWeeklyDuration,
+                    ),
+                    listCeil(
+                      context,
+                      label: 'Account Management',
+                      hit: 'Email, Apple, Google',
+                      call: () => context.push(AppRoutes.ACCOUNT_SETTINGS),
+                    ),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       spacing: 8,
                       children: [
-                        _buildLink(
+                        iconLink(
+                          context,
                           icon: Icons.assignment_turned_in_outlined,
                           label: 'Condition & Terms',
                           call: () {},
                         ),
-                        _buildLink(
+                        iconLink(
+                          context,
                           icon: Icons.privacy_tip_outlined,
                           label: 'Privacy',
                           call: null,
                         ),
-                        _buildLink(
+                        iconLink(
+                          context,
                           icon: Icons.info_outline,
                           label: 'About',
                           call: null,
                         ),
-                        _buildLink(
+                        iconLink(
+                          context,
                           icon: Icons.logout_rounded,
                           label: 'Logout',
                           call: _logout,
@@ -109,11 +140,12 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
+  /// 登出
   Future<void> _logout() async {
-    // Provider.of<PlanProvider>(context, listen: false).cleanAllPlans();
     await Supabase.instance.client.auth.signOut();
   }
 
+  /// 订阅状态卡片
   Widget _buildSubscriptionStatusCard() {
     return Consumer<SubscriptionProvider>(
       builder: (context, subscription, child) {
@@ -126,7 +158,7 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  /// Web 端免费用户卡片
+  /// Web端免费用户卡片
   Widget _buildWebFreeCard() {
     return FeedbackButton(
       onTap: () {
@@ -291,14 +323,17 @@ class _ProfilePageState extends State<ProfilePage> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                (profileProvider.profile == null ||
-                        profileProvider.profile!.nickname == null)
-                    ? 'Nickname'
-                    : profileProvider.profile!.nickname!,
-                style: theme.textTheme.titleLarge!.copyWith(
-                  color: theme.colorScheme.secondary,
-                  fontWeight: FontWeight.bold,
+              FeedbackButton(
+                onTap: setNickname,
+                child: Text(
+                  (profileProvider.profile == null ||
+                          profileProvider.profile!.nickname == null)
+                      ? 'Nickname'
+                      : profileProvider.profile!.nickname!,
+                  style: theme.textTheme.titleLarge!.copyWith(
+                    color: theme.colorScheme.secondary,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
               Text(
@@ -504,70 +539,164 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  /// 列表项
-  Widget _buildListCeil({String? label, String? hit, VoidCallback? call}) {
-    return FeedbackButton(
-      borderRadius: BorderRadius.circular(16),
-      onTap: call,
-      child: Ink(
-        padding: const EdgeInsets.all(16),
-        decoration: ShapeDecoration(
-          color: theme.colorScheme.surfaceContainer,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          spacing: 10,
-          children: [
-            if (label != null)
-              Text(
-                label,
-                style: theme.textTheme.titleMedium!.copyWith(
-                  color: theme.colorScheme.secondary,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            if (hit != null)
-              Expanded(
-                child: Text(
-                  textAlign: TextAlign.right,
-                  hit,
-                  style: theme.textTheme.labelLarge!.copyWith(
-                    color: theme.colorScheme.outline,
-                    fontWeight: FontWeight.w300,
-                  ),
-                ),
-              ),
-            if (call != null)
-              Icon(
-                Icons.navigate_next_rounded,
-                size: 24,
-                color: theme.colorScheme.secondary,
-              ),
-          ],
-        ),
-      ),
+  /// 获取时长显示
+  String _displayDuration() {
+    if (ProfileProvider().profile == null) return '--';
+    final target = durationOptions.firstWhere(
+      (item) => item['value'] == ProfileProvider().profile!.planDurationMinutes,
+      orElse: () => {'label': '--', 'value': 0},
     );
+    return target['label'];
   }
 
-  /// 图标文字链
-  Widget _buildLink({
-    required String label,
-    IconData? icon,
-    VoidCallback? call,
-  }) {
-    return TextButton.icon(
-      icon: Icon(icon, size: 20, color: theme.colorScheme.outline),
-      onPressed: call,
-      label: Text(
-        label,
-        style: theme.textTheme.titleSmall?.copyWith(
-          color: theme.colorScheme.secondary,
-          fontWeight: FontWeight.bold,
-        ),
+  /// 设置周学习时长
+  Future<void> setWeeklyDuration() async {
+    final selectedValue = await showModalBottomSheet<int?>(
+      context: context,
+      useRootNavigator: true,
+      useSafeArea: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
+      builder: (context) {
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewPadding.bottom, //+ 56,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(top: 20, bottom: 10),
+                child: Text(
+                  'Set Weekly Study Duration',
+                  style: theme.textTheme.titleMedium!.copyWith(
+                    color: theme.colorScheme.secondary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              Divider(
+                height: 20,
+                thickness: 1,
+                color: theme.colorScheme.outlineVariant,
+              ),
+              ...durationOptions.map((option) {
+                return FeedbackButton(
+                  onTap: () {
+                    Navigator.pop(context, option['value']);
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 16,
+                    ),
+                    child: Text(
+                      option['label'],
+                      style: theme.textTheme.titleMedium!.copyWith(
+                        color: theme.colorScheme.secondary,
+                      ),
+                    ),
+                  ),
+                );
+              }),
+              SizedBox(height: 24),
+            ],
+          ),
+        );
+      },
     );
+
+    if (selectedValue != null) {
+      ProfileProvider().profile!.planDurationMinutes = selectedValue;
+      await ProfileProvider().saveProfile();
+    }
+  }
+
+  /// 设置用户昵称
+  Future<void> setNickname() async {
+    nicknameController.text = ProfileProvider().profile?.nickname ?? '--';
+    final userNickname = await showDialog<String>(
+      context: context,
+      builder: (context) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          debugPrint('setNickname::::');
+          FocusScope.of(context).requestFocus(focusNode);
+        });
+        return AlertDialog(
+          title: Text(
+            'Change Nickname',
+            style: theme.textTheme.titleMedium!.copyWith(
+              color: theme.colorScheme.secondary,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          content: TextField(
+            focusNode: focusNode,
+            controller: nicknameController,
+            decoration: InputDecoration(
+              hintText: 'Please enter your new nickname',
+              hintStyle: theme.textTheme.bodyLarge!.copyWith(
+                color: theme.colorScheme.outline,
+              ),
+              enabledBorder: UnderlineInputBorder(
+                borderSide: BorderSide(color: theme.colorScheme.outlineVariant),
+              ),
+              focusedBorder: UnderlineInputBorder(
+                borderSide: BorderSide(color: theme.colorScheme.primary),
+              ),
+            ),
+            maxLength: 16, // 输入限制
+            maxLengthEnforcement:
+                MaxLengthEnforcement.truncateAfterCompositionEnds,
+            keyboardType: TextInputType.text, // 键盘类型：文本输入
+            textInputAction: TextInputAction.done,
+            onSubmitted: (value) {
+              if (value.isEmpty) {
+                showOverlayMessage(
+                  context,
+                  'Nickname cannot be empty',
+                  isError: true,
+                );
+                return;
+              }
+              debugPrint('onSubmitted::::$value');
+            },
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context), // 关闭弹窗，不做任何操作
+              child: Text(
+                'Cancel',
+                style: theme.textTheme.titleSmall!.copyWith(
+                  color: theme.colorScheme.outline,
+                ),
+              ),
+            ),
+            FilledButton(
+              onPressed: () {
+                final newNickname = nicknameController.text.trim();
+                if (newNickname.isEmpty) {
+                  showOverlayMessage(
+                    context,
+                    'Nickname cannot be empty',
+                    isError: true,
+                  );
+                  return;
+                }
+                Navigator.pop(context, newNickname);
+              },
+              child: Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+    if (userNickname != null) {
+      ProfileProvider().profile?.nickname = userNickname;
+      ProfileProvider().saveProfile();
+    }
   }
 }

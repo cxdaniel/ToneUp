@@ -32,12 +32,24 @@
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>io.supabase.toneup</string>
+			</array>
+		</dict>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<!-- Google Sign-In REVERSED_CLIENT_ID -->
 				<string>com.googleusercontent.apps.751058148799-i8vpdms0d3dcr2o5uoud99044bbgs7ss</string>
 			</array>
 		</dict>
 	</array>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
+	<key>GIDClientID</key>
+	<string>751058148799-i8vpdms0d3dcr2o5uoud99044bbgs7ss.apps.googleusercontent.com</string>
+	<key>GIDServerClientID</key>
+	<string>751058148799-7s2ml5l7rn89c3826ind938uim04is5g.apps.googleusercontent.com</string>
 	<key>LSApplicationQueriesSchemes</key>
 	<array>
 		<string>https</string>

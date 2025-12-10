@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:toneup_app/services/native_auth_service.dart';
 import 'dart:async';
 
 class OAuthService {
@@ -8,17 +9,22 @@ class OAuthService {
   OAuthService._internal();
 
   final _supabase = Supabase.instance.client;
+  final _nativeAuth = NativeAuthService();
   Completer<bool>? _authCompleter;
   StreamSubscription<AuthState>? _authSubscription;
   Timer? _timeoutTimer;
-  LaunchMode launchMode = LaunchMode.externalApplication;
+  // Web 端使用 popup 模式,移动端使用外部浏览器
+  LaunchMode get launchMode =>
+      kIsWeb ? LaunchMode.platformDefault : LaunchMode.externalApplication;
   String loginCallbackUri = kIsWeb
       ? '${Uri.base.origin}/auth/callback/login/'
       : 'io.supabase.toneup://login-callback/';
   String linkingCallbackUri = kIsWeb
-      // ? '${Uri.base.origin}/auth/callback/linking/'
       ? '${Uri.base.origin}/linking-callback/'
       : 'io.supabase.toneup://linking-callback/';
+  String emailChangeCallbackUri = kIsWeb
+      ? '${Uri.base.origin}/email-change-callback/'
+      : 'io.supabase.toneup://email-change-callback/';
 
   /// 检查当前是否有活跃的认证流程
   bool get isAuthenticating =>
@@ -26,11 +32,12 @@ class OAuthService {
 
   /// 启动 OAuth 登录流程
   /// [provider] - OAuth 提供商 (apple, google 等)
-  /// [launchMode] - 启动模式，默认使用外部浏览器
+  /// [useNative] - 是否使用原生登录（移动端默认 true，Web 端自动为 false）
   /// [timeout] - 超时时间，默认 60 秒
   /// 返回 true 表示登录成功，false 表示失败或取消
   Future<bool> signInWithProvider(
     OAuthProvider provider, {
+    bool? useNative,
     Duration timeout = const Duration(seconds: 60),
   }) async {
     // 如果有正在进行的认证，先取消
@@ -38,10 +45,53 @@ class OAuthService {
       debugPrint('⚠️ 检测到正在进行的认证，先取消');
       cancelAuth();
     }
+
+    // 移动端默认使用原生登录（体验更好）
+    final shouldUseNative = useNative ?? !kIsWeb;
+
+    // 移动端使用原生登录
+    if (shouldUseNative && !kIsWeb) {
+      try {
+        AuthResponse? response;
+        if (provider == OAuthProvider.apple) {
+          debugPrint('🍎 使用原生 Apple 登录');
+          response = await _nativeAuth.signInWithApple();
+        } else if (provider == OAuthProvider.google) {
+          debugPrint('🔍 使用原生 Google 登录 (v7.x)');
+          response = await _nativeAuth.signInWithGoogle();
+        }
+
+        // 成功或用户取消,直接返回
+        if (response != null && response.user != null) {
+          debugPrint('✅ 原生登录成功');
+          return true;
+        } else {
+          debugPrint('⚠️ 用户取消了原生登录');
+          return false; // 用户取消,不再尝试 OAuth
+        }
+      } catch (e) {
+        // 只有在特定错误时才降级到 OAuth
+        final errorMsg = e.toString().toLowerCase();
+        if (errorMsg.contains('不支持') || errorMsg.contains('not available')) {
+          debugPrint('⚠️ 原生登录不支持,降级使用 OAuth: $e');
+          // 继续执行下面的 OAuth 流程
+        } else {
+          // 其他错误直接抛出,不降级
+          debugPrint('❌ 原生登录失败: $e');
+          rethrow;
+        }
+      }
+    } // Web 端或原生不支持时,使用 OAuth 流程
+    return _signInWithOAuth(provider, timeout);
+  }
+
+  /// OAuth 登录流程（Web 端或降级方案）
+  Future<bool> _signInWithOAuth(
+    OAuthProvider provider,
+    Duration timeout,
+  ) async {
     // 创建新的完成器
     _authCompleter = Completer<bool>();
-    // 监听认证状态变化
-    // _setupAuthListener();
     // 设置超时定时器
     _timeoutTimer = Timer(timeout, () {
       debugPrint('⏱️ OAuth 认证超时 (${timeout.inSeconds}秒)');
@@ -52,7 +102,9 @@ class OAuthService {
     });
 
     try {
-      debugPrint('🚀 开始 ${provider.name} OAuth 登录流程');
+      debugPrint(
+        '🚀 开始 ${provider.name} OAuth 登录流程（${kIsWeb ? "Web 端" : "移动端"}）',
+      );
       // 发起 OAuth 请求
       await _supabase.auth.signInWithOAuth(
         provider,
@@ -156,6 +208,7 @@ class OAuthService {
   void dispose() {
     debugPrint('🗑️ OAuthService dispose');
     cancelAuth();
+    _nativeAuth.dispose();
   }
 
   /// 获取当前用户的所有已连接账号
@@ -212,10 +265,7 @@ class OAuthService {
     return connections;
   }
 
-  /// 绑定 Apple 账号
-  ///
-  /// 使用 Supabase 的 linkIdentity API 进行账号绑定
-  /// 注意:这会打开浏览器进行 OAuth 认证,需要等待用户完成
+  /// Web端绑定 Apple 账号
   Future<bool> linkAppleAccount() async {
     try {
       debugPrint('🍎 开始绑定 Apple 账号');
@@ -243,19 +293,18 @@ class OAuthService {
         }
       });
 
-      // 使用 linkIdentity 进行账号绑定
-      // 这会打开浏览器让用户进行 Apple 登录
+      // 使用 linkIdentity 进行 OAuth 账号绑定
+      // 注意: 此方法需要打开浏览器
+      // 移动端优先使用 NativeAuthService.linkIdentityWithIdToken (原生体验)
       await _supabase.auth.linkIdentity(
         OAuthProvider.apple,
         authScreenLaunchMode: launchMode,
-        redirectTo: linkingCallbackUri, //'$loginCallbackUri?type=linking',
+        redirectTo: linkingCallbackUri,
       );
 
       debugPrint('✅ Apple 账号绑定请求已发送,等待用户完成授权');
 
-      // _authCompleter?.complete(true);
-      // linkIdentity 返回 bool 表示请求是否成功发送
-      // 实际绑定结果需要等待 OAuth 回调和 auth state change 事件
+      // 等待绑定结果
       final response = await _authCompleter!.future;
       return response;
     } catch (e) {
@@ -267,8 +316,8 @@ class OAuthService {
 
   /// 绑定 Google 账号
   ///
-  /// 使用 Supabase 的 linkIdentity API 进行账号绑定
-  /// 注意:这会打开浏览器进行 OAuth 认证,需要等待用户完成
+  /// 注意: 由于 Supabase 限制,账号绑定仍需使用 OAuth 流程
+  /// 移动端会打开外部浏览器,Web 端会打开 popup
   Future<bool> linkGoogleAccount() async {
     try {
       debugPrint('🔍 开始绑定 Google 账号');
@@ -294,18 +343,17 @@ class OAuthService {
           _cleanup();
         }
       });
-      // 使用 linkIdentity 进行账号绑定
-      // 这会打开浏览器让用户进行 Google 登录
+      // 使用 linkIdentity 进行 OAuth 账号绑定
+      // 注意: 此方法需要打开浏览器
+      // 移动端优先使用 NativeAuthService.linkIdentityWithIdToken (原生体验)
       await _supabase.auth.linkIdentity(
         OAuthProvider.google,
         authScreenLaunchMode: launchMode,
-        redirectTo: linkingCallbackUri, //'$loginCallbackUri?type=linking',
+        redirectTo: linkingCallbackUri,
       );
 
       debugPrint('✅ Google 账号绑定请求已发送,等待用户完成授权');
-      // _authCompleter!.complete(true);
-      // linkIdentity 返回 bool 表示请求是否成功发送
-      // 实际绑定结果需要等待 OAuth 回调和 auth state change 事件
+      // 等待绑定结果
       final response = await _authCompleter!.future;
       return response;
     } catch (e) {
@@ -345,10 +393,52 @@ class OAuthService {
     }
   }
 
-  /// 更新邮箱(需要验证)
-  Future<bool> updateEmail(String newEmail) async {
+  // ============================================================================
+  // 敏感操作 OTP 重认证流程
+  // ============================================================================
+
+  /// 发送重认证 OTP
+  ///
+  /// 用于敏感操作(修改密码、邮箱、删除账号)前的身份验证
+  /// OTP 会发送到用户当前的 email 或 phone
+  /// 注意:需要用户已登录且24小时内未重新登录时才会触发
+  Future<void> sendReauthenticationOtp() async {
     try {
-      debugPrint('📧 开始更新邮箱: $newEmail');
+      debugPrint('🔐 发送重认证 OTP');
+      await _supabase.auth.reauthenticate();
+      debugPrint('✅ 重认证 OTP 已发送');
+    } catch (e) {
+      debugPrint('❌ 发送重认证 OTP 失败: $e');
+      rethrow;
+    }
+  }
+
+  /// 验证重认证 OTP (简化版)
+  ///
+  /// reauthenticate() 发送的 OTP 不需要单独验证
+  /// 它会在 updateUser(nonce: otpCode) 时自动验证
+  /// 这个方法只是保存 OTP 码供后续使用
+  Future<bool> verifyReauthenticationOtp(String otpCode) async {
+    // reauthenticate 的 OTP 不需要预先验证
+    // 它会在后续的 updateUser 调用中作为 nonce 参数自动验证
+    debugPrint('✅ 重认证 OTP 已接收，将在更新时验证: ${otpCode.substring(0, 2)}****');
+    return true;
+  }
+
+  /// 向新邮箱发送验证链接 (简化方案)
+  ///
+  /// 使用 Supabase 的 updateUser 自动发送确认邮件
+  /// 这种方式会直接触发 Supabase 的邮箱变更流程:
+  /// 1. 向新邮箱发送确认链接
+  /// 2. 用户点击链接后自动完成验证
+  ///
+  /// 注意: 这是最简单可靠的方案,不需要手动处理 OTP
+  Future<void> requestEmailChange(
+    String newEmail,
+    String currentOtpCode,
+  ) async {
+    try {
+      debugPrint('📧 请求更改邮箱到: $newEmail');
 
       // 验证邮箱格式
       final emailRegExp = RegExp(
@@ -358,33 +448,109 @@ class OAuthService {
         throw Exception('邮箱格式不正确');
       }
 
-      // 发送验证邮件
-      await _supabase.auth.updateUser(UserAttributes(email: newEmail));
+      // 直接使用 updateUser 发起邮箱变更
+      // Supabase 会自动向新邮箱发送确认链接
+      await _supabase.auth.updateUser(
+        UserAttributes(email: newEmail, nonce: currentOtpCode),
+      );
 
-      debugPrint('✅ 验证邮件已发送到: $newEmail');
-      return true;
+      debugPrint('✅ 邮箱变更请求已发送,请检查新邮箱中的确认链接');
     } catch (e) {
-      debugPrint('❌ 更新邮箱异常: $e');
+      debugPrint('❌ 请求邮箱变更失败: $e');
       rethrow;
     }
   }
 
-  /// 更改密码
-  Future<bool> changePassword(String newPassword) async {
+  // ============================================================================
+  // 敏感操作方法(需要先通过 OTP 验证)
+  // ============================================================================
+
+  /// 添加邮箱(简化版 - 仅需当前账号 OTP)
+  ///
+  /// 为没有邮箱的账号添加邮箱地址和密码
+  /// 新流程(使用 magic link):
+  /// 1. 调用 sendReauthenticationOtp() - 向当前账号发送重认证 OTP
+  /// 2. 调用此方法 - 使用 OTP 验证身份并发起邮箱添加
+  /// 3. Supabase 会向新邮箱发送确认链接
+  /// 4. 用户点击链接后自动完成邮箱添加
+  ///
+  /// @param email 要添加的新邮箱地址
+  /// @param password 要设置的密码
+  /// @param currentOtpCode 当前账号的重认证 OTP 码(作为nonce)
+  Future<bool> addEmail(
+    String email,
+    String password,
+    String currentOtpCode,
+  ) async {
     try {
-      debugPrint('🔐 开始更改密码');
+      debugPrint('📧 添加邮箱: $email');
+
+      // 使用当前账号的 OTP 作为 nonce 更新邮箱和密码
+      // nonce 会在这里自动验证,如果无效会抛出异常
+      // Supabase 会自动向新邮箱发送确认链接
+      await _supabase.auth.updateUser(
+        UserAttributes(email: email, password: password, nonce: currentOtpCode),
+        emailRedirectTo: emailChangeCallbackUri,
+      );
+
+      debugPrint('✅ 邮箱添加请求已发送,请检查新邮箱中的确认链接');
+      return true;
+    } catch (e) {
+      debugPrint('❌ 添加邮箱失败: $e');
+      rethrow;
+    }
+  }
+
+  /// 更新邮箱(简化版 - 仅需当前邮箱 OTP)
+  ///
+  /// 修改现有邮箱地址
+  /// 新流程(使用 magic link):
+  /// 1. 调用 sendReauthenticationOtp() - 向当前邮箱发送重认证 OTP
+  /// 2. 调用此方法 - 使用 OTP 验证身份并发起邮箱更新
+  /// 3. Supabase 会向新邮箱发送确认链接
+  /// 4. 用户点击链接后自动完成邮箱更新
+  ///
+  /// @param newEmail 新的邮箱地址
+  /// @param currentOtpCode 当前邮箱收到的重认证 OTP 码(作为nonce)
+  Future<bool> updateEmail(String newEmail, String currentOtpCode) async {
+    try {
+      debugPrint('📧 更新邮箱: $newEmail');
+
+      // 使用当前邮箱的 OTP 作为 nonce 更新邮箱
+      // nonce 会在这里自动验证,如果无效会抛出异常
+      // Supabase 会自动向新邮箱发送确认链接
+      await _supabase.auth.updateUser(
+        UserAttributes(email: newEmail, nonce: currentOtpCode),
+        emailRedirectTo: emailChangeCallbackUri,
+      );
+
+      debugPrint('✅ 邮箱更新请求已发送,请检查新邮箱中的确认链接');
+      return true;
+    } catch (e) {
+      debugPrint('❌ 更新邮箱失败: $e');
+      rethrow;
+    }
+  }
+
+  /// 更改密码(使用 OTP 验证)
+  Future<bool> changePassword(String newPassword, String otpCode) async {
+    try {
+      debugPrint('🔐 更改密码');
 
       // 验证密码长度
       if (newPassword.length < 6) {
-        throw Exception('密码至少需要6个字符');
+        throw Exception('密码长度至少为 6 位');
       }
 
-      await _supabase.auth.updateUser(UserAttributes(password: newPassword));
+      // 使用 OTP nonce 更新密码
+      await _supabase.auth.updateUser(
+        UserAttributes(password: newPassword, nonce: otpCode),
+      );
 
       debugPrint('✅ 密码更改成功');
       return true;
     } catch (e) {
-      debugPrint('❌ 更改密码异常: $e');
+      debugPrint('❌ 更改密码失败: $e');
       rethrow;
     }
   }
@@ -404,16 +570,16 @@ class OAuthService {
     }
   }
 
-  /// 删除账号(危险操作)
-  Future<bool> deleteAccount() async {
+  /// 删除账号(危险操作,使用 OTP 验证)
+  Future<bool> deleteAccount(String otpCode) async {
     try {
-      debugPrint('⚠️ 开始删除账号');
+      debugPrint('⚠️ 删除账号');
 
       // 这里需要调用 Edge Function 或 Admin API
       // 因为普通用户无法直接删除自己的账号
       final response = await _supabase.functions.invoke(
         'delete_user_account',
-        body: {},
+        body: {'nonce': otpCode},
       );
 
       if (response.status == 200) {
@@ -423,7 +589,7 @@ class OAuthService {
         throw Exception('删除账号失败');
       }
     } catch (e) {
-      debugPrint('❌ 删除账号异常: $e');
+      debugPrint('❌ 删除账号失败: $e');
       rethrow;
     }
   }

@@ -1,324 +1,89 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:go_router/go_router.dart';
 import 'package:jieba_flutter/analysis/jieba_segmenter.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:go_router/go_router.dart';
-import 'package:toneup_app/components/mainshell.dart';
-import 'package:toneup_app/pages/create_goal_page.dart';
-import 'package:toneup_app/pages/download_page.dart';
-import 'package:toneup_app/pages/paywall.dart';
-import 'package:toneup_app/pages/profile_account.dart';
-import 'package:toneup_app/pages/evaluation_page.dart';
-import 'package:toneup_app/pages/forgot_page.dart';
-import 'package:toneup_app/pages/home_page.dart';
-import 'package:toneup_app/pages/signin_page.dart';
-import 'package:toneup_app/pages/plan_page.dart';
-import 'package:toneup_app/pages/practice_page.dart';
-import 'package:toneup_app/pages/profile_page.dart';
-import 'package:toneup_app/pages/signup_page.dart';
-import 'package:toneup_app/pages/subscription_manage.dart';
-import 'package:toneup_app/pages/welcome_page.dart';
-import 'package:toneup_app/pages/profile_settings.dart';
-import 'package:toneup_app/providers/account_settings_provider.dart';
-import 'package:toneup_app/providers/create_goal_provider.dart';
 import 'package:toneup_app/providers/plan_provider.dart';
 import 'package:toneup_app/providers/profile_provider.dart';
 import 'package:toneup_app/providers/subscription_provider.dart';
 import 'package:toneup_app/providers/tts_provider.dart';
 import 'package:toneup_app/services/config.dart';
-import 'package:toneup_app/services/navigation_service.dart';
-import 'package:toneup_app/services/oauth_service.dart';
+import 'package:toneup_app/services/native_auth_service.dart';
 import 'package:toneup_app/theme_data.dart';
-import 'package:toneup_app/routes.dart';
+import 'package:toneup_app/router_config.dart';
+// 条件导入：仅在 Web 平台导入 dart:html
+import 'web_utils_stub.dart'
+    if (dart.library.html) 'package:toneup_app/web_utils.dart';
 
+/// 全局 ScaffoldMessengerKey
+final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey =
+    GlobalKey<ScaffoldMessengerState>();
 void main() async {
-  try {
-    await Supabase.initialize(
-      url: SupabaseConfig.url,
-      anonKey: SupabaseConfig.anonKey,
-    );
-    await JiebaSegmenter.init();
-    // await RevenueCatService().initialize();
+  // 加载环境变量
+  await dotenv.load(fileName: '.env');
 
-    runApp(MyApp());
-  } catch (e) {
-    debugPrint('初始化失败:$e');
-  }
+  await Supabase.initialize(
+    url: SupabaseConfig.url,
+    anonKey: SupabaseConfig.anonKey,
+  );
+  await JiebaSegmenter.init();
+  await NativeAuthService().initialize();
+
+  runApp(const MyApp());
 }
 
 class MyApp extends StatefulWidget {
   const MyApp({super.key});
+
   @override
   State<MyApp> createState() => _MyAppState();
 }
 
 class _MyAppState extends State<MyApp> {
-  late final String _initialLocation;
   late final GoRouter _router;
 
   @override
   void initState() {
     super.initState();
+    _router = AppRouter.createRouter();
+    setupAuthStateListener(_router);
 
-    // 判断是否已登录
-    final session = Supabase.instance.client.auth.currentSession;
-    _initialLocation = session != null ? AppRoutes.HOME : AppRoutes.LOGIN;
-
-    // 定义嵌套路由的分支（对应底部导航项）
-    final branches = [
-      StatefulShellBranch(
-        routes: [
-          GoRoute(
-            path: AppRoutes.HOME,
-            builder: (context, state) => const HomePage(),
-          ),
-        ],
-      ),
-      StatefulShellBranch(
-        routes: [
-          GoRoute(
-            path: AppRoutes.GOAL_LIST,
-            builder: (context, state) => const PlanPage(),
-          ),
-        ],
-      ),
-      StatefulShellBranch(
-        routes: [
-          GoRoute(
-            path: AppRoutes.PROFILE,
-            builder: (context, state) => const ProfilePage(),
-            routes: [
-              GoRoute(
-                path: 'linking-callback',
-                name: 'linking-callback',
-                builder: (context, state) {
-                  debugPrint('📍 [Route] 进入 linking-callback 路由，准备自销毁。');
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    if (_router.canPop()) {
-                      GoRouter.of(context).pop();
-                      debugPrint('📍 [Route] linking-callback 路由已自销毁。');
-                    }
-                    _router.push(AppRoutes.SETTINGS);
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      _router.push(AppRoutes.ACCOUNT_SETTINGS);
-                    });
-                  });
-                  return const SizedBox.shrink();
-                },
-              ),
-            ],
-          ),
-        ],
-      ),
-    ];
-
-    _router = GoRouter(
-      initialLocation: _initialLocation,
-      navigatorKey: rootNavigatorKey,
-      // debugLogDiagnostics: true,
-      redirect: (context, state) async {
-        final uri = state.uri;
-        debugPrint(
-          '🛑 redirect: 重定向 deeplink: ${uri.toString()},host:${uri.host},query:${uri.query}',
-        );
-        if (uri.toString().contains('linking-callback')) {
-          try {
-            final path = uri.path == '/' ? '/linking-callback' : uri.path;
-            final newLocation = uri.query.isNotEmpty
-                ? '$path?${uri.query}'
-                : path;
-            debugPrint('重定向到：：：：：${AppRoutes.PROFILE}$newLocation');
-            return '${AppRoutes.PROFILE}$newLocation';
-          } catch (e) {
-            debugPrint('❌ [Redirect] 解析 Deeplink 失败: $e');
-          }
-        }
-        return null;
-      },
-      routes: [
-        GoRoute(
-          path: AppRoutes.LOGIN,
-          builder: (context, state) => const SigninPage(),
-        ),
-        GoRoute(
-          path: AppRoutes.SIGN_UP,
-          builder: (context, state) => const SignUpPage(),
-        ),
-        GoRoute(
-          path: AppRoutes.PRACTICE,
-          builder: (context, state) => const PracticePage(),
-        ),
-        GoRoute(
-          path: AppRoutes.EVALUATION,
-          builder: (context, state) => const EvaluationPage(),
-        ),
-        GoRoute(
-          path: AppRoutes.WELCOME,
-          builder: (context, state) => const WelcomePage(),
-        ),
-        GoRoute(
-          path: AppRoutes.FORGOT,
-          builder: (context, state) => const ForgotPage(),
-        ),
-        GoRoute(
-          path: AppRoutes.SETTINGS,
-          builder: (context, state) => const ProfileSettings(),
-        ),
-        GoRoute(
-          path: AppRoutes.ACCOUNT_SETTINGS,
-          builder: (context, state) => ChangeNotifierProvider(
-            create: (_) => AccountSettingsProvider(),
-            child: const AccountSettings(),
-          ),
-        ),
-        GoRoute(
-          path: AppRoutes.CREATE_GOAL,
-          builder: (context, state) => ChangeNotifierProvider(
-            create: (_) => CreateGoalProvider(),
-            child: const CreateGoalPage(),
-          ),
-        ),
-        GoRoute(
-          path: AppRoutes.PAYWALL,
-          redirect: (context, state) {
-            // Web 端重定向到订阅管理页
-            if (kIsWeb) {
-              return AppRoutes.DOWNLOAD;
-            }
-            return null;
-          },
-          builder: (context, state) => PaywallPage(),
-        ),
-        GoRoute(
-          path: AppRoutes.SUBSCRIPTION_MANAGE,
-          builder: (context, state) => SubscriptionManagePage(),
-        ),
-        GoRoute(
-          path: AppRoutes.DOWNLOAD,
-          builder: (context, state) => const DownloadPage(),
-        ),
-        StatefulShellRoute.indexedStack(
-          builder: (context, state, navigationShell) =>
-              MainShell(navigationShell: navigationShell),
-          branches: branches,
-        ),
-      ],
-      // 🆕 错误处理
-      errorBuilder: (context, state) {
-        debugPrint('🔴 路由错误: ${state.uri}');
-        debugPrint('🔴 路由参数: ${state.uri.queryParameters}');
-        // 错误路由
-        return Scaffold(
-          body: Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.error_outline, size: 48, color: Colors.red),
-                  SizedBox(height: 16),
-                  Text('Page not found'),
-                  SizedBox(height: 8),
-                  Text(
-                    state.uri.toString(),
-                    style: TextStyle(fontSize: 12, color: Colors.grey),
-                  ),
-                  SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: () => context.go(AppRoutes.HOME),
-                    child: Text('Back to Home'),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
-    );
-
-    // 🆕 监听登录状态变化
-    Supabase.instance.client.auth.onAuthStateChange.listen(
-      (data) async {
-        final event = data.event;
-        final session = data.session;
-        debugPrint('📡 Auth State Change: $event');
-        if (event == AuthChangeEvent.signedOut) {
-          debugPrint('🚪 用户登出');
-          _router.go(AppRoutes.LOGIN);
-        } else if (event == AuthChangeEvent.signedIn && session != null) {
-          debugPrint('✅ 检测到登录/绑定成功事件');
-          // 🆕 检查是否是绑定操作
-          if (OAuthService().isAuthenticating) {
-            debugPrint('🔗 绑定操作中,不执行登录跳转');
-            showGlobalSnackBar('账号绑定成功', isError: false);
-          } else {
-            final user = session.user;
-            debugPrint('🔐 识别为登录成功，执行跳转,👤 用户信息: ${user.email}');
-            _setOAuthInfoToTempProfile(user);
-            // 小延迟确保状态完全同步
-            debugPrint('🏠 导航到首页');
-            _router.go(AppRoutes.HOME);
-          }
-        } else if (event == AuthChangeEvent.tokenRefreshed) {
-          debugPrint('🔄 Token 已刷新');
-        } else if (event == AuthChangeEvent.userUpdated) {
-          await Supabase.instance.client.auth.refreshSession();
-          debugPrint('✅ 检测到用户信息更新事件');
-          if (OAuthService().isAuthenticating) {
-            debugPrint('🔗 识别为绑定成功(通过userUpdated)，不执行跳转');
-            showGlobalSnackBar('账号绑定成功', isError: false);
-          }
-        }
-      },
-      onError: (error) {
-        // 捕获绑定过程中的错误
-        debugPrint('❌ Linking: Auth error: $error');
-
-        // 处理不同类型的错误
-        if (error is AuthException) {
-          final code = error.statusCode ?? '';
-          final message = error.message;
-          debugPrint('❌ Auth错误码: $code');
-          debugPrint('❌ Auth错误信息: $message');
-          String friendlyMessage;
-          if (code == 'identity_already_exists' ||
-              message.toLowerCase().contains('already linked')) {
-            friendlyMessage = '该账号已被其他用户绑定';
-          } else if (message.toLowerCase().contains('cancelled')) {
-            friendlyMessage = '用户取消了授权';
-          } else {
-            friendlyMessage = '操作失败: $message';
-          }
-          showGlobalSnackBar(friendlyMessage, isError: true);
-        } else {
-          showGlobalSnackBar('操作失败,请重试', isError: true);
-        }
-      },
-    );
+    // Web 平台：检查完整 URL 是否包含回调路径
+    if (kIsWeb) {
+      _checkWebCallbackUrl();
+    }
   }
 
-  /// 🆕 暂存第三方用户信息
-  Future<void> _setOAuthInfoToTempProfile(User user) async {
-    try {
-      final metadata = user.userMetadata;
-      final nickname =
-          metadata?['full_name'] ??
-          metadata?['name'] ??
-          user.email?.split('@')[0] ??
-          'User';
-      debugPrint('👤 使用昵称: $nickname');
-      ProfileProvider().tempProfile.nickname = nickname;
-      // 如果有头像 URL
-      if (metadata?['avatar_url'] != null) {
-        debugPrint('🖼️ 检测到头像: ${metadata!['avatar_url']}');
-        // 这里可以下载并保存头像
-        // ProfileProvider().tempProfile.avatar = ...
+  /// Web 平台：检查并处理回调 URL
+  void _checkWebCallbackUrl() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      try {
+        final fullUrl = getWindowLocationHref();
+        debugPrint('🌐 检查 Web URL: $fullUrl');
+
+        // 检查是否是账号绑定回调
+        if (fullUrl.contains('/linking-callback')) {
+          debugPrint('🔗 检测到账号绑定回调，导航到回调路由');
+          _router.go('/linking-callback');
+          // _router.go('${AppRoutes.PROFILE}/linking-callback');
+          return;
+        }
+
+        // 检查是否是邮箱变更回调
+        if (fullUrl.contains('/email-change-callback')) {
+          debugPrint('📧 检测到邮箱变更回调，导航到回调路由');
+          _router.go('/email-change-callback');
+          // _router.go('${AppRoutes.PROFILE}/email-change-callback');
+          return;
+        }
+
+        debugPrint('✅ 非回调 URL，正常启动');
+      } catch (e) {
+        debugPrint('❌ 检查 Web URL 失败: $e');
       }
-      debugPrint('✅ 暂存第三方用户信息-完成');
-    } catch (e) {
-      debugPrint('❌ 暂存第三方用户信息-失败: $e');
-    }
+    });
   }
 
   @override
@@ -340,7 +105,6 @@ class _MyAppState extends State<MyApp> {
         routerDelegate: _router.routerDelegate,
         routeInformationParser: _router.routeInformationParser,
         routeInformationProvider: _router.routeInformationProvider,
-        // routerConfig: _router,
         debugShowCheckedModeBanner: false,
         scaffoldMessengerKey: scaffoldMessengerKey,
       ),
@@ -348,11 +112,20 @@ class _MyAppState extends State<MyApp> {
   }
 }
 
-/// 🆕 显示全局 SnackBar
-void showGlobalSnackBar(String message, {bool isError = false}) {
-  debugPrint('📢 显示提示: $message');
+/// 显示全局 SnackBar
+///
+/// [message] - 要显示的消息
+/// [isError] - 是否为错误消息（影响颜色）
+/// [floating] - 是否使用浮动模式（浮动模式可以显示在 Dialog 上方）
+void showGlobalSnackBar(
+  String message, {
+  bool isError = false,
+  bool floating = false,
+}) {
   final context = scaffoldMessengerKey.currentContext;
-  final theme = Theme.of(context!);
+  if (context == null) return;
+
+  final theme = Theme.of(context);
   scaffoldMessengerKey.currentState?.showSnackBar(
     SnackBar(
       content: Text(
@@ -366,8 +139,11 @@ void showGlobalSnackBar(String message, {bool isError = false}) {
       backgroundColor: isError
           ? theme.colorScheme.errorContainer
           : theme.colorScheme.primaryContainer,
-      // behavior: SnackBarBehavior.floating,
       duration: const Duration(seconds: 3),
+      behavior: floating ? SnackBarBehavior.floating : SnackBarBehavior.fixed,
+      margin: floating
+          ? const EdgeInsets.only(bottom: 80, left: 16, right: 16)
+          : null,
       action: SnackBarAction(
         label: 'Close',
         textColor: isError
@@ -381,6 +157,74 @@ void showGlobalSnackBar(String message, {bool isError = false}) {
   );
 }
 
-/// 全局 ScaffoldMessengerKey
-GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey =
-    GlobalKey<ScaffoldMessengerState>();
+/// 在 Dialog 上方显示提示（使用 Overlay）
+///
+/// 这个方法会在最顶层的 Overlay 显示提示，确保在 Dialog 之上可见
+/// 适用于需要在 Dialog 内部显示验证错误等场景
+void showOverlayMessage(
+  BuildContext context,
+  String message, {
+  bool isError = false,
+  Duration duration = const Duration(seconds: 2),
+}) {
+  final theme = Theme.of(context);
+  final overlay = Overlay.of(context);
+
+  late OverlayEntry overlayEntry;
+
+  overlayEntry = OverlayEntry(
+    builder: (context) => Positioned(
+      top: MediaQuery.of(context).padding.top + 16,
+      left: 16,
+      right: 16,
+      child: Material(
+        color: Colors.transparent,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: isError
+                ? theme.colorScheme.errorContainer
+                : theme.colorScheme.primaryContainer,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withAlpha(25),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Icon(
+                isError ? Icons.error_outline : Icons.check_circle_outline,
+                color: isError
+                    ? theme.colorScheme.onErrorContainer
+                    : theme.colorScheme.onPrimaryContainer,
+                size: 20,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  message,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: isError
+                        ? theme.colorScheme.onErrorContainer
+                        : theme.colorScheme.onPrimaryContainer,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
+
+  overlay.insert(overlayEntry);
+
+  // 自动移除
+  Future.delayed(duration, () {
+    overlayEntry.remove();
+  });
+}

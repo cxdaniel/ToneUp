@@ -3,9 +3,11 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:toneup_app/services/oauth_service.dart';
+import 'package:toneup_app/services/native_auth_service.dart';
 
 class AccountSettingsProvider extends ChangeNotifier {
   final _oauthService = OAuthService();
+  final _nativeAuthService = NativeAuthService();
 
   Map<String, dynamic> _connectedAccounts = {};
   bool _isLoading = false;
@@ -89,7 +91,7 @@ class AccountSettingsProvider extends ChangeNotifier {
 
   /// 绑定 Apple 账号
   ///
-  /// 返回 true 表示绑定请求已发送(用户需要在浏览器中完成授权)
+  /// 移动端使用原生绑定(linkIdentityWithIdToken),Web 端使用 OAuth 流程
   /// 实际绑定结果会通过 auth state change 事件触发自动刷新
   Future<bool> linkApple() async {
     if (_disposed) return false;
@@ -99,13 +101,27 @@ class AccountSettingsProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final success = await _oauthService.linkAppleAccount();
+      // 移动端使用原生绑定
+      if (!kIsWeb) {
+        final isAvailable = await _nativeAuthService.isAppleSignInAvailable();
+        if (!isAvailable) {
+          throw Exception('当前设备不支持 Apple 登录');
+        }
 
-      if (success) {
-        debugPrint('✅ Apple 绑定请求已发送,等待用户授权');
-        // 不立即刷新,等待 auth state change 事件
+        final response = await _nativeAuthService.linkAppleAccount();
+        if (response == null) {
+          // 用户取消
+          return false;
+        }
+        debugPrint('✅ Apple 原生绑定成功');
+        return true;
       }
 
+      // Web 端使用 OAuth
+      final success = await _oauthService.linkAppleAccount();
+      if (success) {
+        debugPrint('✅ Apple OAuth 绑定请求已发送');
+      }
       return success;
     } catch (e) {
       _errorMessage = e.toString();
@@ -120,6 +136,10 @@ class AccountSettingsProvider extends ChangeNotifier {
   }
 
   /// 绑定 Google 账号
+  ///
+  /// 移动端使用原生绑定(linkIdentityWithIdToken),Web 端使用 OAuth 流程
+  /// Supabase 需开启 "Skip nonce checks" 选项
+  /// 实际绑定结果会通过 auth state change 事件触发自动刷新
   Future<bool> linkGoogle() async {
     if (_disposed) return false;
     _isLoading = true;
@@ -127,10 +147,21 @@ class AccountSettingsProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
+      // 移动端使用原生绑定
+      if (!kIsWeb) {
+        final response = await _nativeAuthService.linkGoogleAccount();
+        if (response == null) {
+          // 用户取消
+          return false;
+        }
+        debugPrint('✅ Google 原生绑定成功');
+        return true;
+      }
+
+      // Web 端使用 OAuth
       final success = await _oauthService.linkGoogleAccount();
       if (success) {
-        debugPrint('✅ Google 绑定请求已发送,等待用户授权');
-        // 不立即刷新,等待 auth state change 事件
+        debugPrint('✅ Google OAuth 绑定请求已发送');
       }
       return success;
     } catch (e) {
@@ -173,24 +204,131 @@ class AccountSettingsProvider extends ChangeNotifier {
     }
   }
 
-  /// 更新邮箱
-  Future<bool> updateEmail(String newEmail) async {
+  // ============================================================================
+  // OTP 重认证相关方法
+  // ============================================================================
+
+  /// 发送重认证 OTP
+  Future<bool> sendReauthenticationOtp() async {
     if (_disposed) return false;
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      final success = await _oauthService.updateEmail(newEmail);
-      if (success) {
-        // 邮箱更新需要验证，暂不重新加载
-        // await loadConnectedAccounts();
+      await _oauthService.sendReauthenticationOtp();
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString();
+      debugPrint('❌ 发送重认证 OTP 失败: $e');
+      return false;
+    } finally {
+      if (!_disposed) {
+        _isLoading = false;
+        notifyListeners();
       }
+    }
+  }
+
+  /// 验证重认证 OTP
+  Future<bool> verifyReauthenticationOtp(String otpCode) async {
+    if (_disposed) return false;
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final success = await _oauthService.verifyReauthenticationOtp(otpCode);
       return success;
     } catch (e) {
       _errorMessage = e.toString();
-      debugPrint('❌ 更新邮箱失败: $e');
+      debugPrint('❌ 验证重认证 OTP 失败: $e');
       return false;
+    } finally {
+      if (!_disposed) {
+        _isLoading = false;
+        notifyListeners();
+      }
+    }
+  }
+
+  // 新邮箱验证相关方法已移除
+  // 现在使用 Supabase 自动发送的确认链接进行验证
+
+  // ============================================================================
+  // 敏感操作方法(需要先通过 OTP 验证)
+  // ============================================================================
+
+  /// 添加邮箱(简化版 - 仅需当前账号 OTP)
+  ///
+  /// 新流程:
+  /// 1. 使用当前账号的 OTP 验证身份
+  /// 2. Supabase 自动向新邮箱发送确认链接
+  /// 3. 用户点击链接后完成验证
+  ///
+  /// @param email 新邮箱地址
+  /// @param password 要设置的密码
+  /// @param currentOtpCode 当前账号的重认证 OTP 码
+  Future<(bool, String?)> addEmail(
+    String email,
+    String password,
+    String currentOtpCode,
+  ) async {
+    if (_disposed) return (false, null);
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final success = await _oauthService.addEmail(
+        email,
+        password,
+        currentOtpCode,
+      );
+      if (success) {
+        await loadConnectedAccounts(); // 重新加载账号信息
+      }
+      return (success, '邮箱添加请求已发送,请检查新邮箱中的确认链接');
+    } catch (e) {
+      _errorMessage = e.toString();
+      debugPrint('❌ 添加邮箱失败: $e');
+      return (false, '$e');
+    } finally {
+      if (!_disposed) {
+        _isLoading = false;
+        notifyListeners();
+      }
+    }
+  }
+
+  /// 更新邮箱(简化版 - 仅需当前邮箱 OTP)
+  ///
+  /// 新流程:
+  /// 1. 使用当前邮箱的 OTP 验证身份
+  /// 2. Supabase 自动向新邮箱发送确认链接
+  /// 3. 用户点击链接后完成验证
+  ///
+  /// @param newEmail 新邮箱地址
+  /// @param currentOtpCode 当前邮箱的重认证 OTP 码
+  Future<(bool, String?)> updateEmail(
+    String newEmail,
+    String currentOtpCode,
+  ) async {
+    if (_disposed) return (false, null);
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final success = await _oauthService.updateEmail(newEmail, currentOtpCode);
+      if (success) {
+        await loadConnectedAccounts(); // 重新加载账号信息
+      }
+      return (success, '邮箱更新请求已发送,请检查新邮箱中的确认链接');
+    } catch (e) {
+      _errorMessage = e.toString();
+      debugPrint('❌ 更新邮箱失败: $e');
+      return (false, '$e');
     } finally {
       if (!_disposed) {
         _isLoading = false;
@@ -200,19 +338,22 @@ class AccountSettingsProvider extends ChangeNotifier {
   }
 
   /// 更改密码
-  Future<bool> changePassword(String newPassword) async {
-    if (_disposed) return false;
+  Future<(bool, String?)> changePassword(
+    String newPassword,
+    String otpCode,
+  ) async {
+    if (_disposed) return (false, null);
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      final success = await _oauthService.changePassword(newPassword);
-      return success;
+      final success = await _oauthService.changePassword(newPassword, otpCode);
+      return (success, null);
     } catch (e) {
       _errorMessage = e.toString();
       debugPrint('❌ 更改密码失败: $e');
-      return false;
+      return (false, '$e');
     } finally {
       if (!_disposed) {
         _isLoading = false;
@@ -222,19 +363,19 @@ class AccountSettingsProvider extends ChangeNotifier {
   }
 
   /// 删除账号
-  Future<bool> deleteAccount() async {
-    if (_disposed) return false;
+  Future<(bool, String?)> deleteAccount(String otpCode) async {
+    if (_disposed) return (false, null);
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      final success = await _oauthService.deleteAccount();
-      return success;
+      final success = await _oauthService.deleteAccount(otpCode);
+      return (success, null);
     } catch (e) {
       _errorMessage = e.toString();
       debugPrint('❌ 删除账号失败: $e');
-      return false;
+      return (false, '$e');
     } finally {
       if (!_disposed) {
         _isLoading = false;
