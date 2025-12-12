@@ -5,7 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:toneup_app/components/feedback_button.dart';
 import 'package:toneup_app/main.dart';
 import 'package:toneup_app/providers/profile_provider.dart';
-import 'package:toneup_app/routes.dart';
+import 'package:toneup_app/router_config.dart';
 
 class ProfileSettings extends StatefulWidget {
   const ProfileSettings({super.key});
@@ -224,7 +224,7 @@ class _ProfileSettings extends State<ProfileSettings> {
                   _buildListCeil(
                     label: 'Account Management',
                     hit: 'Email, Apple, Google',
-                    call: () => context.push(AppRoutes.ACCOUNT_SETTINGS),
+                    call: () => context.push(AppRouter.ACCOUNT_SETTINGS),
                   ),
                 ],
               ),

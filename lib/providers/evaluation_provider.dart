@@ -133,7 +133,7 @@ class EvaluationProvider extends ChangeNotifier {
           final newPlan = UserWeeklyPlanModel.fromJson(message['result']);
           debugPrint('计划创建完成，激活新计划');
           await PlanProvider().activatePlan(newPlan);
-          await ProfileProvider().updatePlan();
+          await ProfileProvider().updatePlanCount();
           isCreating = false;
           loadingMessage = '计划生成完成！';
           debugPrint('新计划已激活: ${newPlan.id}');

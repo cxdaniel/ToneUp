@@ -7,7 +7,8 @@ import 'package:toneup_app/components/components.dart';
 import 'package:toneup_app/components/feedback_button.dart';
 import 'package:toneup_app/main.dart';
 import 'package:toneup_app/providers/account_settings_provider.dart';
-import 'package:toneup_app/routes.dart';
+import 'package:toneup_app/router_config.dart';
+import 'package:toneup_app/services/utils.dart';
 
 class AccountSettings extends StatefulWidget {
   const AccountSettings({super.key});
@@ -20,13 +21,13 @@ class _AccountSettingsState extends State<AccountSettings> {
   late ThemeData theme;
   late AccountSettingsProvider accountProvider;
 
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<AccountSettingsProvider>().loadConnectedAccounts();
-    });
-  }
+  // @override
+  // void initState() {
+  //   super.initState();
+  //   WidgetsBinding.instance.addPostFrameCallback((_) {
+  //     // context.read<AccountSettingsProvider>().loadConnectedAccounts();
+  //   });
+  // }
 
   @override
   void didChangeDependencies() {
@@ -72,8 +73,10 @@ class _AccountSettingsState extends State<AccountSettings> {
                   _buildSectionTitle('Security'),
                   _buildSecuritySection(),
                   SizedBox(height: 0),
-                  _buildSectionTitle('Danger Zone'),
-                  _buildDangerZoneSection(),
+
+                  /// 暂时隐藏危险区域
+                  // _buildSectionTitle('Danger Zone'),
+                  // _buildDangerZoneSection(),
                 ],
               ),
             ),
@@ -322,6 +325,7 @@ class _AccountSettingsState extends State<AccountSettings> {
   }
 
   /// 危险区域
+  // ignore: unused_element
   Widget _buildDangerZoneSection() {
     return Column(
       spacing: 12,
@@ -447,7 +451,6 @@ class _AccountSettingsState extends State<AccountSettings> {
     // 步骤 1: 获取用户输入的新邮箱地址
     final emailController = TextEditingController();
     final passwordController = TextEditingController();
-
     final result = await showDialog<Map<String, String>>(
       context: context,
       builder: (context) {
@@ -493,14 +496,18 @@ class _AccountSettingsState extends State<AccountSettings> {
             ),
             FilledButton(
               onPressed: () {
+                String error = '';
                 final email = emailController.text.trim();
                 final password = passwordController.text;
-                if (email.isEmpty || password.length < 6) {
-                  showOverlayMessage(
-                    context,
-                    'Please fill all fields',
-                    isError: true,
-                  );
+                if (email.isEmpty || password.isEmpty) {
+                  error = 'Please fill all fields';
+                } else if (!AppUtils.isEmail(email)) {
+                  error = 'Enter a valid email (e.g., user@example.com)';
+                } else if (password.length < 6) {
+                  error = 'Password must be at least 6 characters';
+                }
+                if (error.isNotEmpty) {
+                  showOverlayMessage(context, error, isError: true);
                   return;
                 }
                 Navigator.pop(context, {'email': email, 'password': password});
@@ -516,45 +523,42 @@ class _AccountSettingsState extends State<AccountSettings> {
     final newEmail = result['email']!;
     final password = result['password']!;
 
-    // 步骤 2: 发送当前账号的重认证 OTP
-    final currentOtpSent = await accountProvider.sendReauthenticationOtp();
-    if (!currentOtpSent || !mounted) {
+    // 步骤 2: 发起添加邮箱请求，Supabase 会向新邮箱发送 OTP
+    final (addSuccess, addMessage) = await accountProvider.addEmail(
+      newEmail,
+      password,
+    );
+
+    if (!addSuccess || !mounted) {
       showGlobalSnackBar(
-        accountProvider.errorMessage ?? 'Failed to send verification code',
+        addMessage ?? 'Failed to add email',
         isError: true,
+        duration: Duration(seconds: 5),
       );
       return;
     }
 
-    // 步骤 3: 验证当前账号的 OTP 并完成添加
-    String? resultMessage;
-    final verified = await OtpVerificationDialog.show(
+    // 步骤 3: 验证新邮箱的 OTP
+    final newEmailVerified = await OtpVerificationDialog.show(
       context: context,
-      title: 'Verify Current Account',
+      title: 'Verify New Email',
       description:
-          'Enter the 6-digit code sent to your current account. '
-          'You can switch to your email app and come back here.',
-      onVerify: (otpCode) async {
-        final (success, message) = await accountProvider.addEmail(
-          newEmail,
-          password,
-          otpCode,
-        );
-        resultMessage = message;
-        return (success, message);
+          'Enter the 6-digit code sent to $newEmail. '
+          'Please check your new email inbox.',
+      onVerify: (newOtpCode) async {
+        return await accountProvider.verifyNewEmailOtp(newEmail, newOtpCode);
       },
-      onResend: () => accountProvider.sendReauthenticationOtp(),
+      onResend: null, // 新邮箱 OTP 无法重新发送，需要重新开始流程
     );
 
     if (!mounted) return;
-    if (verified == true) {
+    if (newEmailVerified == true) {
+      showGlobalSnackBar('Email added successfully!', isError: false);
+    } else if (newEmailVerified == false) {
       showGlobalSnackBar(
-        resultMessage ??
-            'Email add request sent. Please check your new email inbox for confirmation link.',
-        isError: false,
+        'Failed to verify new email. You may need to start over.',
+        isError: true,
       );
-    } else if (verified == false) {
-      showGlobalSnackBar(resultMessage ?? 'Failed to add email', isError: true);
     }
   }
 
@@ -583,7 +587,7 @@ class _AccountSettingsState extends State<AccountSettings> {
               ),
               const SizedBox(height: 12),
               Text(
-                'After verification, you will receive a confirmation link in your new email. Click it to complete the change.',
+                'You will receive a verification code in your new email. Enter it to complete the change.',
                 style: theme.textTheme.bodySmall!.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
@@ -597,8 +601,15 @@ class _AccountSettingsState extends State<AccountSettings> {
             ),
             FilledButton(
               onPressed: () {
+                String error = '';
                 final email = emailController.text.trim();
-                if (email.isEmpty) return;
+                if (!AppUtils.isEmail(email)) {
+                  error = 'Enter a valid email (e.g., user@example.com)';
+                }
+                if (error.isNotEmpty) {
+                  showOverlayMessage(context, error, isError: true);
+                  return;
+                }
                 Navigator.pop(context, email);
               },
               child: const Text('Next'),
@@ -610,45 +621,39 @@ class _AccountSettingsState extends State<AccountSettings> {
 
     if (newEmail == null || !mounted) return;
 
-    // 步骤 2: 发送当前邮箱的重认证 OTP
-    final currentOtpSent = await accountProvider.sendReauthenticationOtp();
-    if (!currentOtpSent || !mounted) {
+    // 步骤 2: 发起更新邮箱请求，Supabase 会向新邮箱发送 OTP
+    final (updateSuccess, updateMessage) = await accountProvider.updateEmail(
+      newEmail,
+    );
+
+    if (!updateSuccess || !mounted) {
       showGlobalSnackBar(
-        accountProvider.errorMessage ?? 'Failed to send verification code',
+        updateMessage ?? 'Failed to update email',
         isError: true,
+        duration: Duration(seconds: 5),
       );
       return;
     }
 
-    // 步骤 3: 验证当前邮箱的 OTP 并完成更新
-    String? resultMessage;
-    final verified = await OtpVerificationDialog.show(
+    // 步骤 3: 验证新邮箱的 OTP
+    final newEmailVerified = await OtpVerificationDialog.show(
       context: context,
-      title: 'Verify Current Email',
+      title: 'Verify New Email',
       description:
-          'Enter the 6-digit code sent to your current email. '
-          'You can switch to your email app and come back here.',
-      onVerify: (otpCode) async {
-        final (success, message) = await accountProvider.updateEmail(
-          newEmail,
-          otpCode,
-        );
-        resultMessage = message;
-        return (success, message);
+          'Enter the 6-digit code sent to $newEmail. '
+          'Please check your new email inbox.',
+      onVerify: (newOtpCode) async {
+        return await accountProvider.verifyNewEmailOtp(newEmail, newOtpCode);
       },
-      onResend: () => accountProvider.sendReauthenticationOtp(),
+      onResend: null, // 新邮箱 OTP 无法重新发送，需要重新开始流程
     );
 
     if (!mounted) return;
-    if (verified == true) {
+    if (newEmailVerified == true) {
+      showGlobalSnackBar('Email updated successfully!', isError: false);
+    } else if (newEmailVerified == false) {
       showGlobalSnackBar(
-        resultMessage ??
-            'Email update request sent. Please check your new email inbox for confirmation link.',
-        isError: false,
-      );
-    } else if (verified == false) {
-      showGlobalSnackBar(
-        resultMessage ?? 'Failed to update email',
+        'Failed to verify new email. You may need to start over.',
         isError: true,
       );
     }
@@ -907,7 +912,7 @@ class _AccountSettingsState extends State<AccountSettings> {
     if (!mounted) return;
     if (verified == true) {
       // 返回登录页
-      context.go(AppRoutes.LOGIN);
+      context.go(AppRouter.LOGIN);
     }
   }
 }

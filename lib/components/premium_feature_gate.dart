@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:toneup_app/providers/subscription_provider.dart';
-import 'package:toneup_app/routes.dart';
+import 'package:toneup_app/router_config.dart';
 
 class PremiumFeatureGate extends StatelessWidget {
   final Widget child;
@@ -32,7 +32,7 @@ class PremiumFeatureGate extends StatelessWidget {
             if (onUpgradeRequired != null) {
               onUpgradeRequired!();
             } else {
-              context.push(AppRoutes.PAYWALL);
+              context.push(AppRouter.PAYWALL);
             }
           },
           child: Stack(
@@ -78,7 +78,7 @@ class PremiumFeatureGate extends StatelessWidget {
                       SizedBox(height: 24),
                       ElevatedButton(
                         onPressed: () {
-                          context.push(AppRoutes.PAYWALL);
+                          context.push(AppRouter.PAYWALL);
                         },
                         child: Text('查看订阅选项'),
                       ),

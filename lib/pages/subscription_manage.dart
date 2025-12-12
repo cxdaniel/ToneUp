@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:toneup_app/main.dart';
 import 'package:toneup_app/models/subscription_model.dart';
 import 'package:toneup_app/providers/subscription_provider.dart';
-import 'package:toneup_app/routes.dart';
+import 'package:toneup_app/router_config.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class SubscriptionManagePage extends StatelessWidget {
@@ -194,7 +194,7 @@ class SubscriptionManagePage extends StatelessWidget {
             height: 52,
             child: ElevatedButton(
               onPressed: () {
-                context.push(AppRoutes.PAYWALL);
+                context.push(AppRouter.PAYWALL);
               },
               child: Text('Upgrade to Pro'),
             ),

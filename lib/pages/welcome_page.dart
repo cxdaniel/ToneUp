@@ -7,7 +7,7 @@ import 'package:toneup_app/components/components.dart';
 import 'package:toneup_app/components/feedback_button.dart';
 import 'package:toneup_app/models/enumerated_types.dart';
 import 'package:toneup_app/providers/profile_provider.dart';
-import 'package:toneup_app/routes.dart';
+import 'package:toneup_app/router_config.dart';
 import 'package:toneup_app/services/utils.dart';
 
 class WelcomePage extends StatefulWidget {
@@ -174,7 +174,7 @@ class _WelcomePageState extends State<WelcomePage> {
                 frontColor: theme.colorScheme.onPrimaryContainer,
                 onTap: () {
                   Navigator.pop(ctx);
-                  ctx.push(AppRoutes.EVALUATION, extra: {'level': level});
+                  ctx.push(AppRouter.EVALUATION, extra: {'level': level});
                 },
               ),
             ],

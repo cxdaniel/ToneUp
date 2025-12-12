@@ -7,7 +7,7 @@ import 'package:toneup_app/main.dart';
 import 'package:toneup_app/providers/evaluation_provider.dart';
 import 'package:toneup_app/providers/quiz_provider.dart';
 import 'package:toneup_app/providers/tts_provider.dart';
-import 'package:toneup_app/routes.dart';
+import 'package:toneup_app/router_config.dart';
 import 'package:toneup_app/theme_data.dart';
 
 class EvaluationPage extends StatefulWidget {
@@ -524,7 +524,7 @@ class _EvaluationPageState extends State<EvaluationPage> {
     try {
       await evaluationProvider.createProfileAndGoal(targetLevel);
       if (mounted) {
-        context.go(AppRoutes.HOME);
+        context.go(AppRouter.HOME);
       }
     } catch (e) {
       // 处理错误，如显示错误提示

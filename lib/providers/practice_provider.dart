@@ -161,7 +161,7 @@ class PracticeProvider extends ChangeNotifier {
       );
       ProfileProvider().profile!.exp = totalExp.toInt();
       await PlanProvider().updateProgress();
-      await ProfileProvider().updateMaterials();
+      await ProfileProvider().updateMaterialsCount();
     } catch (e) {
       retryLabel = 'Retry';
       _errorMessage = e.toString();

@@ -3,8 +3,9 @@ import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:toneup_app/components/components.dart';
 import 'package:toneup_app/main.dart';
-import 'package:toneup_app/routes.dart';
+import 'package:toneup_app/router_config.dart';
 import 'package:toneup_app/services/oauth_service.dart';
 
 class SigninPage extends StatefulWidget {
@@ -19,7 +20,7 @@ class _SigninPageState extends State<SigninPage> {
   final supabase = Supabase.instance.client;
   final _oauthService = OAuthService();
   late ThemeData theme;
-  bool isRequesting = false;
+  bool isLoading = false;
 
   @override
   void didChangeDependencies() {
@@ -32,12 +33,12 @@ class _SigninPageState extends State<SigninPage> {
     emailController.dispose();
     passwordController.dispose();
     // 取消正在进行的 OAuth 认证
-    _oauthService.cancelAuth();
+    if (isLoading) _oauthService.cancelAuth();
     super.dispose();
   }
 
   Future<void> _forgotPassword() async {
-    context.push(AppRoutes.FORGOT);
+    context.push(AppRouter.FORGOT);
   }
 
   /// 邮箱密码登录
@@ -57,7 +58,8 @@ class _SigninPageState extends State<SigninPage> {
       _showError('The password must be at least 6 characters.');
       return;
     }
-    setState(() => isRequesting = true);
+    FocusScope.of(context).unfocus();
+    setState(() => isLoading = true);
     try {
       await supabase.auth.signInWithPassword(email: email, password: password);
     } catch (e) {
@@ -67,15 +69,15 @@ class _SigninPageState extends State<SigninPage> {
       }
     } finally {
       if (mounted) {
-        setState(() => isRequesting = false);
+        setState(() => isLoading = false);
       }
     }
   }
 
   /// Apple 登录
   Future<void> _loginWithApple() async {
-    if (isRequesting) return;
-    setState(() => isRequesting = true);
+    if (isLoading) return;
+    setState(() => isLoading = true);
     try {
       debugPrint('🍎 开始 Apple 登录');
       final success = await _oauthService.signInWithProvider(
@@ -103,15 +105,15 @@ class _SigninPageState extends State<SigninPage> {
       }
     } finally {
       if (mounted) {
-        setState(() => isRequesting = false);
+        setState(() => isLoading = false);
       }
     }
   }
 
   /// Google 登录
   Future<void> _loginWithGoogle() async {
-    if (isRequesting) return;
-    setState(() => isRequesting = true);
+    if (isLoading) return;
+    setState(() => isLoading = true);
     try {
       debugPrint('🔍 开始 Google 登录');
       final success = await _oauthService.signInWithProvider(
@@ -138,7 +140,7 @@ class _SigninPageState extends State<SigninPage> {
       }
     } finally {
       if (mounted) {
-        setState(() => isRequesting = false);
+        setState(() => isLoading = false);
       }
     }
   }
@@ -163,225 +165,234 @@ class _SigninPageState extends State<SigninPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            // mainAxisAlignment: MainAxisAlignment.start,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            spacing: 24,
-            children: [
-              /// Welcome Title
-              Container(
-                margin: const EdgeInsets.only(top: 54),
-                height: 120,
-                alignment: Alignment.center,
-                child: Text(
-                  'Login to ToneUp',
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.headlineLarge?.copyWith(
-                    fontFamily: 'Righteous',
-                    color: theme.colorScheme.primary,
-                  ),
-                ),
-              ),
-
-              /// Email
-              TextField(
-                controller: emailController,
-                decoration: InputDecoration(
-                  filled: true,
-                  fillColor: theme.colorScheme.surfaceContainer,
-                  labelText: 'Email',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide(
-                      color: theme.colorScheme.surfaceContainerHighest,
+    // 加载中状态
+    if (isLoading) {
+      LoadingOverlay.show(context, label: 'Signing in...');
+    } else {
+      LoadingOverlay.hide();
+    }
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: Scaffold(
+        body: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              // mainAxisAlignment: MainAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              spacing: 24,
+              children: [
+                /// Welcome Title
+                Container(
+                  margin: const EdgeInsets.only(top: 54),
+                  height: 120,
+                  alignment: Alignment.center,
+                  child: Text(
+                    'Login to ToneUp',
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.headlineLarge?.copyWith(
+                      fontFamily: 'Righteous',
+                      color: theme.colorScheme.primary,
                     ),
                   ),
                 ),
-              ),
 
-              /// Password
-              TextField(
-                controller: passwordController,
-                decoration: InputDecoration(
-                  labelText: 'Password',
-                  filled: true,
-                  fillColor: theme.colorScheme.surfaceContainer,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide(
-                      color: theme.colorScheme.surfaceContainerHighest,
-                    ),
-                  ),
-                ),
-                obscureText: true,
-              ),
-
-              /// Forgot Password
-              TextButton(
-                onPressed: _forgotPassword,
-                style: TextButton.styleFrom(padding: EdgeInsets.all(4)),
-                child: Text(
-                  'Forgot Password',
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    color: theme.colorScheme.primary,
-                  ),
-                ),
-              ),
-
-              /// Login Button
-              SizedBox(
-                width: double.infinity,
-                child: TextButton(
-                  style: TextButton.styleFrom(
-                    backgroundColor: theme.colorScheme.primary,
-                    foregroundColor: theme.colorScheme.onPrimary,
-                    disabledBackgroundColor: theme.colorScheme.surfaceDim,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
+                /// Email
+                TextField(
+                  controller: emailController,
+                  decoration: InputDecoration(
+                    filled: true,
+                    fillColor: theme.colorScheme.surfaceContainer,
+                    labelText: 'Email',
+                    border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(16),
                     ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: BorderSide(
+                        color: theme.colorScheme.surfaceContainerHighest,
+                      ),
+                    ),
                   ),
-                  onPressed: isRequesting ? null : _signIn,
-                  child: isRequesting
-                      ? Row(
-                          mainAxisSize: MainAxisSize.min,
-                          spacing: 16,
-                          children: [
-                            SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            ),
-                            Text(
-                              'Signing...',
-                              style: theme.textTheme.titleMedium!.copyWith(
-                                color: theme.colorScheme.onPrimary,
-                              ),
-                            ),
-                          ],
-                        )
-                      : Text(
-                          'Sign in',
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            color: theme.colorScheme.onPrimary,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
                 ),
-              ),
 
-              /// Or continue with
-              Divider(
-                color: theme.colorScheme.surfaceContainerHigh,
-                thickness: 1,
-              ),
-
-              /// with Google
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  icon: SvgPicture.asset(
-                    'assets/images/login_icon_google.svg',
-                    width: 24,
-                    height: 24,
+                /// Password
+                TextField(
+                  controller: passwordController,
+                  decoration: InputDecoration(
+                    labelText: 'Password',
+                    filled: true,
+                    fillColor: theme.colorScheme.surfaceContainer,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: BorderSide(
+                        color: theme.colorScheme.surfaceContainerHighest,
+                      ),
+                    ),
                   ),
-                  label: Text(
-                    'Continue with Google',
-                    style: theme.textTheme.titleMedium?.copyWith(
+                  obscureText: true,
+                ),
+
+                /// Forgot Password
+                TextButton(
+                  onPressed: _forgotPassword,
+                  style: TextButton.styleFrom(padding: EdgeInsets.all(4)),
+                  child: Text(
+                    'Forgot Password',
+                    style: theme.textTheme.titleSmall?.copyWith(
                       color: theme.colorScheme.primary,
                     ),
                   ),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    backgroundColor: theme.colorScheme.surfaceContainerLowest,
-                    side: BorderSide(color: theme.colorScheme.outlineVariant),
-                  ),
-                  onPressed: _loginWithGoogle,
                 ),
-              ),
 
-              /// with apple
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  icon: SvgPicture.asset(
-                    'assets/images/login_icon_apple.svg',
-                    width: 24,
-                    height: 24,
-                    colorFilter: ColorFilter.mode(
-                      theme.colorScheme.onSurface,
-                      BlendMode.srcIn,
-                    ),
-                  ),
-                  label: Text(
-                    'Continue with Apple',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      color: theme.colorScheme.primary,
-                    ),
-                  ),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    backgroundColor: theme.colorScheme.surfaceContainerLowest,
-                    side: BorderSide(color: theme.colorScheme.outlineVariant),
-                  ),
-                  onPressed: _loginWithApple,
-                ),
-              ),
-
-              /// divider
-              Divider(
-                color: theme.colorScheme.surfaceContainerHigh,
-                thickness: 1,
-              ),
-
-              /// Sign Up
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    'Don’t have an account?',
-                    style: TextStyle(
-                      color: theme.colorScheme.primary,
-                      fontSize: 14,
-                      fontFamily: 'Roboto',
-                      fontWeight: FontWeight.w400,
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: () {
-                      HapticFeedback.heavyImpact();
-                      context.replace(AppRoutes.SIGN_UP);
-                    },
+                /// Login Button
+                SizedBox(
+                  width: double.infinity,
+                  child: TextButton(
                     style: TextButton.styleFrom(
-                      padding: EdgeInsets.all(4),
-                      minimumSize: Size.square(40),
+                      backgroundColor: theme.colorScheme.primary,
+                      foregroundColor: theme.colorScheme.onPrimary,
+                      disabledBackgroundColor: theme.colorScheme.surfaceDim,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
                     ),
-                    child: Text(
-                      'SignUp',
+                    onPressed: isLoading ? null : _signIn,
+                    child: isLoading
+                        ? Row(
+                            mainAxisSize: MainAxisSize.min,
+                            spacing: 16,
+                            children: [
+                              SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              Text(
+                                'Signing...',
+                                style: theme.textTheme.titleMedium!.copyWith(
+                                  color: theme.colorScheme.onPrimary,
+                                ),
+                              ),
+                            ],
+                          )
+                        : Text(
+                            'Sign in',
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              color: theme.colorScheme.onPrimary,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                  ),
+                ),
+
+                /// Or continue with
+                Divider(
+                  color: theme.colorScheme.surfaceContainerHigh,
+                  thickness: 1,
+                ),
+
+                /// with Google
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    icon: SvgPicture.asset(
+                      'assets/images/login_icon_google.svg',
+                      width: 24,
+                      height: 24,
+                    ),
+                    label: Text(
+                      'Continue with Google',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: theme.colorScheme.primary,
+                      ),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      backgroundColor: theme.colorScheme.surfaceContainerLowest,
+                      side: BorderSide(color: theme.colorScheme.outlineVariant),
+                    ),
+                    onPressed: _loginWithGoogle,
+                  ),
+                ),
+
+                /// with apple
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    icon: SvgPicture.asset(
+                      'assets/images/login_icon_apple.svg',
+                      width: 24,
+                      height: 24,
+                      colorFilter: ColorFilter.mode(
+                        theme.colorScheme.onSurface,
+                        BlendMode.srcIn,
+                      ),
+                    ),
+                    label: Text(
+                      'Continue with Apple',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: theme.colorScheme.primary,
+                      ),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      backgroundColor: theme.colorScheme.surfaceContainerLowest,
+                      side: BorderSide(color: theme.colorScheme.outlineVariant),
+                    ),
+                    onPressed: _loginWithApple,
+                  ),
+                ),
+
+                /// divider
+                Divider(
+                  color: theme.colorScheme.surfaceContainerHigh,
+                  thickness: 1,
+                ),
+
+                /// Sign Up
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      'Don’t have an account?',
                       style: TextStyle(
                         color: theme.colorScheme.primary,
                         fontSize: 14,
                         fontFamily: 'Roboto',
-                        fontWeight: FontWeight.w700,
+                        fontWeight: FontWeight.w400,
                       ),
                     ),
-                  ),
-                ],
-              ),
-            ],
+                    TextButton(
+                      onPressed: () {
+                        HapticFeedback.heavyImpact();
+                        context.replace(AppRouter.SIGN_UP);
+                      },
+                      style: TextButton.styleFrom(
+                        padding: EdgeInsets.all(4),
+                        minimumSize: Size.square(40),
+                      ),
+                      child: Text(
+                        'SignUp',
+                        style: TextStyle(
+                          color: theme.colorScheme.primary,
+                          fontSize: 14,
+                          fontFamily: 'Roboto',
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),

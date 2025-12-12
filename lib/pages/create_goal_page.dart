@@ -7,7 +7,7 @@ import 'package:toneup_app/models/user_weekly_plan_model.dart';
 import 'package:toneup_app/providers/create_goal_provider.dart';
 import 'package:toneup_app/providers/profile_provider.dart';
 import 'package:toneup_app/providers/subscription_provider.dart';
-import 'package:toneup_app/routes.dart';
+import 'package:toneup_app/router_config.dart';
 
 class CreateGoalPage extends StatefulWidget {
   const CreateGoalPage({super.key});
@@ -55,7 +55,7 @@ class _CreateGoalPageState extends State<CreateGoalPage> {
   }
 
   void _goPayWall() {
-    context.push(AppRoutes.PAYWALL);
+    context.push(AppRouter.PAYWALL);
   }
 
   Future<void> _createNewGoal() async {

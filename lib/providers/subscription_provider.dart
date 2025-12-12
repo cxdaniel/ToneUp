@@ -1,4 +1,3 @@
-// lib/providers/subscription_provider.dart
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
@@ -12,15 +11,12 @@ class SubscriptionProvider extends ChangeNotifier {
   static final SubscriptionProvider _instance =
       SubscriptionProvider._internal();
   factory SubscriptionProvider() => _instance;
-  SubscriptionProvider._internal() {
-    _setupAuthListener();
-  }
+  SubscriptionProvider._internal();
 
   final _supabase = Supabase.instance.client;
-  final _revenueCat = RevenueCatService();
   final int _totalGoals = 2;
 
-  SubscriptionModel? _subscription;
+  SubscriptionModel? subscription;
   Offerings? _offerings;
   bool _isLoading = false;
   String? _errorMessage;
@@ -29,14 +25,13 @@ class SubscriptionProvider extends ChangeNotifier {
   int currentMonthGoalLeft = 0;
 
   // Getters
-  SubscriptionModel? get subscription => _subscription;
   Offerings? get offerings => _offerings;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
 
-  bool get isPro => _subscription?.isPro ?? false;
-  bool get isFree => _subscription?.isFree ?? true;
-  bool get isTrialing => _subscription?.isTrialing ?? false;
+  bool get isPro => subscription?.isPro ?? false;
+  bool get isFree => subscription?.isFree ?? true;
+  bool get isTrialing => subscription?.isTrialing ?? false;
 
   @override
   void dispose() {
@@ -50,36 +45,26 @@ class SubscriptionProvider extends ChangeNotifier {
     if (!_disposed) super.notifyListeners();
   }
 
-  /// 设置认证监听
-  void _setupAuthListener() {
-    _authSubscription = _supabase.auth.onAuthStateChange.listen((data) async {
-      final event = data.event;
-      debugPrint('🔔 SubscriptionProvider 收到 auth event: $event');
-
-      if (event == AuthChangeEvent.signedIn) {
-        // 用户登录后，初始化 RevenueCat 并加载订阅
-        final user = data.session?.user;
-        if (user != null) {
-          await _revenueCat.login(user.id);
-          await loadSubscription();
-        }
-      } else if (event == AuthChangeEvent.signedOut) {
-        // 用户登出，清空订阅数据
-        _subscription = null;
-        await _revenueCat.logout();
-        notifyListeners();
-      }
-    });
+  Future<void> onUserSign(bool isSignIn) async {
+    if (isSignIn) {
+      final user = _supabase.auth.currentUser;
+      await RevenueCatService().login(user!.id);
+      await loadUserSubdata();
+    } else {
+      subscription = null;
+      await RevenueCatService().logout();
+    }
+    notifyListeners();
   }
 
   /// 初始化
   Future<void> initialize() async {
     try {
-      await _revenueCat.initialize();
+      await RevenueCatService().initialize();
       final user = _supabase.auth.currentUser;
       if (user != null) {
-        await _revenueCat.login(user.id);
-        await loadSubscription();
+        await RevenueCatService().login(user.id);
+        await loadUserSubdata();
         await loadOfferings();
         final createdGoals = await getCurrentMonthGoalsCount();
         currentMonthGoalLeft = (_totalGoals - createdGoals).clamp(
@@ -190,7 +175,7 @@ class SubscriptionProvider extends ChangeNotifier {
   }
 
   /// 从 Supabase 加载订阅信息
-  Future<void> loadSubscription() async {
+  Future<void> loadUserSubdata() async {
     final user = _supabase.auth.currentUser;
     if (user == null) return;
 
@@ -207,7 +192,7 @@ class SubscriptionProvider extends ChangeNotifier {
           .maybeSingle();
 
       if (data != null) {
-        _subscription = SubscriptionModel.fromJson(data);
+        subscription = SubscriptionModel.fromJson(data);
       } else {
         // 如果数据库没有记录，创建一个免费账户记录
         await _createFreeSubscription(user.id);
@@ -233,7 +218,7 @@ class SubscriptionProvider extends ChangeNotifier {
           .select()
           .single();
 
-      _subscription = SubscriptionModel.fromJson(data);
+      subscription = SubscriptionModel.fromJson(data);
     } catch (e) {
       debugPrint('❌ 创建免费订阅记录失败: $e');
     }
@@ -244,10 +229,10 @@ class SubscriptionProvider extends ChangeNotifier {
     if (kIsWeb) return;
 
     try {
-      final customerInfo = await _revenueCat.getCustomerInfo();
+      final customerInfo = await RevenueCatService().getCustomerInfo();
       // 同步到 Supabase
       if (customerInfo == null) return;
-      await _revenueCat.syncSubscriptionToSupabase(customerInfo);
+      await RevenueCatService().syncSubscriptionToSupabase(customerInfo);
       // 重新从数据库加载
       final user = _supabase.auth.currentUser;
       if (user != null) {
@@ -256,18 +241,16 @@ class SubscriptionProvider extends ChangeNotifier {
             .select()
             .eq('user_id', user.id)
             .single();
-        _subscription = SubscriptionModel.fromJson(data);
+        subscription = SubscriptionModel.fromJson(data);
         debugPrint('✅ 同步后的订阅状态:');
-        debugPrint('   Status: ${_subscription!.status.name}');
-        debugPrint('   Is Pro: ${_subscription!.isPro}');
-        debugPrint('   Tier: ${_subscription!.tier?.name}');
+        debugPrint('   Status: ${subscription!.status.name}');
+        debugPrint('   Is Pro: ${subscription!.isPro}');
+        debugPrint('   Tier: ${subscription!.tier?.name}');
         debugPrint('   ----------------------------------');
+        debugPrint('   Subscription sta: ${subscription!.subscriptionStartAt}');
+        debugPrint('   Subscription end: ${subscription!.subscriptionEndAt}');
         debugPrint(
-          '   Subscription sta: ${_subscription!.subscriptionStartAt}',
-        );
-        debugPrint('   Subscription end: ${_subscription!.subscriptionEndAt}');
-        debugPrint(
-          '   Trial: ${_subscription!.trialStartAt} -> ${_subscription!.trialEndAt}',
+          '   Trial: ${subscription!.trialStartAt} -> ${subscription!.trialEndAt}',
         );
       }
     } catch (e) {
@@ -278,7 +261,7 @@ class SubscriptionProvider extends ChangeNotifier {
   /// 加载可用产品
   Future<void> loadOfferings() async {
     try {
-      _offerings = await _revenueCat.getOfferings();
+      _offerings = await RevenueCatService().getOfferings();
       notifyListeners();
     } catch (e) {
       debugPrint('❌ 加载产品失败: $e');
@@ -292,9 +275,9 @@ class SubscriptionProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final customerInfo = await _revenueCat.purchasePackage(package);
+      final customerInfo = await RevenueCatService().purchasePackage(package);
       if (customerInfo != null) {
-        await loadSubscription(); // 重新加载订阅状态
+        await loadUserSubdata(); // 重新加载订阅状态
         return true;
       }
       return false;
@@ -315,8 +298,8 @@ class SubscriptionProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      await _revenueCat.restorePurchases();
-      await loadSubscription();
+      await RevenueCatService().restorePurchases();
+      await loadUserSubdata();
       return true;
     } catch (e) {
       _errorMessage = '恢复购买失败: $e';

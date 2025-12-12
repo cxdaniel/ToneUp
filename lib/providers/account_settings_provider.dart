@@ -1,5 +1,4 @@
 import 'dart:async';
-
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:toneup_app/services/oauth_service.dart';
@@ -40,7 +39,7 @@ class AccountSettingsProvider extends ChangeNotifier {
     _authSubscription = _supabase.auth.onAuthStateChange.listen(
       (data) {
         final event = data.event;
-        debugPrint('🔔 AccountSettingsProvider 收到 auth event: $event');
+        debugPrint('🔔 @AccountSettingsProvider 收到 auth event: $event');
         // 当检测到用户信息变化时,重新加载账号列表
         if (event == AuthChangeEvent.userUpdated ||
             event == AuthChangeEvent.tokenRefreshed) {
@@ -252,27 +251,10 @@ class AccountSettingsProvider extends ChangeNotifier {
     }
   }
 
-  // 新邮箱验证相关方法已移除
-  // 现在使用 Supabase 自动发送的确认链接进行验证
-
-  // ============================================================================
-  // 敏感操作方法(需要先通过 OTP 验证)
-  // ============================================================================
-
-  /// 添加邮箱(简化版 - 仅需当前账号 OTP)
-  ///
-  /// 新流程:
-  /// 1. 使用当前账号的 OTP 验证身份
-  /// 2. Supabase 自动向新邮箱发送确认链接
-  /// 3. 用户点击链接后完成验证
-  ///
-  /// @param email 新邮箱地址
-  /// @param password 要设置的密码
-  /// @param currentOtpCode 当前账号的重认证 OTP 码
-  Future<(bool, String?)> addEmail(
+  /// 验证新邮箱的 OTP（用于邮箱变更/添加）
+  Future<(bool, String?)> verifyNewEmailOtp(
     String email,
-    String password,
-    String currentOtpCode,
+    String otpCode,
   ) async {
     if (_disposed) return (false, null);
     _isLoading = true;
@@ -280,15 +262,38 @@ class AccountSettingsProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final success = await _oauthService.addEmail(
-        email,
-        password,
-        currentOtpCode,
-      );
+      final success = await _oauthService.verifyNewEmailOtp(email, otpCode);
       if (success) {
-        await loadConnectedAccounts(); // 重新加载账号信息
+        await loadConnectedAccounts(); // 验证成功后刷新账号信息
       }
-      return (success, '邮箱添加请求已发送,请检查新邮箱中的确认链接');
+      return (success, success ? '邮箱验证成功！' : '验证失败，请检查验证码');
+    } catch (e) {
+      _errorMessage = e.toString();
+      debugPrint('❌ 验证新邮箱 OTP 失败: $e');
+      return (false, '$e');
+    } finally {
+      if (!_disposed) {
+        _isLoading = false;
+        notifyListeners();
+      }
+    }
+  }
+
+  /// 添加邮箱(简化版 - 仅需新邮箱 OTP)
+  /// @param email 新邮箱地址
+  /// @param password 要设置的密码
+  Future<(bool, String?)> addEmail(String email, String password) async {
+    if (_disposed) return (false, null);
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final success = await _oauthService.addEmail(email, password);
+      if (success) {
+        // 不立即刷新账号信息,等待新邮箱 OTP 验证后自动刷新
+      }
+      return (success, 'OTP 验证码已发送到新邮箱,请输入验证码完成添加');
     } catch (e) {
       _errorMessage = e.toString();
       debugPrint('❌ 添加邮箱失败: $e');
@@ -301,30 +306,26 @@ class AccountSettingsProvider extends ChangeNotifier {
     }
   }
 
-  /// 更新邮箱(简化版 - 仅需当前邮箱 OTP)
+  /// 更新邮箱(简化版 - 仅需新邮箱 OTP)
   ///
-  /// 新流程:
-  /// 1. 使用当前邮箱的 OTP 验证身份
-  /// 2. Supabase 自动向新邮箱发送确认链接
-  /// 3. 用户点击链接后完成验证
+  /// 简化流程:
+  /// 1. 调用此方法发起更新
+  /// 2. Supabase 向新邮箱发送 OTP 验证码
+  /// 3. 用户输入新邮箱的 OTP 完成验证
   ///
   /// @param newEmail 新邮箱地址
-  /// @param currentOtpCode 当前邮箱的重认证 OTP 码
-  Future<(bool, String?)> updateEmail(
-    String newEmail,
-    String currentOtpCode,
-  ) async {
+  Future<(bool, String?)> updateEmail(String newEmail) async {
     if (_disposed) return (false, null);
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      final success = await _oauthService.updateEmail(newEmail, currentOtpCode);
+      final success = await _oauthService.updateEmail(newEmail);
       if (success) {
-        await loadConnectedAccounts(); // 重新加载账号信息
+        // 不立即刷新账号信息,等待新邮箱 OTP 验证后自动刷新
       }
-      return (success, '邮箱更新请求已发送,请检查新邮箱中的确认链接');
+      return (success, 'OTP 验证码已发送到新邮箱,请输入验证码完成更新');
     } catch (e) {
       _errorMessage = e.toString();
       debugPrint('❌ 更新邮箱失败: $e');

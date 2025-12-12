@@ -1,6 +1,6 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:go_router/go_router.dart';
 import 'package:jieba_flutter/analysis/jieba_segmenter.dart';
 import 'package:provider/provider.dart';
@@ -11,18 +11,24 @@ import 'package:toneup_app/providers/subscription_provider.dart';
 import 'package:toneup_app/providers/tts_provider.dart';
 import 'package:toneup_app/services/config.dart';
 import 'package:toneup_app/services/native_auth_service.dart';
+import 'package:toneup_app/services/utils.dart';
 import 'package:toneup_app/theme_data.dart';
 import 'package:toneup_app/router_config.dart';
-// 条件导入：仅在 Web 平台导入 dart:html
-import 'web_utils_stub.dart'
-    if (dart.library.html) 'package:toneup_app/web_utils.dart';
 
 /// 全局 ScaffoldMessengerKey
 final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey =
     GlobalKey<ScaffoldMessengerState>();
 void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // 配置 Web URL 策略: 使用 Path URL Strategy (无 hash)
+  usePathUrlStrategy();
   // 加载环境变量
-  await dotenv.load(fileName: '.env');
+  try {
+    await dotenv.load(fileName: '.env');
+  } catch (e) {
+    debugPrint('⚠️ .env文件加载失败(Web平台可能不需要): $e');
+  }
 
   await Supabase.initialize(
     url: SupabaseConfig.url,
@@ -48,42 +54,71 @@ class _MyAppState extends State<MyApp> {
   void initState() {
     super.initState();
     _router = AppRouter.createRouter();
-    setupAuthStateListener(_router);
 
-    // Web 平台：检查完整 URL 是否包含回调路径
-    if (kIsWeb) {
-      _checkWebCallbackUrl();
+    /// 设置 auth state change 监听
+    Supabase.instance.client.auth.onAuthStateChange.listen(
+      _authStateChangeHandler,
+      onError: (error) {
+        String friendlyMessage;
+        if (error is AuthException) {
+          if (error.statusCode == 'identity_already_exists' ||
+              error.message.toLowerCase().contains('already linked')) {
+            friendlyMessage = 'This account is already linked to another user.';
+          } else if (error.message.toLowerCase().contains('cancelled')) {
+            friendlyMessage = 'Account linking cancelled by user.';
+          } else {
+            friendlyMessage = 'Operation failed: ${error.message}';
+          }
+        } else {
+          friendlyMessage = '❌ onAuthStateChange error: $error';
+        }
+        showGlobalSnackBar(friendlyMessage, isError: true);
+      },
+    );
+  }
+
+  /// 处理认证状态变化
+  void _authStateChangeHandler(AuthState data) async {
+    final event = data.event;
+    final session = data.session;
+    debugPrint('🔔 @ProfileProvider 收到 auth event: $event');
+    if (event == AuthChangeEvent.signedOut) {
+      /// 退出登录
+      ProfileProvider().onUserSign(false);
+      PlanProvider().onUserSign(false);
+      SubscriptionProvider().onUserSign(false);
+      _router.go(AppRouter.LOGIN);
+    } else if (event == AuthChangeEvent.signedIn && session != null) {
+      /// 登录成功或账号绑定
+      final user = Supabase.instance.client.auth.currentUser;
+      if (user != null) {
+        // ✅ 判断当前路由,避免在账号绑定时跳转
+        // 如果用户在 LOGIN 或 SIGN_UP 页面,说明是登录操作
+        // 如果在其他页面(如 ACCOUNT_SETTINGS),说明是账号绑定操作
+        final currentLocation =
+            _router.routerDelegate.currentConfiguration.uri.path;
+        final isLoginPage =
+            currentLocation == AppRouter.LOGIN ||
+            currentLocation == AppRouter.SIGN_UP;
+
+        if (AppUtils.isMobile && isLoginPage) {
+          debugPrint('🔄 登录成功,跳转到首页');
+          _cacheOAuthUserInfo(user);
+          _router.go(AppRouter.HOME);
+          SubscriptionProvider().onUserSign(true);
+        } else {
+          debugPrint('🔄 账号绑定成功,保持当前页面');
+        }
+      }
+    } else if (event == AuthChangeEvent.userUpdated) {
+      Supabase.instance.client.auth.refreshSession();
     }
   }
 
-  /// Web 平台：检查并处理回调 URL
-  void _checkWebCallbackUrl() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      try {
-        final fullUrl = getWindowLocationHref();
-        debugPrint('🌐 检查 Web URL: $fullUrl');
-
-        // 检查是否是账号绑定回调
-        if (fullUrl.contains('/linking-callback')) {
-          debugPrint('🔗 检测到账号绑定回调，导航到回调路由');
-          _router.go('/linking-callback');
-          // _router.go('${AppRoutes.PROFILE}/linking-callback');
-          return;
-        }
-
-        // 检查是否是邮箱变更回调
-        if (fullUrl.contains('/email-change-callback')) {
-          debugPrint('📧 检测到邮箱变更回调，导航到回调路由');
-          _router.go('/email-change-callback');
-          // _router.go('${AppRoutes.PROFILE}/email-change-callback');
-          return;
-        }
-
-        debugPrint('✅ 非回调 URL，正常启动');
-      } catch (e) {
-        debugPrint('❌ 检查 Web URL 失败: $e');
-      }
-    });
+  /// 缓存第三方登录的用户信息
+  void _cacheOAuthUserInfo(User? user) {
+    // 此处可添加用户信息缓存逻辑
+    // 例如：保存昵称、头像等
   }
 
   @override
@@ -121,7 +156,10 @@ void showGlobalSnackBar(
   String message, {
   bool isError = false,
   bool floating = false,
+  Duration? duration,
 }) {
+  debugPrint('🔔 showGlobalSnackBar: $message');
+
   final context = scaffoldMessengerKey.currentContext;
   if (context == null) return;
 
@@ -139,7 +177,7 @@ void showGlobalSnackBar(
       backgroundColor: isError
           ? theme.colorScheme.errorContainer
           : theme.colorScheme.primaryContainer,
-      duration: const Duration(seconds: 3),
+      duration: duration ?? Duration(seconds: 3),
       behavior: floating ? SnackBarBehavior.floating : SnackBarBehavior.fixed,
       margin: floating
           ? const EdgeInsets.only(bottom: 80, left: 16, right: 16)

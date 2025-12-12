@@ -10,7 +10,7 @@ import 'package:toneup_app/components/feedback_button.dart';
 import 'package:toneup_app/main.dart';
 import 'package:toneup_app/providers/profile_provider.dart';
 import 'package:toneup_app/providers/subscription_provider.dart';
-import 'package:toneup_app/routes.dart';
+import 'package:toneup_app/router_config.dart';
 import 'package:toneup_app/theme_data.dart';
 
 class ProfilePage extends StatefulWidget {
@@ -49,7 +49,7 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> goSettings() async {
-    context.push(AppRoutes.SETTINGS);
+    context.push(AppRouter.SETTINGS);
   }
 
   @override
@@ -65,7 +65,7 @@ class _ProfilePageState extends State<ProfilePage> {
             onRefresh: () async {
               LoadingOverlay.show(context, label: 'Refreshing profile...');
               await profileProvider.fetchProfile();
-              await subscriptionProvider.loadSubscription();
+              await subscriptionProvider.loadUserSubdata();
               await subscriptionProvider.testRevenueCatConfig();
               LoadingOverlay.hide();
             },
@@ -98,7 +98,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       context,
                       label: 'Account Management',
                       hit: 'Email, Apple, Google',
-                      call: () => context.push(AppRoutes.ACCOUNT_SETTINGS),
+                      call: () => context.push(AppRouter.ACCOUNT_SETTINGS),
                     ),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -107,20 +107,20 @@ class _ProfilePageState extends State<ProfilePage> {
                         iconLink(
                           context,
                           icon: Icons.assignment_turned_in_outlined,
-                          label: 'Condition & Terms',
-                          call: () {},
+                          label: 'Terms of Service',
+                          call: () => context.push(AppRouter.TERMS_OF_SERVICE),
                         ),
                         iconLink(
                           context,
                           icon: Icons.privacy_tip_outlined,
-                          label: 'Privacy',
-                          call: null,
+                          label: 'Privacy Policy',
+                          call: () => context.push(AppRouter.PRIVACY_POLICY),
                         ),
                         iconLink(
                           context,
                           icon: Icons.info_outline,
-                          label: 'About',
-                          call: null,
+                          label: 'About ToneUp',
+                          call: () => context.push(AppRouter.ABOUT),
                         ),
                         iconLink(
                           context,
@@ -162,7 +162,7 @@ class _ProfilePageState extends State<ProfilePage> {
   Widget _buildWebFreeCard() {
     return FeedbackButton(
       onTap: () {
-        context.push(AppRoutes.DOWNLOAD);
+        context.push(AppRouter.DOWNLOAD);
       },
       child: Container(
         padding: EdgeInsets.all(16),
@@ -195,7 +195,7 @@ class _ProfilePageState extends State<ProfilePage> {
   /// 管理订阅按钮
   Widget _buildManageButtons() {
     return FeedbackButton(
-      onTap: () => context.push(AppRoutes.SUBSCRIPTION_MANAGE),
+      onTap: () => context.push(AppRouter.SUBSCRIPTION_MANAGE),
       child: Container(
         padding: EdgeInsets.all(12),
         decoration: BoxDecoration(
@@ -251,7 +251,7 @@ class _ProfilePageState extends State<ProfilePage> {
   /// 升级卡片
   Widget _buildUpgradeCard() {
     return FeedbackButton(
-      onTap: () => context.push(AppRoutes.PAYWALL),
+      onTap: () => context.push(AppRouter.PAYWALL),
       child: Container(
         padding: EdgeInsets.all(12),
         decoration: BoxDecoration(

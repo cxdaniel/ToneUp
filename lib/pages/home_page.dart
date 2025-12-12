@@ -7,7 +7,7 @@ import 'package:toneup_app/models/user_practice_model.dart';
 import 'package:toneup_app/models/user_weekly_plan_model.dart';
 import 'package:toneup_app/providers/plan_provider.dart';
 import 'package:toneup_app/providers/profile_provider.dart';
-import 'package:toneup_app/routes.dart';
+import 'package:toneup_app/router_config.dart';
 import 'package:toneup_app/theme_data.dart';
 
 class HomePage extends StatefulWidget {
@@ -39,7 +39,7 @@ class _HomePageState extends State<HomePage> {
   Future<void> _checkProfile() async {
     final profile = await ProfileProvider().fetchProfile();
     if ((profile == null || profile.level == null) && mounted) {
-      context.go(AppRoutes.WELCOME);
+      context.go(AppRouter.WELCOME);
     } else {
       _initializePlan();
     }
@@ -54,14 +54,14 @@ class _HomePageState extends State<HomePage> {
 
   /// 去全部计划页
   void _gotoPagePlan() {
-    // context.push(AppRoutes.GOAL_LIST);
-    context.go(AppRoutes.GOAL_LIST);
+    // context.push(AppRouter.GOAL_LIST);
+    context.go(AppRouter.GOAL_LIST);
   }
 
   /// 去测评页
   void _gotoPageEvaluation() {
     context.push(
-      AppRoutes.EVALUATION,
+      AppRouter.EVALUATION,
       extra: {'level': planProvider.activePlan!.level},
     );
   }
@@ -72,7 +72,7 @@ class _HomePageState extends State<HomePage> {
     required UserPracticeModel practice,
   }) async {
     await context.push(
-      AppRoutes.PRACTICE,
+      AppRouter.PRACTICE,
       extra: {'practiceData': practice, 'planData': plan},
     );
     if (context.mounted) {
@@ -86,7 +86,7 @@ class _HomePageState extends State<HomePage> {
 
   /// 创建新计划
   Future<void> _goCreateNewGoal() async {
-    await context.push(AppRoutes.CREATE_GOAL);
+    await context.push(AppRouter.CREATE_GOAL);
     if (context.mounted) {
       planProvider.initialize();
     }
@@ -158,9 +158,10 @@ class _HomePageState extends State<HomePage> {
                   mainAxisSize: MainAxisSize.min,
                   context: context,
                   label: 'Create a Goal!',
-                  onTap: () {
-                    context.push(AppRoutes.CREATE_GOAL);
-                  },
+                  onTap: null,
+                  // () {
+                  //   context.push(AppRouter.CREATE_GOAL);
+                  // },
                 ),
               ],
             ),

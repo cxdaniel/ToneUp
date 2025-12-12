@@ -86,7 +86,7 @@ class CreateGoalProvider with ChangeNotifier {
           }
           debugPrint('计划创建完成，激活新计划');
           await PlanProvider().activatePlan(newPlan!);
-          await ProfileProvider().updatePlan();
+          await ProfileProvider().updatePlanCount();
           isLoading = false;
           isCreated = true;
           loadingMessage = '计划生成完成！';

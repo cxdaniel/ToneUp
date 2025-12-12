@@ -1,56 +1,65 @@
-import 'dart:io' show Platform;
-
 import 'package:flutter/foundation.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:toneup_app/models/enumerated_types.dart';
+import 'package:toneup_app/router_config.dart' show AppRouter;
+import 'package:toneup_app/services/utils.dart';
+
+class UriConfig {
+  /// App Store 下载链接
+  static const String appStoreUrl =
+      'https://apps.apple.com/app/toneup/id123456789';
+
+  /// Google Play 下载链接
+  static const String playStoreUrl =
+      'https://play.google.com/store/apps/details?id=com.yourcompany.toneup';
+
+  /// 应用的自定义 URI Scheme
+  static String get appScheme => 'io.supabase.toneup:/';
+
+  static String get loginCallbackUri => kIsWeb
+      ? '${Uri.base.origin}${AppRouter.LOGIN_CALLBACK}/'
+      : '$appScheme${AppRouter.LOGIN_CALLBACK}/';
+
+  static String get linkingCallbackUri => kIsWeb
+      ? '${Uri.base.origin}${AppRouter.LINKING_CALLBACK}/'
+      : '$appScheme${AppRouter.LINKING_CALLBACK}/';
+
+  static String get emailChangeCallbackUri => kIsWeb
+      ? '${Uri.base.origin}${AppRouter.EMAIL_CHANGE_CALLBACK}/'
+      : '$appScheme${AppRouter.EMAIL_CHANGE_CALLBACK}/';
+
+  static String get resetPasswordCallbackUri => kIsWeb
+      ? '${Uri.base.origin}${AppRouter.RESET_PASSWORD_CALLBACK}/'
+      : '$appScheme${AppRouter.RESET_PASSWORD_CALLBACK}/';
+}
 
 class OAuthConfig {
-  // ✅ 请替换为你的 OAuth 重定向 URI
-  static String get redirectUri {
-    if (kIsWeb) {
-      return '${Uri.base.origin}/auth/callback/login/';
-    } else if (Platform.isIOS) {
-      return 'io.supabase.toneup://login-callback/';
-    } else if (Platform.isAndroid) {
-      return 'io.supabase.toneup://login-callback/';
-    } else {
-      throw UnsupportedError('Unsupported platform for Google OAuth');
-    }
-  }
+  // ⚠️ Google Sign In 配置
+  static const String googleClientIdWeb =
+      '751058148799-7s2ml5l7rn89c3826ind938uim04is5g.apps.googleusercontent.com';
+  static const String googleClientIdIos =
+      '751058148799-i8vpdms0d3dcr2o5uoud99044bbgs7ss.apps.googleusercontent.com';
 
-  static String get clientIDGoogle => kIsWeb
-      ? dotenv.env['GOOGLE_CLIENT_ID_WEB'] ?? ''
-      : Platform.isIOS
-      ? dotenv.env['GOOGLE_CLIENT_ID_IOS'] ?? ''
-      : ''; // Android clientId 从 google-services.json 自动读取
-
-  // ⚠️ 重要: serverClientId 用于获取 idToken (必须是 Web Client ID)
-  // 这是 Google Sign In 7.x 的新要求
-  static String get serverClientIDGoogle =>
-      dotenv.env['GOOGLE_SERVER_CLIENT_ID'] ?? '';
+  static String get clientIDGoogle =>
+      kIsWeb ? googleClientIdWeb : (AppUtils.isIOS ? googleClientIdIos : '');
 
   // ⚠️ Apple Sign In 配置
   // 对于原生登录: 使用 Bundle ID (top.toneup.app) - Apple 会将其作为 audience
-  // 对于 Web OAuth: 使用 Service ID (top.toneup.service)
-  static String get clientIDApple => kIsWeb
-      ? dotenv.env['APPLE_CLIENT_ID_WEB'] ?? ''
-      : dotenv.env['APPLE_CLIENT_ID_NATIVE'] ?? '';
+  static const String appleClientIdWeb = 'top.toneup.service';
+  static const String appleClientIdNative = 'top.toneup.app';
 
-  static String get clientSecretGoogle =>
-      dotenv.env['GOOGLE_CLIENT_SECRET'] ?? '';
-  static String get clientSecretApple =>
-      dotenv.env['APPLE_CLIENT_SECRET'] ?? '';
+  static String get clientIDApple =>
+      kIsWeb ? appleClientIdWeb : appleClientIdNative;
 }
 
+/// Supabase 配置
 class SupabaseConfig {
-  static String get url => dotenv.env['SUPABASE_URL'] ?? '';
-  static String get anonKey => dotenv.env['SUPABASE_ANON_KEY'] ?? '';
+  static const String url = 'https://kixonwnuivnjqlraydmz.supabase.co';
+  static const String anonKey =
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtpeG9ud251aXZuanFscmF5ZG16Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY4MjUxMjMsImV4cCI6MjA3MjQwMTEyM30.PWwgMIdde9OMJLA-D5kzlEl9APUvAoeFwWtInXzb4a0';
 }
-// https://kixonwnuivnjqlraydmz.supabase.co/functions/v1/create-plan
 
+/// RevenueCat 配置
 class RevenueCatConfig {
   static const bool useTestKey = kDebugMode;
-
   static const String apiKeyIOS = useTestKey
       ? 'test_shpnmmJxpcaomwUSHhOLGIfqrAy'
       : 'appl_PfoovuEVLvjtBrZlHZMBaHdnpqW';
@@ -62,46 +71,4 @@ class RevenueCatConfig {
   // ✅ 产品 ID（必须与 App Store Connect 中的一致）
   static const String monthlyProductId = 'toneup_monthly_sub';
   static const String yearlyProductId = 'toneup_annually_sub';
-}
-
-class PlatformUtils {
-  /// 是否为移动平台（iOS 或 Android）
-  static bool get isMobile {
-    if (kIsWeb) return false;
-    return Platform.isIOS || Platform.isAndroid;
-  }
-
-  /// 是否为 Web 平台
-  static bool get isWeb => kIsWeb;
-
-  /// 是否为 iOS
-  static bool get isIOS {
-    if (kIsWeb) return false;
-    return Platform.isIOS;
-  }
-
-  /// 是否为 Android
-  static bool get isAndroid {
-    if (kIsWeb) return false;
-    return Platform.isAndroid;
-  }
-
-  /// 是否支持应用内购买
-  static bool get supportsInAppPurchase => isMobile;
-
-  /// 获取平台名称
-  static PlatformType get platformName {
-    if (kIsWeb) return PlatformType.web;
-    if (Platform.isIOS) return PlatformType.iOS;
-    if (Platform.isAndroid) return PlatformType.android;
-    return PlatformType.unknown;
-  }
-
-  /// App Store 下载链接
-  static const String appStoreUrl =
-      'https://apps.apple.com/app/toneup/id123456789';
-
-  /// Google Play 下载链接
-  static const String playStoreUrl =
-      'https://play.google.com/store/apps/details?id=com.yourcompany.toneup';
 }

@@ -24,7 +24,7 @@ class NativeAuthService {
   Future<void> initialize() async {
     await _googleSignIn.initialize(
       clientId: kIsWeb ? OAuthConfig.clientIDGoogle : null,
-      serverClientId: kIsWeb ? null : OAuthConfig.serverClientIDGoogle,
+      serverClientId: kIsWeb ? null : OAuthConfig.clientIDGoogle,
     );
   }
 

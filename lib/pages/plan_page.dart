@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:toneup_app/components/components.dart';
 import 'package:toneup_app/components/feedback_button.dart';
 import 'package:toneup_app/models/enumerated_types.dart';
-import 'package:toneup_app/routes.dart';
+import 'package:toneup_app/router_config.dart';
 import 'package:toneup_app/services/navigation_service.dart';
 import '../../providers/plan_provider.dart';
 import '../../components/sliver_headers.dart'; // 吸顶代理类
@@ -96,7 +95,7 @@ class _PlanPageState extends State<PlanPage> {
     // 仅当用户确认切换时才执行后续操作
     if (shouldSwitch == true) {
       await planProvider.activatePlan(plan);
-      NavigationService.go(AppRoutes.HOME);
+      NavigationService.go(AppRouter.HOME);
     }
   }
 
@@ -127,31 +126,35 @@ class _PlanPageState extends State<PlanPage> {
       body: Consumer<PlanProvider>(
         builder: (context, provider, child) {
           planProvider = provider;
+          // 加载中状态
+          if (planProvider.isLoading) {
+            LoadingOverlay.show(context, label: 'Loading your all goals...');
+          } else {
+            LoadingOverlay.hide();
+          }
           // 加载错误状态
           if (planProvider.errorMessage != null) {
             return _buildErrorState();
           }
-          // 空状态
-          if (planProvider.isLoading) {
-            return _buildLoadingState();
+          // if (!planProvider.isLoading) {
+          if (planProvider.allPlans.isEmpty) {
+            return _buildEmptyState();
           } else {
-            if (planProvider.allPlans.isEmpty) {
-              return _buildEmptyState();
-            } else {
-              // 延迟执行滚动
-              WidgetsBinding.instance.addPostFrameCallback(
-                (_) => _scrollToActiveItem(),
-              );
-              // 正常数据状态
-              return _buildDataState();
-            }
+            // 延迟执行滚动
+            WidgetsBinding.instance.addPostFrameCallback(
+              (_) => _scrollToActiveItem(),
+            );
+            // 正常数据状态
+            return _buildDataState();
           }
+          // }
         },
       ),
     );
   }
 
   /// ⏳ 加载中状态
+  // ignore: unused_element
   Widget _buildLoadingState() {
     return Center(
       child: Column(
@@ -250,9 +253,10 @@ class _PlanPageState extends State<PlanPage> {
                   mainAxisSize: MainAxisSize.min,
                   context: context,
                   label: 'Create a Goal!',
-                  onTap: () {
-                    context.push(AppRoutes.CREATE_GOAL);
-                  },
+                  onTap: null,
+                  // () {
+                  //   context.push(AppRouter.CREATE_GOAL);
+                  // },
                 ),
               ],
             ),

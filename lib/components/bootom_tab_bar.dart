@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:toneup_app/routes.dart';
+import 'package:toneup_app/router_config.dart';
 // 1. 导入所有 Tab 对应的页面（确保路径正确，避免循环导入）
 
 /// 通用底 Tab 栏组件（内部封装跳转逻辑）
@@ -19,16 +19,16 @@ class BottomTabBar extends StatelessWidget {
       // 跳转到对应页面（用 pushReplacement 避免页面栈叠加）
       switch (tappedIndex) {
         case 0:
-          context.replace(AppRoutes.HOME); // 跳转到 Practice 页面
+          context.replace(AppRouter.HOME); // 跳转到 Practice 页面
           break;
         case 1:
-          context.replace(AppRoutes.PODCASTS); // 跳转到 Podcasts 页面
+          context.replace(AppRouter.PODCASTS); // 跳转到 Podcasts 页面
           break;
         case 2:
-          context.replace(AppRoutes.PROFILE); // 跳转到 Me 页面
+          context.replace(AppRouter.PROFILE); // 跳转到 Me 页面
           break;
         default:
-          context.replace(AppRoutes.HOME); // 跳转到 Practice 页面
+          context.replace(AppRouter.HOME); // 跳转到 Practice 页面
           break;
       }
     }

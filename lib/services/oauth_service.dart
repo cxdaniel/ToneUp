@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:toneup_app/services/config.dart';
 import 'package:toneup_app/services/native_auth_service.dart';
 import 'dart:async';
 
@@ -16,15 +17,6 @@ class OAuthService {
   // Web 端使用 popup 模式,移动端使用外部浏览器
   LaunchMode get launchMode =>
       kIsWeb ? LaunchMode.platformDefault : LaunchMode.externalApplication;
-  String loginCallbackUri = kIsWeb
-      ? '${Uri.base.origin}/auth/callback/login/'
-      : 'io.supabase.toneup://login-callback/';
-  String linkingCallbackUri = kIsWeb
-      ? '${Uri.base.origin}/linking-callback/'
-      : 'io.supabase.toneup://linking-callback/';
-  String emailChangeCallbackUri = kIsWeb
-      ? '${Uri.base.origin}/email-change-callback/'
-      : 'io.supabase.toneup://email-change-callback/';
 
   /// 检查当前是否有活跃的认证流程
   bool get isAuthenticating =>
@@ -108,7 +100,7 @@ class OAuthService {
       // 发起 OAuth 请求
       await _supabase.auth.signInWithOAuth(
         provider,
-        redirectTo: loginCallbackUri,
+        redirectTo: UriConfig.loginCallbackUri,
         authScreenLaunchMode: launchMode,
       );
       debugPrint('⏳ 等待认证完成...');
@@ -138,7 +130,7 @@ class OAuthService {
     _authSubscription = _supabase.auth.onAuthStateChange.listen(
       (data) async {
         final event = data.event;
-        debugPrint('📡 Auth event: $event');
+        debugPrint('🔔 @OAuthService 收到 auth event: $event');
 
         if (event == AuthChangeEvent.signedIn ||
             event == AuthChangeEvent.userUpdated) {
@@ -299,7 +291,7 @@ class OAuthService {
       await _supabase.auth.linkIdentity(
         OAuthProvider.apple,
         authScreenLaunchMode: launchMode,
-        redirectTo: linkingCallbackUri,
+        redirectTo: UriConfig.linkingCallbackUri,
       );
 
       debugPrint('✅ Apple 账号绑定请求已发送,等待用户完成授权');
@@ -345,11 +337,10 @@ class OAuthService {
       });
       // 使用 linkIdentity 进行 OAuth 账号绑定
       // 注意: 此方法需要打开浏览器
-      // 移动端优先使用 NativeAuthService.linkIdentityWithIdToken (原生体验)
       await _supabase.auth.linkIdentity(
         OAuthProvider.google,
         authScreenLaunchMode: launchMode,
-        redirectTo: linkingCallbackUri,
+        redirectTo: UriConfig.linkingCallbackUri,
       );
 
       debugPrint('✅ Google 账号绑定请求已发送,等待用户完成授权');
@@ -425,6 +416,37 @@ class OAuthService {
     return true;
   }
 
+  /// 验证新邮箱的 OTP（用于邮箱变更/添加）
+  ///
+  /// 当用户通过 addEmail 或 updateEmail 后，新邮箱会收到 OTP
+  /// 调用此方法验证新邮箱的 OTP 以完成邮箱变更
+  ///
+  /// @param email 新邮箱地址
+  /// @param otpCode 新邮箱收到的 OTP 验证码
+  Future<bool> verifyNewEmailOtp(String email, String otpCode) async {
+    try {
+      debugPrint('🔐 验证新邮箱 OTP: $email');
+
+      // 验证 OTP (email_change 类型)
+      final response = await _supabase.auth.verifyOTP(
+        type: OtpType.emailChange,
+        email: email,
+        token: otpCode,
+      );
+
+      if (response.session != null) {
+        debugPrint('✅ 新邮箱 OTP 验证成功，邮箱已更新');
+        return true;
+      } else {
+        debugPrint('❌ 新邮箱 OTP 验证失败');
+        return false;
+      }
+    } catch (e) {
+      debugPrint('❌ 验证新邮箱 OTP 失败: $e');
+      rethrow;
+    }
+  }
+
   /// 向新邮箱发送验证链接 (简化方案)
   ///
   /// 使用 Supabase 的 updateUser 自动发送确认邮件
@@ -461,39 +483,25 @@ class OAuthService {
     }
   }
 
-  // ============================================================================
-  // 敏感操作方法(需要先通过 OTP 验证)
-  // ============================================================================
-
-  /// 添加邮箱(简化版 - 仅需当前账号 OTP)
-  ///
-  /// 为没有邮箱的账号添加邮箱地址和密码
-  /// 新流程(使用 magic link):
-  /// 1. 调用 sendReauthenticationOtp() - 向当前账号发送重认证 OTP
-  /// 2. 调用此方法 - 使用 OTP 验证身份并发起邮箱添加
-  /// 3. Supabase 会向新邮箱发送确认链接
-  /// 4. 用户点击链接后自动完成邮箱添加
-  ///
+  /// 添加邮箱(简化版 - 仅需新邮箱 OTP)
   /// @param email 要添加的新邮箱地址
   /// @param password 要设置的密码
-  /// @param currentOtpCode 当前账号的重认证 OTP 码(作为nonce)
-  Future<bool> addEmail(
-    String email,
-    String password,
-    String currentOtpCode,
-  ) async {
+  Future<bool> addEmail(String email, String password) async {
     try {
       debugPrint('📧 添加邮箱: $email');
 
-      // 使用当前账号的 OTP 作为 nonce 更新邮箱和密码
-      // nonce 会在这里自动验证,如果无效会抛出异常
-      // Supabase 会自动向新邮箱发送确认链接
+      // 验证密码长度
+      if (password.length < 6) {
+        throw Exception('密码长度至少为 6 位');
+      }
+      // 直接更新邮箱和密码，Supabase 会向新邮箱发送 OTP
+      // emailRedirectTo 设为 null 触发发送 OTP 而不是 Magic Link
       await _supabase.auth.updateUser(
-        UserAttributes(email: email, password: password, nonce: currentOtpCode),
-        emailRedirectTo: emailChangeCallbackUri,
+        UserAttributes(email: email, password: password),
+        emailRedirectTo: null, // null = 发送 OTP，非 null = 发送 Magic Link
       );
 
-      debugPrint('✅ 邮箱添加请求已发送,请检查新邮箱中的确认链接');
+      debugPrint('✅ 邮箱添加请求已发送,OTP 已发送到新邮箱');
       return true;
     } catch (e) {
       debugPrint('❌ 添加邮箱失败: $e');
@@ -501,30 +509,20 @@ class OAuthService {
     }
   }
 
-  /// 更新邮箱(简化版 - 仅需当前邮箱 OTP)
-  ///
-  /// 修改现有邮箱地址
-  /// 新流程(使用 magic link):
-  /// 1. 调用 sendReauthenticationOtp() - 向当前邮箱发送重认证 OTP
-  /// 2. 调用此方法 - 使用 OTP 验证身份并发起邮箱更新
-  /// 3. Supabase 会向新邮箱发送确认链接
-  /// 4. 用户点击链接后自动完成邮箱更新
-  ///
+  /// 更新邮箱(简化版 - 仅需新邮箱 OTP)
   /// @param newEmail 新的邮箱地址
-  /// @param currentOtpCode 当前邮箱收到的重认证 OTP 码(作为nonce)
-  Future<bool> updateEmail(String newEmail, String currentOtpCode) async {
+  Future<bool> updateEmail(String newEmail) async {
     try {
       debugPrint('📧 更新邮箱: $newEmail');
 
-      // 使用当前邮箱的 OTP 作为 nonce 更新邮箱
-      // nonce 会在这里自动验证,如果无效会抛出异常
-      // Supabase 会自动向新邮箱发送确认链接
+      // 直接更新邮箱，Supabase 会向新邮箱发送 OTP
+      // emailRedirectTo 设为 null 触发发送 OTP 而不是 Magic Link
       await _supabase.auth.updateUser(
-        UserAttributes(email: newEmail, nonce: currentOtpCode),
-        emailRedirectTo: emailChangeCallbackUri,
+        UserAttributes(email: newEmail),
+        emailRedirectTo: null, // null = 发送 OTP，非 null = 发送 Magic Link
       );
 
-      debugPrint('✅ 邮箱更新请求已发送,请检查新邮箱中的确认链接');
+      debugPrint('✅ 邮箱更新请求已发送,OTP 已发送到新邮箱');
       return true;
     } catch (e) {
       debugPrint('❌ 更新邮箱失败: $e');

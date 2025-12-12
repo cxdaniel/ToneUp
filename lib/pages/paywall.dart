@@ -83,7 +83,7 @@ class PaywallPage extends StatelessWidget {
             listen: false,
           );
           debugPrint('🔄 Syncing subscription state...');
-          await subscriptionProvider.loadSubscription();
+          await subscriptionProvider.loadUserSubdata();
           debugPrint('✅ Subscription state synced');
           debugPrint('📊 Final State:');
           debugPrint(
@@ -142,7 +142,7 @@ class PaywallPage extends StatelessWidget {
             listen: false,
           );
 
-          await subscriptionProvider.loadSubscription();
+          await subscriptionProvider.loadUserSubdata();
 
           LoadingOverlay.hide();
           if (context.mounted && context.canPop()) context.pop();

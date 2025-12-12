@@ -2,7 +2,6 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:toneup_app/components/feedback_button.dart';
-
 export 'package:toneup_app/components/otp_verification_dialog.dart';
 
 class SkeletonBox extends StatelessWidget {

@@ -38,19 +38,7 @@ class PlanProvider extends ChangeNotifier {
   // 单例
   static final PlanProvider _instance = PlanProvider._internal();
   factory PlanProvider() => _instance;
-  PlanProvider._internal() {
-    Supabase.instance.client.auth.onAuthStateChange.listen(
-      (data) {
-        final event = data.event;
-        if (event == AuthChangeEvent.signedOut) {
-          cleanAllPlans();
-        }
-      },
-      onError: (error) {
-        debugPrint('❌ onAuthStateChange error: $error');
-      },
-    );
-  }
+  PlanProvider._internal();
 
   @override
   void dispose() {
@@ -66,7 +54,8 @@ class PlanProvider extends ChangeNotifier {
   }
 
   /// 用户退出登录初始当前数据
-  void cleanAllPlans() {
+  void onUserSign(bool isSignIn) {
+    if (isSignIn) return;
     _activePlan = null;
     _allPlans = [];
   }

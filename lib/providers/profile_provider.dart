@@ -12,17 +12,6 @@ class ProfileProvider extends ChangeNotifier {
   factory ProfileProvider() => _instance;
 
   ProfileProvider._internal() {
-    Supabase.instance.client.auth.onAuthStateChange.listen(
-      (data) {
-        final event = data.event;
-        if (event == AuthChangeEvent.signedOut) {
-          cleanProfile();
-        }
-      },
-      onError: (error) {
-        debugPrint('❌ onAuthStateChange error: $error');
-      },
-    );
     final User? user = Supabase.instance.client.auth.currentUser;
     if (user == null) throw Exception("用户未登录");
     tempProfile = ProfileModel(id: user.id, level: 1);
@@ -52,12 +41,13 @@ class ProfileProvider extends ChangeNotifier {
   }
 
   /// 清除个人资料
-  void cleanProfile() {
+  void onUserSign(bool isSignedIn) {
+    if (isSignedIn) return;
     _profileModel = null;
   }
 
   /// 更新计划数
-  Future<void> updatePlan() async {
+  Future<void> updatePlanCount() async {
     if (_profileModel != null) {
       _profileModel!.plans = PlanProvider().allPlans.length;
       final totalPractice = PlanProvider().allPlans.fold(
@@ -95,7 +85,7 @@ class ProfileProvider extends ChangeNotifier {
   }
 
   /// 更新学习材料档案
-  Future<void> updateMaterials() async {
+  Future<void> updateMaterialsCount() async {
     final User? user = Supabase.instance.client.auth.currentUser;
     if (user == null) throw Exception("用户未登录");
     try {
