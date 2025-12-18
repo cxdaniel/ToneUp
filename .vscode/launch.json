@@ -2,15 +2,59 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Flutter-当前连接设备", // 自定义名称
+      "name": "Flutter: Debug (Current Device)",
       "request": "launch",
-      "type": "dart", // Flutter/Dart 固定调试器类型
-      "program": "${workspaceFolder}/lib/main.dart", // Flutter 入口必为 main.dart
-      "flutterMode": "debug", // 调试模式：debug（可断点）、profile（性能分析）、release（无调试信息）
-      // "args": [
-      //   "--dart-define", "ENV=dev",
-      // ],
-      // "console": "terminal" // 显示Flutter日志
+      "type": "dart",
+      "program": "${workspaceFolder}/lib/main.dart",
+      "flutterMode": "debug",
+      "console": "terminal"
+    },
+    {
+      "name": "Flutter: Debug (iOS Simulator)",
+      "request": "launch",
+      "type": "dart",
+      "program": "${workspaceFolder}/lib/main.dart",
+      "flutterMode": "debug",
+      "deviceId": "ios",
+      "console": "terminal"
+    },
+    {
+      "name": "Flutter: Debug (Android Emulator)",
+      "request": "launch",
+      "type": "dart",
+      "program": "${workspaceFolder}/lib/main.dart",
+      "flutterMode": "debug",
+      "deviceId": "emulator-5554",
+      "console": "terminal"
+    },
+    {
+      "name": "Flutter: Debug (Chrome)",
+      "request": "launch",
+      "type": "dart",
+      "program": "${workspaceFolder}/lib/main.dart",
+      "flutterMode": "debug",
+      "deviceId": "chrome",
+      "console": "terminal",
+      "args": [
+        "--web-renderer",
+        "html"
+      ]
+    },
+    {
+      "name": "Flutter: Profile Mode",
+      "request": "launch",
+      "type": "dart",
+      "program": "${workspaceFolder}/lib/main.dart",
+      "flutterMode": "profile",
+      "console": "terminal"
+    },
+    {
+      "name": "Flutter: Release Mode",
+      "request": "launch",
+      "type": "dart",
+      "program": "${workspaceFolder}/lib/main.dart",
+      "flutterMode": "release",
+      "console": "terminal"
     }
   ]
 }

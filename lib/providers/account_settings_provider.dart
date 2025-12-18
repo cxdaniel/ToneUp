@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:toneup_app/services/oauth_service.dart';
 import 'package:toneup_app/services/native_auth_service.dart';
+import 'package:toneup_app/services/utils.dart';
 
 class AccountSettingsProvider extends ChangeNotifier {
   final _oauthService = OAuthService();
@@ -101,7 +102,7 @@ class AccountSettingsProvider extends ChangeNotifier {
 
     try {
       // 移动端使用原生绑定
-      if (!kIsWeb) {
+      if (!kIsWeb && AppUtils.isIOS) {
         final isAvailable = await _nativeAuthService.isAppleSignInAvailable();
         if (!isAvailable) {
           throw Exception('当前设备不支持 Apple 登录');

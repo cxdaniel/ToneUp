@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:go_router/go_router.dart';
 import 'package:jieba_flutter/analysis/jieba_segmenter.dart';
@@ -11,7 +10,6 @@ import 'package:toneup_app/providers/subscription_provider.dart';
 import 'package:toneup_app/providers/tts_provider.dart';
 import 'package:toneup_app/services/config.dart';
 import 'package:toneup_app/services/native_auth_service.dart';
-import 'package:toneup_app/services/utils.dart';
 import 'package:toneup_app/theme_data.dart';
 import 'package:toneup_app/router_config.dart';
 
@@ -23,12 +21,6 @@ void main() async {
 
   // 配置 Web URL 策略: 使用 Path URL Strategy (无 hash)
   usePathUrlStrategy();
-  // 加载环境变量
-  try {
-    await dotenv.load(fileName: '.env');
-  } catch (e) {
-    debugPrint('⚠️ .env文件加载失败(Web平台可能不需要): $e');
-  }
 
   await Supabase.initialize(
     url: SupabaseConfig.url,
@@ -81,7 +73,7 @@ class _MyAppState extends State<MyApp> {
   void _authStateChangeHandler(AuthState data) async {
     final event = data.event;
     final session = data.session;
-    debugPrint('🔔 @ProfileProvider 收到 auth event: $event');
+    debugPrint('🔔 @main 收到 auth event: $event');
     if (event == AuthChangeEvent.signedOut) {
       /// 退出登录
       ProfileProvider().onUserSign(false);
@@ -92,22 +84,35 @@ class _MyAppState extends State<MyApp> {
       /// 登录成功或账号绑定
       final user = Supabase.instance.client.auth.currentUser;
       if (user != null) {
-        // ✅ 判断当前路由,避免在账号绑定时跳转
-        // 如果用户在 LOGIN 或 SIGN_UP 页面,说明是登录操作
-        // 如果在其他页面(如 ACCOUNT_SETTINGS),说明是账号绑定操作
-        final currentLocation =
-            _router.routerDelegate.currentConfiguration.uri.path;
-        final isLoginPage =
-            currentLocation == AppRouter.LOGIN ||
-            currentLocation == AppRouter.SIGN_UP;
+        // ✅ 获取当前路由信息
+        final currentUri = _router.routerDelegate.currentConfiguration.uri;
+        final currentLocation = currentUri.path;
+        final currentUriString = currentUri.toString();
 
-        if (AppUtils.isMobile && isLoginPage) {
-          debugPrint('🔄 登录成功,跳转到首页');
+        debugPrint('🔄 当前路由: $currentLocation (URI: $currentUriString)');
+        
+        // 登录操作：在 LOGIN/SIGN_UP/LOGIN_CALLBACK 页面
+        // 注意：Custom Scheme Deep Link 的 path 可能是 "/"，需要检查完整 URI
+        final isLoginFlow =
+            currentLocation == AppRouter.LOGIN ||
+            currentLocation == AppRouter.SIGN_UP ||
+            currentLocation == AppRouter.LOGIN_CALLBACK ||
+            currentUriString.contains('login-callback');
+
+        // 账号绑定操作：在 LINKING_CALLBACK 或其他已登录页面
+        final isLinkingFlow = currentUriString.contains('linking-callback');
+
+        if (isLoginFlow && !isLinkingFlow) {
+          debugPrint('🔄 登录成功,跳转到首页 (from: $currentLocation)');
           _cacheOAuthUserInfo(user);
           _router.go(AppRouter.HOME);
           SubscriptionProvider().onUserSign(true);
+          ProfileProvider().onUserSign(true);
+          PlanProvider().onUserSign(true);
         } else {
-          debugPrint('🔄 账号绑定成功,保持当前页面');
+          debugPrint('🔄 账号绑定成功,保持当前页面 (location: $currentLocation)');
+          // 账号绑定后刷新 Provider 数据
+          ProfileProvider().fetchProfile();
         }
       }
     } else if (event == AuthChangeEvent.userUpdated) {

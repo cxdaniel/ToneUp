@@ -30,6 +30,7 @@ class NativeAuthService {
 
   /// Apple 登录
   ///
+  /// 仅在 iOS 上调用（Android 使用 OAuth 流程）
   /// iOS 原生环境不使用 nonce,直接通过 identityToken 验证
   Future<AuthResponse?> signInWithApple() async {
     try {
@@ -42,12 +43,6 @@ class NativeAuthService {
           AppleIDAuthorizationScopes.email,
           AppleIDAuthorizationScopes.fullName,
         ],
-        webAuthenticationOptions: kIsWeb
-            ? WebAuthenticationOptions(
-                clientId: OAuthConfig.clientIDApple,
-                redirectUri: Uri.parse('${Uri.base.origin}/auth/callback'),
-              )
-            : null,
       );
 
       if (credential.identityToken == null) {
@@ -140,6 +135,19 @@ class NativeAuthService {
       if (e.code == 'sign_in_canceled') {
         return null;
       }
+      if (e.code == 'unknown_error' &&
+          e.message?.contains('No credential') == true) {
+        throw Exception('请先在设备中添加 Google 账号\n设置 > 账号 > 添加账号');
+      }
+      rethrow;
+    } on GoogleSignInException catch (e) {
+      if (e.code == GoogleSignInExceptionCode.canceled) {
+        return null;
+      }
+      if (e.code == GoogleSignInExceptionCode.unknownError &&
+          e.toString().contains('No credential')) {
+        throw Exception('请先在设备中添加 Google 账号\n设置 > 账号 > 添加账号');
+      }
       rethrow;
     }
   }
@@ -184,6 +192,19 @@ class NativeAuthService {
     } on PlatformException catch (e) {
       if (e.code == 'sign_in_canceled') {
         return null;
+      }
+      if (e.code == 'unknown_error' &&
+          e.message?.contains('No credential') == true) {
+        throw Exception('请先在设备中添加 Google 账号\n设置 > 账号 > 添加账号');
+      }
+      rethrow;
+    } on GoogleSignInException catch (e) {
+      if (e.code == GoogleSignInExceptionCode.canceled) {
+        return null;
+      }
+      if (e.code == GoogleSignInExceptionCode.unknownError &&
+          e.toString().contains('No credential')) {
+        throw Exception('请先在设备中添加 Google 账号\n设置 > 账号 > 添加账号');
       }
       rethrow;
     }

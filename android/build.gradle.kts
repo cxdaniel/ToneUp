@@ -1,5 +1,5 @@
-val ndkVersion by extra(flutter.ndkVersion)
-val ndkVersion1 by extra(ndkVersion)
+// val ndkVersion by extra(flutter.ndkVersion)
+// val ndkVersion1 by extra(ndkVersion)
 allprojects {
     repositories {
         google()

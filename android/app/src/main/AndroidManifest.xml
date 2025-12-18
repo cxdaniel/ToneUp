@@ -26,13 +26,29 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
-            <!-- 🆕 OAuth Deep Link -->
+            <!-- OAuth Deep Link (Custom Scheme) for Login -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <!-- Custom URL Scheme -->
                 <data android:scheme="io.supabase.toneup" android:host="login-callback" />
+            </intent-filter>
+            <!-- OAuth Deep Link (Custom Scheme) for Account Linking -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="io.supabase.toneup" android:host="linking-callback" />
+            </intent-filter>
+            <!-- App Links (HTTPS) for Supabase OAuth Callback -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data 
+                    android:scheme="https"
+                    android:host="kixonwnuivnjqlraydmz.supabase.co"
+                    android:pathPrefix="/auth/v1/callback" />
             </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.

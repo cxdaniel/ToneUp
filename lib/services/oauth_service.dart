@@ -4,6 +4,8 @@ import 'package:toneup_app/services/config.dart';
 import 'package:toneup_app/services/native_auth_service.dart';
 import 'dart:async';
 
+import 'package:toneup_app/services/utils.dart';
+
 class OAuthService {
   static final OAuthService _instance = OAuthService._internal();
   factory OAuthService() => _instance;
@@ -39,7 +41,11 @@ class OAuthService {
     }
 
     // 移动端默认使用原生登录（体验更好）
-    final shouldUseNative = useNative ?? !kIsWeb;
+    // iOS: 所有provider都用原生
+    // Android: 只有Google用原生，Apple用OAuth浏览器流程
+    final shouldUseNative =
+        useNative ??
+        (!kIsWeb && (AppUtils.isIOS || provider == OAuthProvider.google));
 
     // 移动端使用原生登录
     if (shouldUseNative && !kIsWeb) {
@@ -84,6 +90,7 @@ class OAuthService {
   ) async {
     // 创建新的完成器
     _authCompleter = Completer<bool>();
+    _setupAuthListener();
     // 设置超时定时器
     _timeoutTimer = Timer(timeout, () {
       debugPrint('⏱️ OAuth 认证超时 (${timeout.inSeconds}秒)');
@@ -104,9 +111,12 @@ class OAuthService {
         authScreenLaunchMode: launchMode,
       );
       debugPrint('⏳ 等待认证完成...');
-      _authCompleter!.complete(true);
+
+      // 保存 future 引用，防止 _authCompleter 被清理后访问
+      final authFuture = _authCompleter!.future;
+
       // 等待认证完成
-      final result = await _authCompleter!.future;
+      final result = await authFuture;
       debugPrint(result ? '✅ OAuth 登录成功' : '❌ OAuth 登录失败');
       return result;
     } catch (e) {
@@ -147,11 +157,10 @@ class OAuthService {
             debugPrint('⚠️ 登录事件触发但 session 为 null');
           }
         } else if (event == AuthChangeEvent.signedOut) {
-          debugPrint('🚪 检测到登出事件');
-          if (_authCompleter != null && !_authCompleter!.isCompleted) {
-            _authCompleter!.complete(false);
-            _cleanup();
-          }
+          debugPrint('🚪 检测到登出事件（OAuth 流程中忽略）');
+          // 注意：在 OAuth 登录流程中，signedOut 是正常的
+          // 因为打开浏览器前可能会清除当前 session
+          // 所以这里不做任何操作，等待 signedIn 事件
         }
       },
       onError: (error) {

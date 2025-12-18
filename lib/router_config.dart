@@ -169,10 +169,11 @@ class AppRouter {
     ];
 
     // OAuth 登录回调处理
+    // 不做重定向，让回调页面处理完成后再跳转
     if (path == AppRouter.LOGIN_CALLBACK ||
         uri.toString().contains(AppRouter.LOGIN_CALLBACK)) {
-      debugPrint('➡️ 检测到登录回调,无需重定向,继续访问: $path');
-      return AppRouter.HOME;
+      debugPrint('➡️ 检测到登录回调,等待 Supabase 处理...');
+      return null; // 返回 null，继续访问当前路径
     }
 
     // 处理账号绑定回调
@@ -225,6 +226,21 @@ class AppRouter {
       GoRoute(
         path: AppRouter.SIGN_UP,
         builder: (context, state) => const SignUpPage(),
+      ),
+      GoRoute(
+        path: AppRouter.LOGIN_CALLBACK,
+        builder: (context, state) {
+          // OAuth 回调处理页面
+          // Supabase 会自动处理 token，然后触发 onAuthStateChange
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            // final router = GoRouter.of(context);
+            // 等待认证状态更新后再跳转（由 _authStateChangeHandler 处理）
+            debugPrint('✅ OAuth 回调已处理，等待跳转...');
+          });
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        },
       ),
       GoRoute(
         path: AppRouter.PRACTICE,
