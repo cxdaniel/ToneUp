@@ -1,0 +1,7 @@
+# OAuth 回调路由 - 直接传递给 index.html (不重定向)
+/login-callback/*  /index.html  200
+/linking-callback/*  /index.html  200
+/email-change-callback/*  /index.html  200
+
+# SPA 路由 - 所有其他路径重写到 index.html
+/*    /index.html   200
