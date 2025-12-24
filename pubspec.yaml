@@ -81,6 +81,7 @@ dev_dependencies:
   flutter_lints: ^6.0.0
   build_runner: ^2.7.1       # 代码生成工具
   json_serializable: ^6.7.1 # 自动生成JSON序列化代码
+  flutter_launcher_icons: ^0.14.1  # 应用图标生成器
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 
@@ -102,3 +103,21 @@ flutter:
         - asset: assets/fonts/Righteous-Regular.ttf
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+# Flutter Launcher Icons配置
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/images/app_icon.png"  # 需要准备1024x1024的PNG图标
+  min_sdk_android: 21  # Android最低SDK版本
+  
+  # Web图标配置
+  web:
+    generate: true
+    image_path: "assets/images/app_icon.png"
+    background_color: "#ffffff"
+    theme_color: "#1a73e8"
+  
+  # Android自适应图标（可选）
+  adaptive_icon_background: "#ffffff"
+  adaptive_icon_foreground: "assets/images/app_icon.png"
