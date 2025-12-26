@@ -1,11 +1,11 @@
 {
-    "name": "toneup_app",
-    "short_name": "toneup_app",
+    "name": "ToneUp - Chinese Learning",
+    "short_name": "ToneUp",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#ffffff",
     "theme_color": "#1a73e8",
-    "description": "A new Flutter project.",
+    "description": "Learn Chinese with ToneUp - Your personal Chinese language learning assistant.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
