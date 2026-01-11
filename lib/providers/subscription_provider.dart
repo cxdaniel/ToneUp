@@ -29,7 +29,8 @@ class SubscriptionProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
 
-  bool get isPro => subscription?.isPro ?? false;
+  bool get isPro =>
+      subscription?.isPro ?? false || RevenueCatConfig.isBetaFreeTrial;
   bool get isFree => subscription?.isFree ?? true;
   bool get isTrialing => subscription?.isTrialing ?? false;
 

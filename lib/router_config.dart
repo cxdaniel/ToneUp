@@ -22,6 +22,7 @@ import 'package:toneup_app/pages/signup_page.dart';
 import 'package:toneup_app/pages/subscription_manage.dart';
 import 'package:toneup_app/pages/welcome_page.dart';
 import 'package:toneup_app/pages/profile_settings.dart';
+import 'package:toneup_app/pages/level_detail_page.dart';
 import 'package:toneup_app/providers/account_settings_provider.dart';
 import 'package:toneup_app/providers/create_goal_provider.dart';
 import 'package:toneup_app/services/navigation_service.dart';
@@ -46,6 +47,7 @@ class AppRouter {
   static const CREATE_GOAL = '/create_goal';
   static const PAYWALL = '/paywall';
   static const SUBSCRIPTION_MANAGE = '/profile/subscription';
+  static const LEVEL_DETAIL = '/level_detail';
   static const DOWNLOAD = '/download';
   static const LOGIN_CALLBACK = '/login-callback';
   static const LINKING_CALLBACK = '/linking-callback';
@@ -288,6 +290,10 @@ class AppRouter {
       GoRoute(
         path: AppRouter.SUBSCRIPTION_MANAGE,
         builder: (context, state) => SubscriptionManagePage(),
+      ),
+      GoRoute(
+        path: AppRouter.LEVEL_DETAIL,
+        builder: (context, state) => const LevelDetailPage(),
       ),
       GoRoute(
         path: AppRouter.DOWNLOAD,

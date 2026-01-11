@@ -73,6 +73,7 @@ class SupabaseConfig {
 /// RevenueCat 配置
 class RevenueCatConfig {
   static const bool useTestKey = kDebugMode;
+  static bool get isBetaFreeTrial => true;
   static const String apiKeyIOS = useTestKey
       ? 'test_shpnmmJxpcaomwUSHhOLGIfqrAy'
       : 'appl_PfoovuEVLvjtBrZlHZMBaHdnpqW';

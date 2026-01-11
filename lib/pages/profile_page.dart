@@ -410,7 +410,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     ? '--'
                     : 'HSK ${profileProvider.profile!.level}',
                 sub: 'Level',
-                call: null,
+                call: () => context.push(AppRouter.LEVEL_DETAIL),
               ),
               _buildInfoCard(
                 icon: Icons.track_changes_outlined,
