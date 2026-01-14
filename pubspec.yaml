@@ -96,6 +96,7 @@ flutter:
     - assets/dict.txt
     - assets/prob_emit.txt
     - assets/docs/
+    - assets/dict/
     - .env
   fonts:
     - family: Righteous

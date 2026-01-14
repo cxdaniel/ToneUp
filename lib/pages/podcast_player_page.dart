@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:toneup_app/components/chars_with_pinyin.dart';
+import 'package:toneup_app/components/word_detail_bottom_sheet.dart';
 import 'package:toneup_app/models/media_content_model.dart';
 import 'package:toneup_app/providers/media_player_provider.dart';
+import 'package:toneup_app/services/simple_dictionary_service.dart';
 
 /// 播客播放器页面
 /// 专注于播放和字幕学习的交互
@@ -23,6 +25,7 @@ class _PodcastPlayerPageState extends State<PodcastPlayerPage> {
   final Map<int, GlobalKey> _segmentKeys = {}; // 每个segment的key，用于滚动定位
   int? _lastScrolledSegmentId; // 上次滚动到的segment ID
   double? _draggingPosition; // 拖动进度条时的临时位置（毫秒）
+  final _dictionaryService = SimpleDictionaryService(); // 词典服务
 
   @override
   void initState() {
@@ -184,12 +187,13 @@ class _PodcastPlayerPageState extends State<PodcastPlayerPage> {
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
             color: isCurrentSegment
-                ? theme.colorScheme.primaryContainer
-                : theme.colorScheme.surfaceContainerHigh,
+                ? theme.colorScheme.primaryContainer.withAlpha(128)
+                : theme.colorScheme.surfaceContainerLow,
             borderRadius: BorderRadius.circular(16),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            spacing: 8,
             children: [
               // 中文字幕（Jieba词语级高亮）+ 拼音
               _buildWordHighlightedText(
@@ -198,8 +202,6 @@ class _PodcastPlayerPageState extends State<PodcastPlayerPage> {
                 segmentId: segment.id,
               ),
 
-              const SizedBox(height: 20),
-
               // 英文翻译
               if (isCurrentSegment)
                 Divider(color: theme.colorScheme.outlineVariant),
@@ -207,9 +209,8 @@ class _PodcastPlayerPageState extends State<PodcastPlayerPage> {
               if (isCurrentSegment)
                 Text(
                   segment.translation ?? '',
-                  style: theme.textTheme.bodyMedium?.copyWith(
+                  style: theme.textTheme.bodyLarge?.copyWith(
                     color: theme.colorScheme.secondary,
-                    height: 1.5,
                   ),
                 ),
             ],
@@ -247,13 +248,19 @@ class _PodcastPlayerPageState extends State<PodcastPlayerPage> {
 
         return GestureDetector(
           onTap: () {
-            player.seekToWord(segmentId, wordTiming.word);
+            if (isCurrentSegment) {
+              // 当前高亮分段：显示词典面板
+              _showWordDetailPanel(wordTiming.word, segmentId);
+            } else {
+              // 非高亮分段：跳转播放进度
+              player.seekToWord(segmentId, wordTiming.word);
+            }
           },
           child: CharsWithPinyin(
             chinese: wordTiming.word,
             showPinyin: isCurrentSegment ? _showPinyin : false,
-            size: isCurrentSegment ? 24 : 16,
-            spacing: isCurrentSegment ? 1.5 : 1,
+            size: isCurrentSegment ? 28 : 20,
+            spacing: isCurrentSegment ? 1.6 : 1.2,
             charsColor: isCurrentSegment
                 ? isHighlighted
                       ? theme.colorScheme.onPrimaryContainer
@@ -274,7 +281,8 @@ class _PodcastPlayerPageState extends State<PodcastPlayerPage> {
     return Container(
       padding: EdgeInsets.fromLTRB(20, 16, 20, viewPadding.bottom + 16),
       decoration: BoxDecoration(
-        color: theme.colorScheme.primaryContainer.withAlpha(77),
+        // color: theme.colorScheme.primaryContainer.withAlpha(100),
+        color: theme.colorScheme.surface,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: Column(
@@ -406,6 +414,28 @@ class _PodcastPlayerPageState extends State<PodcastPlayerPage> {
           ),
         ],
       ),
+    );
+  }
+
+  /// 显示词语详情面板
+  void _showWordDetailPanel(String word, int segmentId) {
+    // 获取当前 segment 的翻译和文本作为上下文
+    final segments = widget.media.transcript?.segments ?? [];
+    final segment = segments.firstWhere(
+      (s) => s.id == segmentId,
+      orElse: () => segments.first,
+    );
+
+    final wordDetail = _dictionaryService.getWordDetail(
+      word: word,
+      contextTranslation: segment.translation,
+      contextSentence: segment.text,
+    );
+
+    WordDetailBottomSheet.show(
+      context,
+      wordDetail,
+      playerProvider: _playerProvider,
     );
   }
 

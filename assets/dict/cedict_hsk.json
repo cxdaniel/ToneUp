@@ -1,0 +1,98 @@
+{
+  "欢迎": {
+    "pinyin": "huān yíng",
+    "definitions": ["to welcome", "welcome"]
+  },
+  "你好": {
+    "pinyin": "nǐ hǎo",
+    "definitions": ["hello", "hi"]
+  },
+  "今天": {
+    "pinyin": "jīn tiān",
+    "definitions": ["today", "at the present", "now"]
+  },
+  "我们": {
+    "pinyin": "wǒ men",
+    "definitions": ["we", "us", "ourselves"]
+  },
+  "中国": {
+    "pinyin": "zhōng guó",
+    "definitions": ["China", "Middle Kingdom"]
+  },
+  "建筑": {
+    "pinyin": "jiàn zhù",
+    "definitions": ["building", "architecture", "to build", "to construct"]
+  },
+  "飞檐": {
+    "pinyin": "fēi yán",
+    "definitions": ["upturned eaves", "flying eaves"]
+  },
+  "翘角": {
+    "pinyin": "qiào jiǎo",
+    "definitions": ["upturned corners", "eaves corners"]
+  },
+  "古代": {
+    "pinyin": "gǔ dài",
+    "definitions": ["ancient times", "olden times"]
+  },
+  "特色": {
+    "pinyin": "tè sè",
+    "definitions": ["characteristic", "distinguishing feature", "unique"]
+  },
+  "结构": {
+    "pinyin": "jié gòu",
+    "definitions": ["structure", "composition", "makeup", "architecture"]
+  },
+  "汉语": {
+    "pinyin": "hàn yǔ",
+    "definitions": ["Chinese language", "Mandarin"]
+  },
+  "学习": {
+    "pinyin": "xué xí",
+    "definitions": ["to learn", "to study", "study", "learning"]
+  },
+  "播客": {
+    "pinyin": "bō kè",
+    "definitions": ["podcast", "podcasting"]
+  },
+  "文化": {
+    "pinyin": "wén huà",
+    "definitions": ["culture", "civilization", "cultural"]
+  },
+  "意义": {
+    "pinyin": "yì yì",
+    "definitions": ["meaning", "significance", "sense"]
+  },
+  "一些": {
+    "pinyin": "yī xiē",
+    "definitions": ["some", "a few", "a little"]
+  },
+  "非常": {
+    "pinyin": "fēi cháng",
+    "definitions": ["very", "extremely", "unusual", "extraordinary"]
+  },
+  "要": {
+    "pinyin": "yào",
+    "definitions": ["to want", "to need", "will", "going to", "important"]
+  },
+  "来": {
+    "pinyin": "lái",
+    "definitions": ["to come", "to arrive", "to come round"]
+  },
+  "聊": {
+    "pinyin": "liáo",
+    "definitions": ["to chat", "to have a chat", "to talk"]
+  },
+  "当中": {
+    "pinyin": "dāng zhōng",
+    "definitions": ["among", "in the middle", "in the center"]
+  },
+  "的": {
+    "pinyin": "de",
+    "definitions": ["of", "possessive particle", "structural particle"]
+  },
+  "是": {
+    "pinyin": "shì",
+    "definitions": ["to be", "is", "are", "yes"]
+  }
+}
