@@ -37,7 +37,8 @@ class MediaPlayerProvider extends ChangeNotifier {
   int? _currentSegmentId; // 当前高亮的segment
   String? _currentHighlightedWord; // 当前高亮的词语
   WordTimeRange? _currentHighlightedWordRange; // 当前高亮词语的时间范围
-  Map<int, List<WordTimeRange>> _segmentWordTimings = {}; // 缓存每个segment的词语时间范围
+  final Map<int, List<WordTimeRange>> _segmentWordTimings =
+      {}; // 缓存每个segment的词语时间范围
 
   StreamSubscription<Duration>? _positionSubscription;
   StreamSubscription<Duration?>? _durationSubscription;

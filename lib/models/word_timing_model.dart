@@ -102,9 +102,9 @@ class WordTimingsData {
   /// 获取所有segment的总字符数
   int get totalCharCount {
     int count = 0;
-    segmentTimings.values.forEach((words) {
+    for (var words in segmentTimings.values) {
       count += words.length;
-    });
+    }
     return count;
   }
 

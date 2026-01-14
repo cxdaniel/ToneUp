@@ -15,7 +15,6 @@ class SimpleDictionaryService {
     _loadDictionary();
   }
 
-  final PinyinHelper _pinyinHelper = PinyinHelper();
   Map<String, dynamic> _dictionary = {};
   bool _isLoaded = false;
 

@@ -143,7 +143,7 @@ class _PodcastListPageState extends State<PodcastListPage> {
             Icon(
               Icons.podcasts,
               size: 64,
-              color: theme.colorScheme.primary.withOpacity(0.5),
+              color: theme.colorScheme.primary.withAlpha(128),
             ),
             const SizedBox(height: 16),
             Text(
@@ -345,7 +345,7 @@ class _PodcastListPageState extends State<PodcastListPage> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withAlpha(25),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(
@@ -363,9 +363,9 @@ class _PodcastListPageState extends State<PodcastListPage> {
     final minutes = seconds ~/ 60;
     final remainingSeconds = seconds % 60;
     if (minutes > 0) {
-      return '${minutes}分${remainingSeconds}秒';
+      return '$minutes分$remainingSeconds秒';
     }
-    return '${remainingSeconds}秒';
+    return '$remainingSeconds秒';
   }
 
   /// 导航到播客详情页面

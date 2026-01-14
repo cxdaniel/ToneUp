@@ -90,7 +90,7 @@ class UserMediaProgressModel {
   String get formattedTotalWatchTime {
     final minutes = totalWatchTime.toInt() ~/ 60;
     final seconds = totalWatchTime.toInt() % 60;
-    return '${minutes}分${seconds}秒';
+    return '$minutes分$seconds秒';
   }
 
   /// 更新播放进度
