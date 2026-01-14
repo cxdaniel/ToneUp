@@ -69,9 +69,9 @@ class MainShell extends StatelessWidget {
                   ),
                   BottomNavigationBarItem(
                     icon: navigationShell.currentIndex == 1
-                        ? Icon(Icons.radar_rounded)
-                        : Icon(Icons.track_changes_outlined),
-                    label: 'Goals',
+                        ? Icon(Icons.podcasts)
+                        : Icon(Icons.podcasts_outlined),
+                    label: 'Podcasts',
                   ),
                   BottomNavigationBarItem(
                     icon: navigationShell.currentIndex == 2

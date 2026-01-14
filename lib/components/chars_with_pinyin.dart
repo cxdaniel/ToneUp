@@ -6,12 +6,20 @@ class CharsWithPinyin extends StatefulWidget {
   final String chinese;
   final bool showPinyin;
   final double size;
+  final Color? charsColor;
+  final Color? pinyinColor;
+  final FontWeight? fontWeight;
+  final double spacing;
 
   const CharsWithPinyin({
     super.key,
     required this.chinese,
     this.showPinyin = true,
     this.size = 36,
+    this.charsColor,
+    this.pinyinColor,
+    this.fontWeight,
+    this.spacing = 1.2,
   });
 
   @override
@@ -38,7 +46,9 @@ class _CharsWithPinyinState extends State<CharsWithPinyin> {
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               fontWeight: FontWeight.w400,
-              color: Theme.of(context).colorScheme.onSecondaryContainer,
+              color:
+                  widget.pinyinColor ??
+                  Theme.of(context).colorScheme.onSecondaryContainer,
               height: 1,
               fontSize: widget.size * .5,
             ),
@@ -47,9 +57,9 @@ class _CharsWithPinyinState extends State<CharsWithPinyin> {
           widget.chinese,
           textAlign: TextAlign.center,
           style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-            fontWeight: FontWeight.w700,
-            color: Theme.of(context).colorScheme.primary,
-            height: 1.2,
+            fontWeight: widget.fontWeight ?? FontWeight.w700,
+            color: widget.charsColor ?? Theme.of(context).colorScheme.primary,
+            height: widget.spacing,
             fontSize: widget.size,
           ),
         ),

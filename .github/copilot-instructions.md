@@ -3,13 +3,14 @@
 ## Project Overview
 ToneUp is a Chinese language learning app built with Flutter + Supabase + RevenueCat. The app follows a freemium model with Pro subscriptions available on iOS/Android (Web shows read-only subscription status).
 
-## Core Tech Stack:**
-- Flutter 3.35.2 (Dart 3.9.0, Material Design 3)
-- Supabase (authentication, database, real-time subscriptions)
-- RevenueCat (iOS/Android in-app purchase management)
-- Provider pattern for state management
-- go_router for navigation
-- JiebaSegmenter for Chinese word segmentation
+## Core Tech Stack
+- **Flutter**: 3.35.2 (Dart 3.9.0, Material Design 3)
+- **Backend**: Supabase (auth, PostgreSQL, real-time)
+- **Subscriptions**: RevenueCat (iOS/Android IAP only - not Web)
+- **State Management**: Provider pattern (`ChangeNotifier`)
+- **Routing**: go_router 16.2.1 with `AppRouter` class
+- **Chinese Processing**: JiebaSegmenter, pinyin library
+- **Audio**: just_audio, flutter_tts (火山引擎 VolcTTS via `volc_api.dart`)
 
 ### Third-Party Authentication
 - **Apple Sign In**: Native experience using `sign_in_with_apple` package (iOS 13+, macOS 10.15+)
@@ -125,6 +126,34 @@ if (kIsWeb) {
 - Use custom extensions for domain-specific colors (quiz feedback, XP)
 - Never hardcode color values directly in widgets
 
+## Critical Build & Run Commands
+
+### Development
+```bash
+flutter pub get                           # Install dependencies
+flutter run -d "iPhone 15 Pro"            # iOS simulator
+flutter run -d chrome --web-port=8080     # Web (localhost:8080 for OAuth)
+flutter run -d emulator-5554              # Android emulator
+```
+
+### Building
+```bash
+flutter build ios --release               # iOS production build
+flutter build web --release --wasm        # Web with WASM (deployed to Netlify)
+cd ios && pod install                     # Update iOS CocoaPods (after pubspec changes)
+```
+
+### Debugging
+```bash
+flutter logs | grep -i revenue            # Monitor RevenueCat logs
+flutter analyze                           # Lint check
+flutter test --coverage                   # Run tests with coverage
+```
+
+### CI/CD Scripts
+- `ci_scripts/ci_post_clone.sh`: Runs `pod install` after clone
+- `ci_scripts/ci_pre_xcodebuild.sh`: Runs `flutter build ios --release --no-codesign`
+
 ## Key Development Workflows
 
 ### Testing Subscriptions (iOS)
@@ -136,10 +165,12 @@ if (kIsWeb) {
 2. **Sandbox Testing**:
    - Use sandbox Apple ID from App Store Connect
    - RevenueCat automatically uses test key when `kDebugMode == true`
-   - Monitor logs: `flutter logs | grep -i revenue`
-
-3. **Production Testing**:
-   - TestFlight builds use production API key
+  **Tables use snake_case**: `user_weekly_plan`, `user_practice`, `subscriptions`, `profiles`, `user_materials`
+- **Models use PascalCase**: `UserWeeklyPlanModel`, `UserPracticeModel`, `SubscriptionModel`, `ProfileModel`
+- All models in `lib/models/` with `fromJson`/`toJson` serialization
+- RLS (Row Level Security) enabled for user-specific data
+- **15-dimension ability indicators**: Each learning material tagged with indicators like `charsRecognition`, `wordRecognition`, `listening`, `speaking` (see `lib/models/indicators_model.dart`)
+- **HSK Level System**: Content categorized by HSK 1-6 (150 chars → 5000+ chars)
    - Subscription purchases are real (but can be refunded)
    - Verify webhook delivery to Supabase in RevenueCat dashboard
 
@@ -172,8 +203,10 @@ if (kIsWeb) {
 ## Critical File Locations
 
 ### Entry Points
-- `lib/main.dart`: App initialization (Supabase, JiebaSegmenter, providers)
-- `lib/routes.dart`: Route constants (use `AppRoutes.ROUTE_NAME`)
+- `lib/main.dart`: App initialization (Supabase, JiebaSegmenter, providers via `MultiProvider`)
+- `lib/router_config.dart`: Route config and constants (use `AppRouter.ROUTE_NAME`)
+  - Auth redirects in `_handleRedirect()` - distinguishes login vs linking flows
+  - Shell routing via `StatefulShellBranch` for bottom navigation
 
 ### Subscription System
 - `lib/services/revenue_cat_service.dart`: RevenueCat SDK wrapper (299 lines)
@@ -292,11 +325,88 @@ Future<void> loadData() async {
     notifyListeners();
   }
 }
+```Important Project-Specific Patterns
+
+### Auth Flow Nuances (Critical!)
+- **Login vs Linking Detection** (`lib/main.dart:_authStateChangeHandler()`):
+  - Checks current route to determine if `signedIn` event is from login or account linking
+  - Login: Redirects to `HOME` and initializes all providers
+  - Linking: Stays on current page, only refreshes `ProfileProvider`
+  - Custom scheme deep links have `path == "/"` - check full URI string
+- **OAuth State Caching** (`lib/main.dart:_cacheOAuthUserInfo()`):
+  - Stores OAuth user metadata temporarily during auth flow
+  - Used to create profile if doesn't exist in Supabase
+
+### Logging Convention
+Search emoji-prefixed logs for debugging:
+- `✅` Success events (e.g., `✅ RevenueCat 初始化成功`)
+- `❌` Errors (e.g., `❌ RevenueCat 初始化失败`)
+- `⚠️` Warnings (e.g., `⚠️ Web 端跳过 RevenueCat 初始化`)
+- `🔔` Auth events (e.g., `🔔 @main 收到 auth event: signedIn`)
+
+### Initialization Order (main.dart)
+```dart
+WidgetsFlutterBinding.ensureInitialized();
+usePathUrlStrategy();                  // Remove # from Web URLs
+await Supabase.initialize(...);
+await JiebaSegmenter.init();           // Load Chinese segmentation dict
+await NativeAuthService().initialize(); // Platform-specific auth setup
+runApp(MyApp());
 ```
+
+### Services Architecture
+- **DataService** (`lib/services/data_service.dart`): CRUD wrapper for Supabase, used by providers
+- **NativeAuthService**: Mobile-only, handles Apple/Google native sign-in
+- **OAuthService**: Web fallback for browser-based OAuth
+- **RevenueCatService**: Singleton, mobile-only (check `kIsWeb` before calling)
+- **NavigationService**: Global navigator key for context-less navigation
+
+### Providers Lifecycle Pattern
+All providers follow this pattern:
+```dart
+class MyProvider extends ChangeNotifier {
+  bool _disposed = false;
+  StreamSubscription? _authSub;
+  
+  MyProvider() {
+    _authSub = Supabase.instance.client.auth.onAuthStateChange.listen(...);
+  }
+  
+  void onUserSign(bool isSignedIn) {
+    if (isSignedIn) {
+      loadData();
+    } else {
+      clearData();
+    }
+  }
+  
+  @override
+  void dispose() {
+    _disposed = true;
+    _authSub?.cancel();
+    super.dispose();
+  }
+  
+  @override
+  void notifyListeners() {
+    if (!_disposed) super.notifyListeners();
+  }
+}
+```
+
+## Documentation References
+- **Full Architecture**: `docs/PROJECT_OVERVIEW.md` (900+ lines covering HSK system, 15 indicators, data models)
+- **Third-Party Auth**: `docs/THIRD_PARTY_AUTH.md` (Google/Apple native + OAuth strategies)
+- **Testing Guide**: `docs/TESTING_GUIDE.md` (Platform-specific test commands)
+- **Web Deployment**: `docs/WEB_DEPLOYMENT.md` (Netlify WASM build process)
+- **Data Models**: `docs/DATA_MODELS.md` (Complete schema reference)
 
 ## AI Agent Workflow Recommendations
 1. **Before editing subscription code**: Review `revenue_cat_service.dart` and `subscription_provider.dart`
-2. **Before adding Pro features**: Check `PremiumFeatureGate` usage patterns
-3. **Before UI changes**: Verify Material 3 theme usage and custom extensions
+2. **Before adding Pro features**: Check `PremiumFeatureGate` usage in `lib/components/`
+3. **Before UI changes**: Verify Material 3 theme usage and custom `AppThemeExtensions`
+4. **When debugging auth**: Search for `🔔 @main 收到 auth event` to trace flow
+5. **For platform features**: Always ask "Does this need Web vs Mobile differentiation?" Check `kIsWeb` first
+6. **Before modifying routes**: Check `router_config.dart` auth redirect logic to avoid breaking login/linking flows
 4. **When debugging**: Search for emoji-prefixed logs (✅ success, ❌ error, ⚠️ warning, 🔔 event)
 5. **For platform features**: Always ask "Does this need Web vs Mobile differentiation?"

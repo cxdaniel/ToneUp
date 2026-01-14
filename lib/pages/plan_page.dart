@@ -123,6 +123,15 @@ class _PlanPageState extends State<PlanPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          'Goals',
+          style: theme.textTheme.headlineMedium?.copyWith(
+            color: theme.colorScheme.onSecondaryContainer,
+            fontWeight: FontWeight.w300,
+          ),
+        ),
+      ),
       body: Consumer<PlanProvider>(
         builder: (context, provider, child) {
           planProvider = provider;
@@ -296,7 +305,7 @@ class _PlanPageState extends State<PlanPage> {
           slivers: [
             SliverAppBar(
               toolbarHeight: 10,
-              expandedHeight: 60 + 40,
+              // expandedHeight: 60 + 40,
               surfaceTintColor: theme.colorScheme.surface,
               backgroundColor: theme.colorScheme.surface,
               leadingWidth: double.infinity,
@@ -305,13 +314,13 @@ class _PlanPageState extends State<PlanPage> {
                   left: 24,
                   top: MediaQuery.of(context).viewPadding.top + 60,
                 ),
-                child: Text(
-                  'Goals',
-                  style: theme.textTheme.headlineLarge?.copyWith(
-                    color: theme.colorScheme.onSecondaryContainer,
-                    fontWeight: FontWeight.w300,
-                  ),
-                ),
+                // child: Text(
+                //   'Goals',
+                //   style: theme.textTheme.headlineLarge?.copyWith(
+                //     color: theme.colorScheme.onSecondaryContainer,
+                //     fontWeight: FontWeight.w300,
+                //   ),
+                // ),
               ),
               pinned: true,
             ),

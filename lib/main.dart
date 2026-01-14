@@ -8,6 +8,7 @@ import 'package:toneup_app/providers/plan_provider.dart';
 import 'package:toneup_app/providers/profile_provider.dart';
 import 'package:toneup_app/providers/subscription_provider.dart';
 import 'package:toneup_app/providers/tts_provider.dart';
+import 'package:toneup_app/providers/media_player_provider.dart';
 import 'package:toneup_app/services/config.dart';
 import 'package:toneup_app/services/native_auth_service.dart';
 import 'package:toneup_app/theme_data.dart';
@@ -90,7 +91,7 @@ class _MyAppState extends State<MyApp> {
         final currentUriString = currentUri.toString();
 
         debugPrint('🔄 当前路由: $currentLocation (URI: $currentUriString)');
-        
+
         // 登录操作：在 LOGIN/SIGN_UP/LOGIN_CALLBACK 页面
         // 注意：Custom Scheme Deep Link 的 path 可能是 "/"，需要检查完整 URI
         final isLoginFlow =
@@ -136,6 +137,7 @@ class _MyAppState extends State<MyApp> {
         ChangeNotifierProvider(
           create: (_) => SubscriptionProvider()..initialize(),
         ),
+        ChangeNotifierProvider(create: (_) => MediaPlayerProvider()),
       ],
       child: MaterialApp.router(
         title: 'ToneUp',

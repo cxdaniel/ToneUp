@@ -54,8 +54,8 @@ class _HomePageState extends State<HomePage> {
 
   /// 去全部计划页
   void _gotoPagePlan() {
-    // context.push(AppRouter.GOAL_LIST);
-    context.go(AppRouter.GOAL_LIST);
+    context.push(AppRouter.GOAL_LIST);
+    // context.go(AppRouter.GOAL_LIST);
   }
 
   /// 去测评页

@@ -9,13 +9,13 @@ import 'package:toneup_app/pages/create_goal_page.dart';
 import 'package:toneup_app/pages/document_viewer_page.dart';
 import 'package:toneup_app/pages/download_page.dart';
 import 'package:toneup_app/pages/paywall.dart';
+import 'package:toneup_app/pages/plan_page.dart';
 import 'package:toneup_app/pages/profile_account.dart';
 import 'package:toneup_app/pages/evaluation_page.dart';
 import 'package:toneup_app/pages/forgot_page.dart';
 import 'package:toneup_app/pages/reset_password_callback.dart';
 import 'package:toneup_app/pages/home_page.dart';
 import 'package:toneup_app/pages/signin_page.dart';
-import 'package:toneup_app/pages/plan_page.dart';
 import 'package:toneup_app/pages/practice_page.dart';
 import 'package:toneup_app/pages/profile_page.dart';
 import 'package:toneup_app/pages/signup_page.dart';
@@ -23,6 +23,9 @@ import 'package:toneup_app/pages/subscription_manage.dart';
 import 'package:toneup_app/pages/welcome_page.dart';
 import 'package:toneup_app/pages/profile_settings.dart';
 import 'package:toneup_app/pages/level_detail_page.dart';
+import 'package:toneup_app/pages/podcast_list_page.dart';
+import 'package:toneup_app/pages/podcast_detail_page.dart';
+import 'package:toneup_app/pages/podcast_player_page.dart';
 import 'package:toneup_app/providers/account_settings_provider.dart';
 import 'package:toneup_app/providers/create_goal_provider.dart';
 import 'package:toneup_app/services/navigation_service.dart';
@@ -39,6 +42,8 @@ class AppRouter {
   static const ACTIVE = '/active';
   static const PROFILE = '/profile';
   static const PODCASTS = '/podcasts';
+  static const PODCAST_DETAIL = '/podcast_detail';
+  static const PODCAST_PLAYER = '/podcast_player';
   static const EVALUATION = '/evaluation';
   static const WELCOME = '/welcome';
   static const FORGOT = '/forgot';
@@ -86,8 +91,8 @@ class AppRouter {
       StatefulShellBranch(
         routes: [
           GoRoute(
-            path: AppRouter.GOAL_LIST,
-            builder: (context, state) => const PlanPage(),
+            path: AppRouter.PODCASTS,
+            builder: (context, state) => const PodcastListPage(),
           ),
         ],
       ),
@@ -245,6 +250,10 @@ class AppRouter {
         },
       ),
       GoRoute(
+        path: AppRouter.GOAL_LIST,
+        builder: (context, state) => const PlanPage(),
+      ),
+      GoRoute(
         path: AppRouter.PRACTICE,
         builder: (context, state) => const PracticePage(),
       ),
@@ -298,6 +307,26 @@ class AppRouter {
       GoRoute(
         path: AppRouter.DOWNLOAD,
         builder: (context, state) => const DownloadPage(),
+      ),
+      GoRoute(
+        path: AppRouter.PODCAST_DETAIL,
+        builder: (context, state) {
+          final media = state.extra;
+          if (media == null) {
+            return const Scaffold(body: Center(child: Text('播客数据缺失')));
+          }
+          return PodcastDetailPage(media: media as dynamic);
+        },
+      ),
+      GoRoute(
+        path: AppRouter.PODCAST_PLAYER,
+        builder: (context, state) {
+          final media = state.extra;
+          if (media == null) {
+            return const Scaffold(body: Center(child: Text('播客数据缺失')));
+          }
+          return PodcastPlayerPage(media: media as dynamic);
+        },
       ),
       GoRoute(
         path: AppRouter.LOGIN_CALLBACK,
