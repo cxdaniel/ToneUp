@@ -27,6 +27,7 @@ void main() async {
     url: SupabaseConfig.url,
     anonKey: SupabaseConfig.anonKey,
   );
+
   await JiebaSegmenter.init();
   await NativeAuthService().initialize();
 

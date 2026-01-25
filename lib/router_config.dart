@@ -26,6 +26,7 @@ import 'package:toneup_app/pages/level_detail_page.dart';
 import 'package:toneup_app/pages/podcast_list_page.dart';
 import 'package:toneup_app/pages/podcast_detail_page.dart';
 import 'package:toneup_app/pages/podcast_player_page.dart';
+import 'package:toneup_app/pages/dictionary_debug_page.dart';
 import 'package:toneup_app/providers/account_settings_provider.dart';
 import 'package:toneup_app/providers/create_goal_provider.dart';
 import 'package:toneup_app/services/navigation_service.dart';
@@ -61,6 +62,7 @@ class AppRouter {
   static const PRIVACY_POLICY = '/privacy-policy';
   static const TERMS_OF_SERVICE = '/terms-of-service';
   static const ABOUT = '/about';
+  static const DICTIONARY_DEBUG = '/dictionary-debug';
 
   static GoRouter createRouter() {
     final session = Supabase.instance.client.auth.currentSession;
@@ -359,6 +361,10 @@ class AppRouter {
           title: 'About ToneUp',
           assetPath: 'assets/docs/about.md',
         ),
+      ),
+      GoRoute(
+        path: AppRouter.DICTIONARY_DEBUG,
+        builder: (context, state) => const DictionaryDebugPage(),
       ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) =>

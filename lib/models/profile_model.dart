@@ -25,6 +25,8 @@ class ProfileModel {
   @JsonKey(name: "updated_at")
   DateTime? updatedAt;
   String? avatar;
+  @JsonKey(name: "native_language")
+  String? nativeLanguage; // 用户母语：en, zh, ja, ko, es, fr, de等
 
   ProfileModel({
     required this.id,
@@ -43,6 +45,7 @@ class ProfileModel {
     this.createdAt,
     this.updatedAt,
     this.avatar,
+    this.nativeLanguage = 'en', // 默认英文
   });
 
   factory ProfileModel.fromJson(Map<String, dynamic> json) =>

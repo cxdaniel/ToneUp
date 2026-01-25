@@ -1,98 +1,279 @@
 {
   "欢迎": {
     "pinyin": "huān yíng",
-    "definitions": ["to welcome", "welcome"]
+    "summary": "to welcome; welcome",
+    "entries": [
+      {
+        "pos": "v.",
+        "definitions": ["to welcome", "to greet warmly"],
+        "examples": [
+          "欢迎光临！Welcome!",
+          "欢迎你来中国。Welcome to China."
+        ]
+      },
+      {
+        "pos": "int.",
+        "definitions": ["welcome!"],
+        "examples": []
+      }
+    ],
+    "hsk": 2
   },
   "你好": {
     "pinyin": "nǐ hǎo",
-    "definitions": ["hello", "hi"]
+    "summary": "hello; hi",
+    "entries": [
+      {
+        "pos": "int.",
+        "definitions": ["hello", "hi", "how do you do"],
+        "examples": [
+          "你好！见到你很高兴。Hello! Nice to meet you.",
+          "你好吗？How are you?"
+        ]
+      }
+    ],
+    "hsk": 1
   },
   "今天": {
     "pinyin": "jīn tiān",
-    "definitions": ["today", "at the present", "now"]
-  },
-  "我们": {
-    "pinyin": "wǒ men",
-    "definitions": ["we", "us", "ourselves"]
-  },
-  "中国": {
-    "pinyin": "zhōng guó",
-    "definitions": ["China", "Middle Kingdom"]
+    "summary": "today",
+    "entries": [
+      {
+        "pos": "n.",
+        "definitions": ["today", "the present day"],
+        "examples": [
+          "今天天气很好。The weather is nice today.",
+          "今天是星期一。Today is Monday."
+        ]
+      }
+    ],
+    "hsk": 1
   },
   "建筑": {
     "pinyin": "jiàn zhù",
-    "definitions": ["building", "architecture", "to build", "to construct"]
-  },
-  "飞檐": {
-    "pinyin": "fēi yán",
-    "definitions": ["upturned eaves", "flying eaves"]
-  },
-  "翘角": {
-    "pinyin": "qiào jiǎo",
-    "definitions": ["upturned corners", "eaves corners"]
-  },
-  "古代": {
-    "pinyin": "gǔ dài",
-    "definitions": ["ancient times", "olden times"]
-  },
-  "特色": {
-    "pinyin": "tè sè",
-    "definitions": ["characteristic", "distinguishing feature", "unique"]
-  },
-  "结构": {
-    "pinyin": "jié gòu",
-    "definitions": ["structure", "composition", "makeup", "architecture"]
-  },
-  "汉语": {
-    "pinyin": "hàn yǔ",
-    "definitions": ["Chinese language", "Mandarin"]
+    "summary": "building; architecture",
+    "entries": [
+      {
+        "pos": "n.",
+        "definitions": ["building", "structure", "edifice", "architecture"],
+        "examples": [
+          "这座建筑很漂亮。This building is beautiful.",
+          "中国古代建筑很有特色。Ancient Chinese architecture is very distinctive."
+        ]
+      },
+      {
+        "pos": "v.",
+        "definitions": ["to build", "to construct"],
+        "examples": [
+          "我们正在建筑一座新桥。We are building a new bridge."
+        ]
+      }
+    ],
+    "hsk": 4
   },
   "学习": {
     "pinyin": "xué xí",
-    "definitions": ["to learn", "to study", "study", "learning"]
+    "summary": "to study; to learn",
+    "entries": [
+      {
+        "pos": "v.",
+        "definitions": ["to study", "to learn", "to emulate"],
+        "examples": [
+          "我在学习中文。I am learning Chinese.",
+          "学习是一个持续的过程。Learning is a continuous process."
+        ]
+      },
+      {
+        "pos": "n.",
+        "definitions": ["study", "learning"],
+        "examples": [
+          "他的学习成绩很好。His academic performance is very good."
+        ]
+      }
+    ],
+    "hsk": 1
+  },
+  "中国": {
+    "pinyin": "zhōng guó",
+    "summary": "China",
+    "entries": [
+      {
+        "pos": "n.",
+        "definitions": ["China", "Middle Kingdom"],
+        "examples": [
+          "我来自中国。I come from China.",
+          "中国是一个历史悠久的国家。China is a country with a long history."
+        ]
+      }
+    ],
+    "hsk": 1
   },
   "播客": {
     "pinyin": "bō kè",
-    "definitions": ["podcast", "podcasting"]
+    "summary": "podcast",
+    "entries": [
+      {
+        "pos": "n.",
+        "definitions": ["podcast", "podcasting"],
+        "examples": [
+          "我喜欢听播客。I like listening to podcasts."
+        ]
+      }
+    ],
+    "hsk": 6
   },
   "文化": {
     "pinyin": "wén huà",
-    "definitions": ["culture", "civilization", "cultural"]
+    "summary": "culture",
+    "entries": [
+      {
+        "pos": "n.",
+        "definitions": ["culture", "civilization", "cultural"],
+        "examples": [
+          "中国文化历史悠久。Chinese culture has a long history."
+        ]
+      }
+    ],
+    "hsk": 3
   },
   "意义": {
     "pinyin": "yì yì",
-    "definitions": ["meaning", "significance", "sense"]
+    "summary": "meaning; significance",
+    "entries": [
+      {
+        "pos": "n.",
+        "definitions": ["meaning", "significance", "sense"],
+        "examples": [
+          "这件事很有意义。This matter is very meaningful."
+        ]
+      }
+    ],
+    "hsk": 4
   },
   "一些": {
     "pinyin": "yī xiē",
-    "definitions": ["some", "a few", "a little"]
+    "summary": "some; a few",
+    "entries": [
+      {
+        "pos": "det.",
+        "definitions": ["some", "a few", "a little"],
+        "examples": [
+          "我有一些问题。I have some questions."
+        ]
+      }
+    ],
+    "hsk": 2
   },
   "非常": {
     "pinyin": "fēi cháng",
-    "definitions": ["very", "extremely", "unusual", "extraordinary"]
+    "summary": "very; extremely",
+    "entries": [
+      {
+        "pos": "adv.",
+        "definitions": ["very", "extremely", "highly"],
+        "examples": [
+          "今天非常热。Today is very hot."
+        ]
+      },
+      {
+        "pos": "adj.",
+        "definitions": ["unusual", "extraordinary"],
+        "examples": []
+      }
+    ],
+    "hsk": 2
   },
   "要": {
     "pinyin": "yào",
-    "definitions": ["to want", "to need", "will", "going to", "important"]
+    "summary": "to want; will",
+    "entries": [
+      {
+        "pos": "v.",
+        "definitions": ["to want", "to need", "to demand"],
+        "examples": [
+          "我要去北京。I want to go to Beijing."
+        ]
+      },
+      {
+        "pos": "aux.",
+        "definitions": ["will", "going to", "must"],
+        "examples": [
+          "明天要下雨。It will rain tomorrow."
+        ]
+      }
+    ],
+    "hsk": 1
   },
   "来": {
     "pinyin": "lái",
-    "definitions": ["to come", "to arrive", "to come round"]
+    "summary": "to come",
+    "entries": [
+      {
+        "pos": "v.",
+        "definitions": ["to come", "to arrive", "to come round"],
+        "examples": [
+          "他明天来。He will come tomorrow.",
+          "你来自哪里？Where do you come from?"
+        ]
+      }
+    ],
+    "hsk": 1
   },
   "聊": {
     "pinyin": "liáo",
-    "definitions": ["to chat", "to have a chat", "to talk"]
+    "summary": "to chat",
+    "entries": [
+      {
+        "pos": "v.",
+        "definitions": ["to chat", "to have a chat", "to talk"],
+        "examples": [
+          "我们聊聊天吧。Let's have a chat."
+        ]
+      }
+    ],
+    "hsk": 3
   },
   "当中": {
     "pinyin": "dāng zhōng",
-    "definitions": ["among", "in the middle", "in the center"]
+    "summary": "among; in the middle",
+    "entries": [
+      {
+        "pos": "prep.",
+        "definitions": ["among", "in the middle", "in the center"],
+        "examples": [
+          "他在学生当中很受欢迎。He is popular among students."
+        ]
+      }
+    ],
+    "hsk": 4
   },
   "的": {
     "pinyin": "de",
-    "definitions": ["of", "possessive particle", "structural particle"]
+    "summary": "possessive particle",
+    "entries": [
+      {
+        "pos": "part.",
+        "definitions": ["possessive particle", "of", "structural particle"],
+        "examples": [
+          "我的书。My book."
+        ]
+      }
+    ],
+    "hsk": 1
   },
   "是": {
     "pinyin": "shì",
-    "definitions": ["to be", "is", "are", "yes"]
+    "summary": "to be; is",
+    "entries": [
+      {
+        "pos": "v.",
+        "definitions": ["to be", "is", "are", "am"],
+        "examples": [
+          "我是学生。I am a student.",
+          "这是我的书。This is my book."
+        ]
+      }
+    ],
+    "hsk": 1
   }
 }

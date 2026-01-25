@@ -185,6 +185,10 @@ class _PodcastListPageState extends State<PodcastListPage> {
                       ),
                     ),
                     const Spacer(),
+                    ElevatedButton(
+                      onPressed: () => context.push('/dictionary-debug'),
+                      child: Text('词典调试'),
+                    ),
                     IconButton(
                       icon: const Icon(Icons.filter_list),
                       onPressed: _showFilterDialog,

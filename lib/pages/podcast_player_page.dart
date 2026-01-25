@@ -4,6 +4,7 @@ import 'package:toneup_app/components/chars_with_pinyin.dart';
 import 'package:toneup_app/components/word_detail_bottom_sheet.dart';
 import 'package:toneup_app/models/media_content_model.dart';
 import 'package:toneup_app/providers/media_player_provider.dart';
+import 'package:toneup_app/providers/profile_provider.dart';
 import 'package:toneup_app/services/simple_dictionary_service.dart';
 
 /// 播客播放器页面
@@ -418,7 +419,7 @@ class _PodcastPlayerPageState extends State<PodcastPlayerPage> {
   }
 
   /// 显示词语详情面板
-  void _showWordDetailPanel(String word, int segmentId) {
+  void _showWordDetailPanel(String word, int segmentId) async {
     // 获取当前 segment 的翻译和文本作为上下文
     final segments = widget.media.transcript?.segments ?? [];
     final segment = segments.firstWhere(
@@ -426,11 +427,18 @@ class _PodcastPlayerPageState extends State<PodcastPlayerPage> {
       orElse: () => segments.first,
     );
 
-    final wordDetail = _dictionaryService.getWordDetail(
+    // 获取用户母语设置（在异步操作前获取所有 context 数据）
+    final profile = context.read<ProfileProvider>().profile;
+    final language = profile?.nativeLanguage ?? 'en';
+
+    final wordDetail = await _dictionaryService.getWordDetail(
       word: word,
+      language: language,
       contextTranslation: segment.translation,
-      contextSentence: segment.text,
     );
+
+    // 异步操作后检查 widget 是否仍然挂载
+    if (!mounted) return;
 
     WordDetailBottomSheet.show(
       context,
@@ -448,21 +456,23 @@ class _PodcastPlayerPageState extends State<PodcastPlayerPage> {
       builder: (context) {
         return AlertDialog(
           title: const Text('播放速度'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [0.5, 0.75, 1.0, 1.25, 1.5, 2.0].map((speed) {
-              return RadioListTile<double>(
-                title: Text('${speed}X'),
-                value: speed,
-                groupValue: player.playbackSpeed,
-                onChanged: (value) {
-                  if (value != null) {
-                    player.setPlaybackSpeed(value);
-                    Navigator.pop(context);
-                  }
-                },
-              );
-            }).toList(),
+          content: RadioGroup<double>(
+            groupValue: player.playbackSpeed,
+            onChanged: (value) {
+              if (value != null) {
+                player.setPlaybackSpeed(value);
+                Navigator.pop(context);
+              }
+            },
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [0.5, 0.75, 1.0, 1.25, 1.5, 2.0].map((speed) {
+                return RadioListTile<double>(
+                  title: Text('${speed}X'),
+                  value: speed,
+                );
+              }).toList(),
+            ),
           ),
         );
       },

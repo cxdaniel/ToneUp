@@ -52,8 +52,11 @@ dependencies:
   cupertino_icons: ^1.0.8   # iOS风格图标 Use with the CupertinoIcons class for iOS style icons.
   # audioplayers: ^6.5.1
   just_audio: ^0.10.5       # 声音管理
+  audio_session: ^0.1.24    # 音频会话管理（支持后台播放）
   audio_waveforms: ^1.3.0   # 音频波形显示
   path_provider: ^2.1.5     # 用于访问文件系统路径
+  path: ^1.9.0              # 路径操作工具
+  sqflite: ^2.4.1           # SQLite数据库（词典缓存）
   jieba_flutter: ^0.2.0     # 结巴分词断句
   pinyin: ^3.3.0            # 拼音库
   image_picker: ^1.2.0      # 图片选择器
@@ -97,6 +100,7 @@ flutter:
     - assets/prob_emit.txt
     - assets/docs/
     - assets/dict/
+    - assets/dictionaries/
     - .env
   fonts:
     - family: Righteous

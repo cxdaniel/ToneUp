@@ -27,6 +27,7 @@ ProfileModel _$ProfileModelFromJson(Map<String, dynamic> json) => ProfileModel(
       ? null
       : DateTime.parse(json['updated_at'] as String),
   avatar: json['avatar'] as String?,
+  nativeLanguage: json['native_language'] as String? ?? 'en',
 );
 
 Map<String, dynamic> _$ProfileModelToJson(ProfileModel instance) =>
@@ -47,6 +48,7 @@ Map<String, dynamic> _$ProfileModelToJson(ProfileModel instance) =>
       'created_at': instance.createdAt?.toIso8601String(),
       'updated_at': instance.updatedAt?.toIso8601String(),
       'avatar': instance.avatar,
+      'native_language': instance.nativeLanguage,
     };
 
 const _$PurposeTypeEnumMap = {
