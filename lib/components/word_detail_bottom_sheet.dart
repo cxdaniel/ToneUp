@@ -3,23 +3,27 @@ import 'package:provider/provider.dart';
 import 'package:toneup_app/models/word_detail_model.dart';
 import 'package:toneup_app/providers/media_player_provider.dart';
 import 'package:toneup_app/providers/tts_provider.dart';
+import 'package:toneup_app/services/simple_dictionary_service.dart';
 
 /// 词语详情面板（底部弹出）
 /// 显示词语的拼音、翻译和例句
 class WordDetailBottomSheet extends StatefulWidget {
-  final WordDetailModel wordDetail;
+  final String word; // 要查询的词语
+  final String language; // 目标语言
   final MediaPlayerProvider? playerProvider; // 播放器 provider（用于暂停/恢复）
 
   const WordDetailBottomSheet({
     super.key,
-    required this.wordDetail,
+    required this.word,
+    required this.language,
     this.playerProvider,
   });
 
-  /// 显示词典面板
+  /// 显示词典面板（立即打开，内部异步加载）
   static Future<void> show(
-    BuildContext context,
-    WordDetailModel wordDetail, {
+    BuildContext context, {
+    required String word,
+    required String language,
     MediaPlayerProvider? playerProvider,
   }) async {
     // 记录打开面板前的播放状态
@@ -37,7 +41,8 @@ class WordDetailBottomSheet extends StatefulWidget {
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (context) => WordDetailBottomSheet(
-        wordDetail: wordDetail,
+        word: word,
+        language: language,
         playerProvider: playerProvider,
       ),
     );
@@ -53,7 +58,45 @@ class WordDetailBottomSheet extends StatefulWidget {
 }
 
 class _WordDetailBottomSheetState extends State<WordDetailBottomSheet> {
+  final _dictionaryService = SimpleDictionaryService();
   TTSProvider? _ttsProvider;
+  WordDetailModel? _wordDetail;
+  bool _isLoading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadWordDetail();
+  }
+
+  /// 加载词语详情
+  Future<void> _loadWordDetail() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      final result = await _dictionaryService.getWordDetail(
+        word: widget.word,
+        language: widget.language,
+      );
+      if (mounted) {
+        setState(() {
+          _wordDetail = result;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = e.toString();
+          _isLoading = false;
+        });
+      }
+    }
+  }
 
   @override
   void dispose() {
@@ -64,41 +107,13 @@ class _WordDetailBottomSheetState extends State<WordDetailBottomSheet> {
 
   /// 播放词语发音
   Future<void> _speakWord(TTSProvider tts) async {
+    if (_wordDetail == null) return;
+
     if (tts.state == TTSState.playing) {
       await tts.stop();
     } else {
-      await tts.play(widget.wordDetail.word, uselocal: false);
+      await tts.play(_wordDetail!.word, uselocal: false);
     }
-  }
-
-  /// 判断是否有详细的词条信息（避免显示冗余数据）
-  bool _hasDetailedEntries() {
-    if (widget.wordDetail.entries.isEmpty) return false;
-
-    final summary = widget.wordDetail.summary?.trim() ?? '';
-
-    // 如果只有一个entry
-    if (widget.wordDetail.entries.length == 1) {
-      final entry = widget.wordDetail.entries.first;
-
-      // 有例句，显示详细解释
-      if (entry.examples.isNotEmpty) return true;
-
-      // 有多个释义，显示详细解释
-      if (entry.definitions.length > 1) return true;
-
-      // 只有一个释义且和summary相同，不显示
-      if (entry.definitions.length == 1 &&
-          entry.definitions.first.trim() == summary) {
-        return false;
-      }
-
-      // 只有一个释义但和summary不同，显示
-      return true;
-    }
-
-    // 有多个entries，显示详细解释
-    return true;
   }
 
   @override
@@ -112,7 +127,7 @@ class _WordDetailBottomSheetState extends State<WordDetailBottomSheet> {
 
         return Container(
           decoration: BoxDecoration(
-            color: theme.colorScheme.primary,
+            color: theme.colorScheme.surface,
             borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
           ),
           padding: EdgeInsets.only(
@@ -124,7 +139,6 @@ class _WordDetailBottomSheetState extends State<WordDetailBottomSheet> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
-            spacing: 12,
             children: [
               // 拖动指示条
               Center(
@@ -137,184 +151,189 @@ class _WordDetailBottomSheetState extends State<WordDetailBottomSheet> {
                   ),
                 ),
               ),
-              // 汉字 + 拼音 + 播放按钮
-              Wrap(
-                alignment: WrapAlignment.start,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                spacing: 16,
-                children: [
-                  Text(
-                    widget.wordDetail.word,
-                    style: theme.textTheme.displaySmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: theme.colorScheme.primaryContainer,
-                    ),
-                  ),
-                  // 拼音
-                  Text(
-                    widget.wordDetail.pinyin,
-                    style: theme.textTheme.titleLarge?.copyWith(
-                      color: theme.colorScheme.primaryContainer,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  // 播放按钮
-                  IconButton(
-                    onPressed: tts.state == TTSState.loading
-                        ? null
-                        : () => _speakWord(tts),
-                    icon: tts.state == TTSState.loading
-                        ? SizedBox(
-                            width: 24,
-                            height: 24,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2.5,
-                              color: theme.colorScheme.primaryContainer,
-                            ),
-                          )
-                        : Icon(
-                            tts.state == TTSState.playing
-                                ? Icons.stop_circle
-                                : Icons.volume_up,
-                            color: theme.colorScheme.primaryContainer,
-                          ),
-                    iconSize: 36,
-                    tooltip: tts.state == TTSState.playing ? '停止' : '播放发音',
-                  ),
-                ],
-              ),
-
               const SizedBox(height: 16),
 
-              // 关键释意（summary）
-              if (widget.wordDetail.summary != null &&
-                  widget.wordDetail.summary!.isNotEmpty)
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.primaryContainer.withAlpha(128),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    widget.wordDetail.summary!,
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      color: theme.colorScheme.onPrimaryContainer,
-                      fontWeight: FontWeight.w600,
-                      height: 1.5,
+              // Loading 状态
+              if (_isLoading)
+                Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(48),
+                    child: Column(
+                      children: [
+                        CircularProgressIndicator(
+                          color: theme.colorScheme.primary,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Loading: ${widget.word}',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
 
-              // 详细解释（仅在有额外信息时显示）
-              if (_hasDetailedEntries()) ...[
-                const SizedBox(height: 24),
-                _buildSectionTitle(context, '详细解释'),
-                const SizedBox(height: 12),
-                ...widget.wordDetail.entries.map((entry) {
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
+              // 错误状态
+              if (_error != null)
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  margin: const EdgeInsets.symmetric(vertical: 24),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.errorContainer,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
                     children: [
-                      // 词性标签
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.tertiaryContainer,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          entry.pos,
-                          style: theme.textTheme.labelLarge?.copyWith(
-                            color: theme.colorScheme.onTertiaryContainer,
-                            fontWeight: FontWeight.bold,
-                          ),
+                      Icon(
+                        Icons.error_outline,
+                        color: theme.colorScheme.error,
+                        size: 48,
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Dictionary Load Error',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          color: theme.colorScheme.onErrorContainer,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
                       const SizedBox(height: 8),
+                      Text(
+                        _error!,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onErrorContainer,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
 
-                      // 释义列表（跳过与summary重复的单一释义）
-                      if (entry.definitions.length > 1 ||
-                          (entry.definitions.isNotEmpty &&
-                              entry.definitions.first.trim() !=
-                                  (widget.wordDetail.summary?.trim() ?? '')))
-                        ...entry.definitions.asMap().entries.map((defEntry) {
-                          return Padding(
-                            padding: const EdgeInsets.only(left: 16, bottom: 4),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                if (entry.definitions.length > 1)
-                                  Text(
-                                    '${defEntry.key + 1}. ',
-                                    style: theme.textTheme.bodyMedium?.copyWith(
-                                      color: theme.colorScheme.secondary,
-                                    ),
-                                  ),
-                                Expanded(
-                                  child: Text(
-                                    defEntry.value,
-                                    style: theme.textTheme.bodyMedium?.copyWith(
-                                      color: theme.colorScheme.onSurface,
-                                      height: 1.5,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        }),
-
-                      // 该词性的例句
-                      if (entry.examples.isNotEmpty) ...[
-                        const SizedBox(height: 8),
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          margin: const EdgeInsets.only(left: 16),
-                          decoration: BoxDecoration(
-                            color: theme.colorScheme.secondaryContainer
-                                .withAlpha(77),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                              color: theme.colorScheme.outline.withAlpha(51),
+              // 成功加载数据
+              if (!_isLoading && _error == null && _wordDetail != null) ...[
+                // 基础信息卡片
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primaryContainer.withAlpha(77),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    spacing: 16,
+                    children: [
+                      // 词语 + 拼音 + 播放按钮
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Text(
+                            _wordDetail!.word,
+                            style: theme.textTheme.headlineSmall?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: theme.colorScheme.onPrimaryContainer,
                             ),
                           ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: entry.examples.map((example) {
-                              return Padding(
-                                padding: const EdgeInsets.only(bottom: 4),
-                                child: Text(
-                                  example,
-                                  style: theme.textTheme.bodySmall?.copyWith(
-                                    color:
-                                        theme.colorScheme.onSecondaryContainer,
-                                    height: 1.4,
-                                    fontStyle: FontStyle.italic,
+                          Spacer(),
+                          // 拼音
+                          Text(
+                            _wordDetail!.pinyin,
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              color: theme.colorScheme.onPrimaryContainer
+                                  .withAlpha(204),
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
+                          // 播放按钮
+                          IconButton(
+                            onPressed: tts.state == TTSState.loading
+                                ? null
+                                : () => _speakWord(tts),
+                            icon: tts.state == TTSState.loading
+                                ? SizedBox(
+                                    width: 24,
+                                    height: 24,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2.5,
+                                      color: theme.colorScheme.primary,
+                                    ),
+                                  )
+                                : Icon(
+                                    tts.state == TTSState.playing
+                                        ? Icons.stop_circle
+                                        : Icons.volume_up,
+                                    color: theme.colorScheme.primary,
                                   ),
-                                ),
-                              );
-                            }).toList(),
+                            iconSize: 32,
+                            tooltip: tts.state == TTSState.playing
+                                ? '停止'
+                                : '播放发音',
+                          ),
+                        ],
+                      ),
+                      // 概要释义
+                      if (_wordDetail!.summary != null &&
+                          _wordDetail!.summary!.isNotEmpty)
+                        Text(
+                          _wordDetail!.summary!,
+                          style: theme.textTheme.bodyLarge?.copyWith(
+                            color: theme.colorScheme.onPrimaryContainer,
+                            height: 1.5,
                           ),
                         ),
-                      ],
 
-                      const SizedBox(height: 16),
+                      // 元数据行
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          // HSK等级
+                          if (_wordDetail!.hskLevel != null)
+                            _buildMetaChip(
+                              theme,
+                              Icons.school,
+                              'HSK ${_wordDetail!.hskLevel}',
+                              theme.colorScheme.tertiary,
+                            ),
+                          // 词条数
+                          _buildMetaChip(
+                            theme,
+                            Icons.article,
+                            '${_wordDetail!.entries.length} 词条',
+                            theme.colorScheme.secondary,
+                          ),
+                        ],
+                      ),
                     ],
-                  );
-                }),
+                  ),
+                ),
+
+                // 词条详情列表
+                if (_wordDetail!.entries.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  // Text(
+                  //   '词条详情',
+                  //   style: theme.textTheme.titleMedium?.copyWith(
+                  //     fontWeight: FontWeight.bold,
+                  //     color: theme.colorScheme.onSurface,
+                  //   ),
+                  // ),
+                  ..._wordDetail!.entries.asMap().entries.map((mapEntry) {
+                    final index = mapEntry.key;
+                    final entry = mapEntry.value;
+                    return _buildEntryCard(theme, entry, index + 1);
+                  }),
+                ],
               ],
 
-              const SizedBox(height: 16),
+              const SizedBox(height: 24),
 
-              // Close button
-              OutlinedButton(
+              // 关闭按钮
+              FilledButton(
                 onPressed: () => Navigator.pop(context),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: theme.colorScheme.primaryContainer,
-                  backgroundColor: theme.colorScheme.onPrimaryContainer,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -328,14 +347,94 @@ class _WordDetailBottomSheetState extends State<WordDetailBottomSheet> {
     );
   }
 
-  Widget _buildSectionTitle(BuildContext context, String title) {
-    final theme = Theme.of(context);
-    return Text(
-      title,
-      style: theme.textTheme.titleMedium?.copyWith(
-        fontWeight: FontWeight.w600,
-        color: theme.colorScheme.onSurfaceVariant,
+  /// 构建元数据芯片
+  Widget _buildMetaChip(
+    ThemeData theme,
+    IconData icon,
+    String label,
+    Color color,
+  ) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withAlpha(26),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withAlpha(102)),
       ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: color),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: theme.textTheme.labelLarge?.copyWith(color: color),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 构建单个词条卡片
+  Widget _buildEntryCard(ThemeData theme, WordEntry entry, int index) {
+    final definitions = entry.definitions;
+    final examples = entry.examples;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // 词条标题（序号 + 词性）
+        Wrap(
+          crossAxisAlignment: WrapCrossAlignment.center,
+          runAlignment: WrapAlignment.start,
+          spacing: 12,
+          children: [
+            if (entry.pos.isNotEmpty) ...[
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.secondaryContainer,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(entry.pos, style: theme.textTheme.titleLarge),
+              ),
+            ],
+            if (definitions.isNotEmpty) ...[
+              ...definitions.asMap().entries.map((defEntry) {
+                return Text(
+                  defEntry.value,
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    color: theme.colorScheme.onSurface,
+                  ),
+                );
+              }),
+            ],
+          ],
+        ),
+
+        // 例句列表
+        if (examples.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 4),
+              ...examples.map((example) {
+                return Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    '• $example',
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      fontStyle: FontStyle.italic,
+                      color: theme.colorScheme.onSurface,
+                    ),
+                  ),
+                );
+              }),
+            ],
+          ),
+        ],
+      ],
     );
   }
 }

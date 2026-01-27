@@ -57,5 +57,18 @@
   "C_Cpp_Runner.useLinkTimeOptimization": false,
   "C_Cpp_Runner.msvcSecureNoWarnings": false,
   "cmake.sourceDirectory": "/Users/daniel/WorkSpaces/toneup/toneup_app/linux",
-  "java.configuration.updateBuildConfiguration": "interactive"
+  "java.configuration.updateBuildConfiguration": "interactive",
+  "deno.enable": false,  // 全局禁用
+  "deno.enablePaths": [
+    "supabase/functions"  // 仅对此目录启用
+  ],
+  "deno.lint": true,
+  "deno.unstable": true,
+  "deno.suggest.imports.hosts": {
+    "https://deno.land": true,
+    "https://esm.sh": true
+  },
+  "[typescript]": {
+    "editor.defaultFormatter": "denoland.vscode-deno"
+  }
 }

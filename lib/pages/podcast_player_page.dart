@@ -5,7 +5,6 @@ import 'package:toneup_app/components/word_detail_bottom_sheet.dart';
 import 'package:toneup_app/models/media_content_model.dart';
 import 'package:toneup_app/providers/media_player_provider.dart';
 import 'package:toneup_app/providers/profile_provider.dart';
-import 'package:toneup_app/services/simple_dictionary_service.dart';
 
 /// 播客播放器页面
 /// 专注于播放和字幕学习的交互
@@ -26,7 +25,6 @@ class _PodcastPlayerPageState extends State<PodcastPlayerPage> {
   final Map<int, GlobalKey> _segmentKeys = {}; // 每个segment的key，用于滚动定位
   int? _lastScrolledSegmentId; // 上次滚动到的segment ID
   double? _draggingPosition; // 拖动进度条时的临时位置（毫秒）
-  final _dictionaryService = SimpleDictionaryService(); // 词典服务
 
   @override
   void initState() {
@@ -420,29 +418,18 @@ class _PodcastPlayerPageState extends State<PodcastPlayerPage> {
 
   /// 显示词语详情面板
   void _showWordDetailPanel(String word, int segmentId) async {
-    // 获取当前 segment 的翻译和文本作为上下文
-    final segments = widget.media.transcript?.segments ?? [];
-    final segment = segments.firstWhere(
-      (s) => s.id == segmentId,
-      orElse: () => segments.first,
-    );
-
     // 获取用户母语设置（在异步操作前获取所有 context 数据）
     final profile = context.read<ProfileProvider>().profile;
     final language = profile?.nativeLanguage ?? 'en';
 
-    final wordDetail = await _dictionaryService.getWordDetail(
-      word: word,
-      language: language,
-      contextTranslation: segment.translation,
-    );
-
     // 异步操作后检查 widget 是否仍然挂载
     if (!mounted) return;
 
+    // 使用新的API：立即打开面板，内部异步加载
     WordDetailBottomSheet.show(
       context,
-      wordDetail,
+      word: word,
+      language: language,
       playerProvider: _playerProvider,
     );
   }

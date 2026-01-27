@@ -63,7 +63,11 @@ class EvaluationProvider extends ChangeNotifier {
       loadingMessage = 'Loading evaluation data...';
       notifyListeners();
 
-      final quizesData = await DataService().fetchEvaluationQuizes(level);
+      final lang = ProfileProvider().profile?.nativeLanguage ?? 'en';
+      final quizesData = await DataService().fetchEvaluationQuizes(
+        level,
+        lang: lang,
+      );
       await DataService().addActivityToQuizesModel(quizesData);
       await DataService().addIndicatorToQuizesModel(quizesData);
       _quizzes = QuizBase.getQuizInstanceByType(quizesData);

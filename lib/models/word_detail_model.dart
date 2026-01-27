@@ -1,11 +1,13 @@
 /// 词条详细解释（按词性分组）
 class WordEntry {
   final String pos; // 词性：v. (verb), n. (noun), adj., adv., etc.
+  final String pinyin; // 拼音（Coze AI 返回在每个 entry 中）
   final List<String> definitions; // 该词性下的释义列表
   final List<String> examples; // 例句列表
 
   WordEntry({
     required this.pos,
+    this.pinyin = '',
     required this.definitions,
     required this.examples,
   });
@@ -13,6 +15,7 @@ class WordEntry {
   factory WordEntry.fromJson(Map<String, dynamic> json) {
     return WordEntry(
       pos: json['pos'] as String? ?? '',
+      pinyin: json['pinyin'] as String? ?? '',
       definitions:
           (json['definitions'] as List<dynamic>?)
               ?.map((e) => e.toString())
@@ -27,7 +30,12 @@ class WordEntry {
   }
 
   Map<String, dynamic> toJson() {
-    return {'pos': pos, 'definitions': definitions, 'examples': examples};
+    return {
+      'pos': pos,
+      'pinyin': pinyin,
+      'definitions': definitions,
+      'examples': examples,
+    };
   }
 }
 

@@ -19,6 +19,7 @@ UserPracticeModel _$UserPracticeModelFromJson(Map<String, dynamic> json) =>
       updateAt: json['update_at'] == null
           ? null
           : DateTime.parse(json['update_at'] as String),
+      lang: json['lang'] as String?,
     );
 
 Map<String, dynamic> _$UserPracticeModelToJson(UserPracticeModel instance) =>
@@ -28,6 +29,7 @@ Map<String, dynamic> _$UserPracticeModelToJson(UserPracticeModel instance) =>
       'status': instance.status,
       'score': instance.score,
       'count': instance.count,
+      'lang': instance.lang,
       'created_at': instance.createdAt.toIso8601String(),
       'update_at': instance.updateAt?.toIso8601String(),
     };

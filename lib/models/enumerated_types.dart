@@ -138,6 +138,57 @@ enum PurposeType {
   String get name => toString().split('.').last;
 }
 
+/// 用户母语/目标语言枚举
+/// 对应 ProfileModel.nativeLanguage 和词典/练习题的目标语言
+enum LanguageType {
+  @JsonValue('en')
+  english,
+  @JsonValue('zh')
+  chinese,
+  @JsonValue('ja')
+  japanese,
+  @JsonValue('ko')
+  korean,
+  @JsonValue('es')
+  spanish,
+  @JsonValue('fr')
+  french,
+  @JsonValue('de')
+  german;
+
+  String get code => _$LanguageTypeEnumMap[this]!;
+
+  /// 获取语言的本地化名称
+  String get displayName {
+    switch (this) {
+      case LanguageType.english:
+        return 'English';
+      case LanguageType.chinese:
+        return '中文';
+      case LanguageType.japanese:
+        return '日本語';
+      case LanguageType.korean:
+        return '한국어';
+      case LanguageType.spanish:
+        return 'Español';
+      case LanguageType.french:
+        return 'Français';
+      case LanguageType.german:
+        return 'Deutsch';
+    }
+  }
+
+  /// 从语言代码字符串解析
+  static LanguageType fromCode(String code) {
+    return _$LanguageTypeEnumMap.entries
+        .firstWhere(
+          (entry) => entry.value == code,
+          orElse: () => const MapEntry(LanguageType.english, 'en'),
+        )
+        .key;
+  }
+}
+
 const _$QuizTemplateEnumMap = {
   QuizTemplate.textToText: '看文选文',
   QuizTemplate.textToVoice: '看文选音',
@@ -193,4 +244,14 @@ const _$IndicatorCategoryEnumMap = {
   IndicatorCategory.writingNorms: '书写规范',
   IndicatorCategory.writtenWriting: '书面写作',
   IndicatorCategory.translation: '文本翻译',
+};
+
+const _$LanguageTypeEnumMap = {
+  LanguageType.english: 'en',
+  LanguageType.chinese: 'zh',
+  LanguageType.japanese: 'ja',
+  LanguageType.korean: 'ko',
+  LanguageType.spanish: 'es',
+  LanguageType.french: 'fr',
+  LanguageType.german: 'de',
 };

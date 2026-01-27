@@ -106,6 +106,7 @@ class DataService {
     required List<int> inds,
     int dur = 60,
     List<String>? acts,
+    String nativeLanguage = 'en', // 用户母语设置（默认英语）
   }) async* {
     final session = _supabase.auth.currentSession;
     final url = '${SupabaseConfig.url}/functions/v1/create-plan';
@@ -121,6 +122,7 @@ class DataService {
       'inds': inds,
       'dur': dur,
       'acts': acts,
+      'native_language': nativeLanguage, // 传递用户母语设置
     });
 
     final response = await request.send();
@@ -455,13 +457,16 @@ class DataService {
   }
 
   /// 获取评测题目
-  Future<List<QuizesModle>> fetchEvaluationQuizes(int level) async {
+  Future<List<QuizesModle>> fetchEvaluationQuizes(
+    int level, {
+    String lang = 'en',
+  }) async {
     try {
       final data = await _supabase
           .schema('research_core')
           .rpc<List<Map<String, dynamic>>>(
             'random_evaluation',
-            params: {'level_input': level, 'n': 10},
+            params: {'level_input': level, 'n': 10, 'lang_input': lang},
           );
       return data.map((item) => QuizesModle.fromJson(item)).toList();
     } catch (e) {

@@ -11,6 +11,7 @@ class UserPracticeModel {
   final int status;
   double score;
   int count;
+  String? lang;
 
   @JsonKey(name: "created_at")
   final DateTime createdAt;
@@ -25,6 +26,7 @@ class UserPracticeModel {
     required this.count,
     required this.createdAt,
     this.updateAt,
+    this.lang,
   });
 
   factory UserPracticeModel.fromJson(Map<String, dynamic> json) =>

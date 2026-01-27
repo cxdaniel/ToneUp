@@ -614,7 +614,7 @@ $$ LANGUAGE plpgsql;
 
 ### random_evaluation (评测题目生成)
 
-**功能**: 随机生成指定等级的评测题目。
+**功能**: 随机生成指定等级和语言的评测题目。
 
 **调用方式**:
 ```dart
@@ -622,20 +622,23 @@ final quizzes = await _supabase
     .schema('research_core')
     .rpc('random_evaluation', params: {
       'level_input': 3,
-      'n': 10
+      'n': 10,
+      'lang': 'en'  // 可选，默认 'en'
     });
 ```
 
 **SQL定义**:
 ```sql
-CREATE OR REPLACE FUNCTION random_evaluation(
+CREATE OR REPLACE FUNCTION research_core.random_evaluation(
   level_input INT,
-  n INT
-) RETURNS SETOF quizes AS $$
+  n INT,
+  lang_input lang DEFAULT 'en'::lang
+) RETURNS SETOF research_core.evaluation AS $$
 BEGIN
   RETURN QUERY
-  SELECT * FROM quizes
+  SELECT * FROM research_core.evaluation
   WHERE level = level_input
+    AND lang = lang_input
   ORDER BY RANDOM()
   LIMIT n;
 END;

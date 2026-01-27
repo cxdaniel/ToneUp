@@ -4,15 +4,15 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:toneup_app/models/word_detail_model.dart';
 import 'package:toneup_app/services/dictionary_cache_service.dart';
 import 'package:toneup_app/services/lru_cache.dart';
-import 'package:toneup_app/services/baidu_dict_service.dart';
 import 'package:toneup_app/services/utils.dart';
 
-/// 五级词典服务（百度词典版API）
+/// 四级词典服务（扣子AI工作流版 - 优化架构）
 /// L1: LRU内存缓存 (200词上限，Web/移动端通用)
 /// L2: SQLite本地缓存 (移动端持久化，Web端IndexedDB)
-/// L3: Supabase云端数据库 (跨设备同步)
-/// L4: 百度词典版API (仅中英互查，其他语种降级)
-/// L5: 拼音降级 (最终兜底)
+/// L3: Supabase云端数据库 + Edge Function (查询不到时自动调用Coze工作流并保存)
+/// L4: 拼音降级 (最终兜底)
+///
+/// 架构优化：Edge Function内部集成Coze调用和数据保存，客户端只需查询L3
 class SimpleDictionaryService {
   static final SimpleDictionaryService _instance =
       SimpleDictionaryService._internal();
@@ -25,10 +25,7 @@ class SimpleDictionaryService {
   // L2: SQLite缓存服务
   final _sqliteCache = DictionaryCacheService();
 
-  // L4: 百度词典版API服务 (仅中英互查)
-  final _baiduDict = BaiduDictService();
-
-  /// 查询词语详情（五级查询）
+  /// 查询词语详情（四级查询）
   /// [word] - 要查询的汉字或外语词语
   /// [language] - 目标语言代码 (en, zh, ja, ko等)
   /// [contextTranslation] - 上下文翻译（备选）
@@ -54,74 +51,21 @@ class SimpleDictionaryService {
       return cachedWord;
     }
 
-    // ===== L3: Supabase数据库查询 =====
-    final supabaseWord = await _queryFromSupabase(word, language);
+    // ===== L3: Supabase + Edge Function (自动调用Coze并保存) =====
+    final supabaseWord = await _queryOrGenerateFromSupabase(
+      word,
+      language,
+      contextTranslation,
+    );
     if (supabaseWord != null) {
-      debugPrint('✅ L3命中 (Supabase): $word ($language)');
+      debugPrint('✅ L3命中 (Supabase/Coze): $word ($language)');
       // 保存到L2缓存
       await _sqliteCache.saveWord(supabaseWord, language);
       _memoryCache.put(cacheKey, supabaseWord);
       return supabaseWord;
     }
 
-    // ===== L4: 百度词典版API查询 (仅中英互查) =====
-    if (_baiduDict.isConfigured && _isSupportedByBaiduDict(language)) {
-      WordDetailModel? apiWord;
-
-      // 带重试的API调用 (处理QPS限流)
-      for (var retry = 0; retry < 3; retry++) {
-        if (retry > 0) {
-          debugPrint('⏳ 第${retry + 1}次重试 (等待${200 * retry}ms)...');
-          await Future.delayed(Duration(milliseconds: 200 * retry));
-        }
-
-        apiWord = await _baiduDict.translate(
-          word: word,
-          from: 'zh',
-          to: language,
-        );
-
-        if (apiWord != null) break; // 成功则退出重试
-      }
-
-      if (apiWord != null) {
-        debugPrint('✅ L4命中 (百度API): $word');
-
-        // 补充拼音（API可能没有）
-        if (apiWord.pinyin.isEmpty && AppUtils.isChinese(word)) {
-          final wordWithPinyin = WordDetailModel(
-            word: apiWord.word,
-            pinyin: PinyinHelper.getPinyin(
-              word,
-              format: PinyinFormat.WITH_TONE_MARK,
-            ),
-            summary: apiWord.summary,
-            entries: apiWord.entries,
-            hskLevel: apiWord.hskLevel,
-          );
-
-          // 保存到L3、L2缓存
-          await _saveToSupabase(wordWithPinyin, language);
-          await _sqliteCache.saveWord(wordWithPinyin, language);
-          _memoryCache.put(cacheKey, wordWithPinyin);
-          return wordWithPinyin;
-        }
-
-        // 保存到L3、L2缓存
-        await _saveToSupabase(apiWord, language);
-        await _sqliteCache.saveWord(apiWord, language);
-        _memoryCache.put(cacheKey, apiWord);
-        return apiWord;
-      }
-    } else {
-      if (!_baiduDict.isConfigured) {
-        debugPrint('⚠️ 百度API未配置，跳过L4查询');
-      } else {
-        debugPrint('⚠️ 百度词典版仅支持中英互查，语种 $language 不支持，跳过L4');
-      }
-    }
-
-    // ===== L5: 最终降级 - 仅返回拼音 =====
+    // ===== L4: 最终降级 - 仅返回拼音 =====
     debugPrint('⚠️ 所有查询失败，返回基础信息: $word');
     final fallbackWord = WordDetailModel(
       word: word,
@@ -132,80 +76,113 @@ class SimpleDictionaryService {
       entries: [],
     );
 
-    // L5降级也缓存到L1（避免重复计算拼音）
+    // L4降级也缓存到L1（避免重复计算拼音）
     _memoryCache.put(cacheKey, fallbackWord);
     return fallbackWord;
   }
 
-  /// 检查语言是否被百度词典版支持 (仅中英互查)
-  bool _isSupportedByBaiduDict(String language) {
-    return language == 'en' || language == 'zh';
-  }
-
-  /// 从Supabase查询词条
-  Future<WordDetailModel?> _queryFromSupabase(
+  /// 从Supabase查询或通过Edge Function生成词条
+  /// Edge Function会自动调用Coze工作流并保存到数据库
+  Future<WordDetailModel?> _queryOrGenerateFromSupabase(
     String word,
     String language,
+    String? contextTranslation,
   ) async {
     try {
+      // 1. 先查询数据库是否已有
       final response = await Supabase.instance.client
           .from('dictionary')
-          .select('word, pinyin, hsk_level, translations')
+          .select('word, hsk_level, translations')
           .eq('word', word)
           .maybeSingle();
 
-      if (response == null) return null;
+      if (response != null) {
+        final translations = response['translations'] as Map<String, dynamic>?;
+        if (translations != null && translations.containsKey(language)) {
+          final langData = translations[language] as Map<String, dynamic>;
 
-      final translations = response['translations'] as Map<String, dynamic>?;
-      if (translations == null || !translations.containsKey(language)) {
+          // 解析entries
+          final entriesData = langData['entries'] as List?;
+          final entries =
+              entriesData
+                  ?.map((e) => WordEntry.fromJson(e as Map<String, dynamic>))
+                  .toList() ??
+              [];
+
+          // 从第一个entry中提取拼音（Coze返回的pinyin在entry中）
+          String pinyin = '';
+          if (entries.isNotEmpty && entries[0].pinyin.isNotEmpty) {
+            pinyin = entries[0].pinyin;
+          } else {
+            // 兜底方案：使用pinyin库生成
+            pinyin = PinyinHelper.getPinyin(
+              word,
+              format: PinyinFormat.WITH_TONE_MARK,
+            );
+          }
+
+          debugPrint('📖 从数据库查到: $word ($language)');
+          return WordDetailModel(
+            word: response['word'] as String,
+            pinyin: pinyin,
+            summary: langData['summary'] as String?,
+            entries: entries,
+            hskLevel: response['hsk_level'] as int?,
+          );
+        }
+      }
+
+      // 2. 数据库没有，调用Edge Function（自动调用Coze并保存）
+      debugPrint('🚀 调用Edge Function生成: $word → $language');
+      final functionResponse = await Supabase.instance.client.functions.invoke(
+        'translate-word',
+        body: {
+          'word': word,
+          'lang': language, // 注意：参数名是 lang 不是 target_language
+        },
+      );
+
+      if (functionResponse.data == null) {
+        debugPrint('❌ Edge Function返回空数据');
         return null;
       }
 
-      final langData = translations[language] as Map<String, dynamic>;
+      final data = functionResponse.data as Map<String, dynamic>;
 
-      // 解析entries
-      final entriesData = langData['entries'] as List?;
+      // 解析Edge Function返回的词条
+      final entriesData = data['entries'] as List?;
       final entries =
           entriesData
               ?.map((e) => WordEntry.fromJson(e as Map<String, dynamic>))
               .toList() ??
           [];
 
-      return WordDetailModel(
-        word: response['word'] as String,
-        pinyin: response['pinyin'] as String,
-        summary: langData['summary'] as String?,
+      final wordDetail = WordDetailModel(
+        word: word,
+        pinyin: data['pinyin'] as String? ?? '',
+        summary: data['summary'] as String?,
         entries: entries,
-        hskLevel: response['hsk_level'] as int?,
+        hskLevel: data['hsk_level'] as int?,
       );
+
+      // 补充拼音（如果Edge Function未生成）
+      if (wordDetail.pinyin.isEmpty && AppUtils.isChinese(word)) {
+        return WordDetailModel(
+          word: wordDetail.word,
+          pinyin: PinyinHelper.getPinyin(
+            word,
+            format: PinyinFormat.WITH_TONE_MARK,
+          ),
+          summary: wordDetail.summary,
+          entries: wordDetail.entries,
+          hskLevel: wordDetail.hskLevel,
+        );
+      }
+
+      return wordDetail;
     } catch (e) {
-      debugPrint('❌ Supabase查询失败: $e');
+      debugPrint('❌ L3查询/生成失败: $e');
       return null;
-    }
-  }
-
-  /// 保存词条到Supabase
-  Future<void> _saveToSupabase(WordDetailModel word, String language) async {
-    try {
-      // 构建translations JSON
-      final translationData = {
-        language: {
-          'summary': word.summary,
-          'entries': word.entries.map((e) => e.toJson()).toList(),
-        },
-      };
-
-      await Supabase.instance.client.from('dictionary').upsert({
-        'word': word.word,
-        'pinyin': word.pinyin,
-        'hsk_level': word.hskLevel,
-        'translations': translationData,
-        'source': 'mdx',
-      });
-
-      debugPrint('✅ 词条已保存到Supabase: ${word.word}');
-    } catch (e) {
-      debugPrint('❌ 保存到Supabase失败: $e');
     }
   }
 
@@ -239,67 +216,59 @@ class SimpleDictionaryService {
       }
     }
 
-    debugPrint('🎯 所有本地缓存已清空，下次查询将使用百度词典版API');
+    debugPrint('🎯 所有本地缓存已清空，下次查询将使用扣子AI词典工作流');
   }
 
   /// 获取缓存统计
   Future<Map<String, dynamic>> getCacheStats() async {
     final sqliteStats = await _sqliteCache.getCacheStats();
-    return {
-      'lru': _memoryCache.getStats(),
-      'sqlite': sqliteStats,
-      'baidu_api': _baiduDict.getUsageStats(),
-    };
+    return {'lru': _memoryCache.getStats(), 'sqlite': sqliteStats};
   }
 
-  /// 测试API词典是否正常工作
+  /// 测试Edge Function词典是否正常工作
   /// [testWord] - 测试词语（默认"你好"）
+  /// [language] - 测试语言（默认"en"）
   /// 返回测试结果和查询来源
   Future<Map<String, dynamic>> testApiDictionary({
     String testWord = '你好',
+    String language = 'en',
   }) async {
-    debugPrint('\n🧪 ===== 开始API词典测试 =====');
-    debugPrint('测试词语: $testWord');
+    debugPrint('\n🧪 ===== 开始Edge Function词典测试 =====');
+    debugPrint('测试词语: $testWord → $language');
 
-    // 1. 检查API是否配置
-    if (!_baiduDict.isConfigured) {
+    // 清空缓存确保查询Edge Function
+    await clearAllCache();
+    debugPrint('✅ 已清空所有缓存');
+
+    try {
+      // 直接调用Edge Function测试
+      final result = await getWordDetail(word: testWord, language: language);
+
+      debugPrint('✅ 测试成功!');
+      debugPrint('📖 词语: ${result.word}');
+      debugPrint('📌 拼音: ${result.pinyin}');
+      debugPrint('📝 释义: ${result.summary}');
+      debugPrint('📚 词条数: ${result.entries.length}');
+      if (result.hskLevel != null) {
+        debugPrint('🎓 HSK等级: ${result.hskLevel}');
+      }
+
+      return {
+        'success': true,
+        'word': result.word,
+        'pinyin': result.pinyin,
+        'summary': result.summary,
+        'entries': result.entries.map((e) => e.toJson()).toList(),
+        'entries_count': result.entries.length,
+        'hsk_level': result.hskLevel,
+      };
+    } catch (e) {
+      debugPrint('❌ 测试失败: $e');
       return {
         'success': false,
-        'error': '百度API未配置',
-        'suggestion': '请在 BaiduDictService 中设置 API_KEY 和 SECRET_KEY',
+        'error': e.toString(),
+        'suggestion': '请检查Edge Function "translate-word" 是否已部署并配置正确',
       };
     }
-
-    // 2. 清空缓存确保查询API
-    await clearAllCache();
-
-    // 3. 执行查询
-    final startTime = DateTime.now();
-    final result = await getWordDetail(word: testWord, language: 'en');
-    final duration = DateTime.now().difference(startTime);
-
-    // 4. 分析结果
-    final testResult = {
-      'success': result.summary != '(暂无释义)',
-      'word': result.word,
-      'pinyin': result.pinyin,
-      'summary': result.summary,
-      'entries_count': result.entries.length,
-      'entries': result.entries.map((e) => e.toJson()).toList(),
-      'query_time_ms': duration.inMilliseconds,
-      'api_configured': _baiduDict.isConfigured,
-    };
-
-    if (testResult['success'] == true) {
-      debugPrint('✅ API词典测试成功');
-      debugPrint('查询耗时: ${duration.inMilliseconds}ms');
-      debugPrint('结果: ${result.summary}');
-    } else {
-      debugPrint('❌ API词典测试失败');
-      debugPrint('结果: ${result.summary}');
-    }
-
-    debugPrint('===== API词典测试完成 =====\n');
-    return testResult;
   }
 }

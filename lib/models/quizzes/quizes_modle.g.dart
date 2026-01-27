@@ -26,6 +26,7 @@ QuizesModle _$QuizesModleFromJson(Map<String, dynamic> json) =>
             ?.map((e) => e as Map<String, dynamic>)
             .toList(),
         explain: json['explain'] as String?,
+        lang: json['lang'] as String?,
       )
       ..activity = json['activity'] == null
           ? null
@@ -49,6 +50,7 @@ Map<String, dynamic> _$QuizesModleToJson(QuizesModle instance) =>
       'question': instance.question,
       'options': instance.options,
       'explain': instance.explain,
+      'lang': instance.lang,
       'activity': instance.activity,
       'indicator': instance.indicator,
     };

@@ -27,6 +27,7 @@ class QuizesModle {
   String? question;
   List<Map<String, dynamic>>? options;
   String? explain;
+  String? lang;
 
   // @JsonKey(name: "material_id")
   // final int? materialId;
@@ -49,6 +50,7 @@ class QuizesModle {
     this.question,
     this.options,
     this.explain,
+    this.lang,
   });
 
   // 序列化方法（需运行 build_runner 生成）

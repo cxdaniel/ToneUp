@@ -52,6 +52,27 @@
 
 ---
 
+#### 2.1. [DICTIONARY_DATA_STRUCTURE.md](./DICTIONARY_DATA_STRUCTURE.md) ⭐新增
+**用途**: 词典数据结构标准规范（扣子工作流返回格式）  
+**适合人群**: AI工作流配置、后端开发、数据验证
+
+**包含内容**:
+- ✅ WordDetailModel完整字段说明
+- ✅ 扣子工作流标准输出格式
+- ✅ 词性标注规范速查表
+- ✅ 多语种支持示例
+- ✅ Supabase存储格式
+- ✅ 推荐的AI Prompt模板
+- ✅ 数据验证规则
+
+**快速查找**:
+- JSON格式 → "核心数据模型 - WordDetailModel"
+- 词性缩写 → "词性标注规范"
+- Prompt模板 → "扣子工作流Prompt模板"
+- 快速参考 → 见 [COZE_DICTIONARY_QUICK_REF.md](./COZE_DICTIONARY_QUICK_REF.md)
+
+---
+
 #### 3. [API_REFERENCE.md](./API_REFERENCE.md)
 **用途**: Supabase、RevenueCat、TTS等所有API完整调用指南  
 **适合人群**: 前端开发、集成测试、API调试
